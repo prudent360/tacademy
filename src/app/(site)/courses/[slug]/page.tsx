@@ -1,0 +1,199 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ClockIcon, LayersIcon, MonitorIcon, PinIcon, UsersIcon } from "@/components/icons";
+import { Markdown } from "@/components/markdown";
+import { CourseArt } from "@/components/site/course-art";
+import { EnrollForm } from "@/components/site/enroll-form";
+import { FreeEnroll } from "@/components/site/free-enroll";
+import { Avatar, Badge, ModeBadge, Notice } from "@/components/ui";
+import { getCurrentUser } from "@/lib/auth";
+import { isFree, withCohorts } from "@/lib/catalog";
+import { bankTransferConfig } from "@/lib/config";
+import { getCourseBySlug, getInstructorsByCohort, getSettings, getStudentCohorts } from "@/lib/data";
+import { payableCurrencies } from "@/lib/payments";
+import { formatMoney } from "@/lib/money";
+import { absoluteUrl, jsonLd } from "@/lib/site";
+import { formatDateOnly } from "@/lib/time";
+
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ cancelled?: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const course = await getCourseBySlug((await params).slug);
+  if (!course) return {};
+  return { title: course.title, description: course.summary, alternates: { canonical: `/courses/${course.slug}` } };
+}
+
+export default async function CoursePage({ params, searchParams }: Props) {
+  const [{ slug }, { cancelled }] = await Promise.all([params, searchParams]);
+  const course = await getCourseBySlug(slug);
+  if (!course) notFound();
+  const [settings, user, [summary]] = await Promise.all([getSettings(), getCurrentUser(), withCohorts([course])]);
+  const cohorts = summary.cohorts;
+  const instructorsByCohort = await getInstructorsByCohort(cohorts.map((c) => c.id));
+  const instructors = [...new Map([...instructorsByCohort.values()].flat().map((i) => [i.id, i])).values()];
+  const myCohortIds = new Set(user ? (await getStudentCohorts(user.id)).map((r) => r.cohort.id) : []);
+  const [payable, bank] = await Promise.all([payableCurrencies(), bankTransferConfig()]);
+  const onlinePrices = (prices: Record<string, number | undefined>) =>
+    Object.fromEntries(Object.entries(prices).filter(([c, v]) => payable.includes(c) && (v ?? 0) > 0)) as Record<string, number>;
+  const preferredCurrency = settings.currencies.find((currency) => cohorts.some((cohort) => (cohort.prices[currency] ?? 0) > 0));
+  const preferredPrices = preferredCurrency ? cohorts.map((cohort) => cohort.prices[preferredCurrency] ?? 0).filter((price) => price > 0) : [];
+  const startingPrice = preferredCurrency && preferredPrices.length ? formatMoney(Math.min(...preferredPrices), preferredCurrency) : cohorts.some(isFree) ? "Free" : null;
+  const deliveryModes = [...new Set(cohorts.map((cohort) => cohort.deliveryMode))].map((mode) => mode === "virtual" ? "Online" : mode === "physical" ? "In person" : "Hybrid").join(" or ");
+  const courseNav = [course.description && { href: "#overview", label: "Overview" }, course.curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: course.title,
+    description: course.summary,
+    url: absoluteUrl(`/courses/${course.slug}`),
+    provider: { "@type": "EducationalOrganization", name: settings.siteName, url: absoluteUrl("/") },
+    hasCourseInstance: cohorts.map((c) => ({
+      "@type": "CourseInstance",
+      name: c.name,
+      courseMode: c.deliveryMode === "virtual" ? "online" : c.deliveryMode === "physical" ? "onsite" : "blended",
+      startDate: c.startDate ?? undefined,
+      endDate: c.endDate ?? undefined,
+    })),
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
+      <section className="border-b border-line bg-white">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 py-12 sm:px-8 md:py-16 lg:grid-cols-[1.3fr_1fr]">
+          <div className="flex flex-col gap-5">
+            <Link href="/courses" className="w-fit text-sm font-semibold text-accent hover:text-accent-dark">← All courses</Link>
+            <div className="flex flex-wrap items-center gap-2">{cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full) && <Badge tone="green">Registration open</Badge>}{course.category && <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-accent md:text-[13px]">{course.category}</p>}</div>
+            <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight text-ink md:text-5xl">{course.title}</h1>
+            <p className="max-w-[620px] text-lg leading-relaxed text-muted">{course.summary}</p>
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-body"><span className="flex items-center gap-2"><LayersIcon className="size-4 text-accent" />{course.level}</span><span className="flex items-center gap-2"><CalendarIcon className="size-4 text-accent" />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span></div>
+            {startingPrice && <div><p className="text-xs font-semibold uppercase tracking-[1.2px] text-muted">{startingPrice === "Free" ? "Course fee" : "From"}</p><p className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">{startingPrice}</p></div>}
+            <div className="flex flex-wrap gap-3"><a href="#cohorts" className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Choose a cohort <ArrowRight className="size-4" /></a>{course.curriculum.length > 0 && <a href="#curriculum" className="inline-flex h-12 items-center rounded-[5px] border border-edge-strong bg-white px-6 font-semibold text-ink transition hover:border-accent-muted hover:bg-panel">View curriculum</a>}</div>
+          </div>
+          <div className="overflow-hidden rounded-[5px] border border-edge shadow-[0_24px_60px_-38px_rgba(25,17,46,.4)]">
+            {course.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={course.imageUrl} alt="" className="aspect-[16/10] w-full object-cover" />
+            ) : (
+              <CourseArt seed={course.id} className="aspect-[16/10] w-full" />
+            )}
+          </div>
+        </div>
+        <div className="mx-auto grid max-w-[1200px] grid-cols-2 border-x border-t border-edge bg-white sm:grid-cols-4">
+          <div className="flex items-center gap-3 border-b border-r border-edge px-4 py-4 sm:border-b-0 md:px-6"><ClockIcon className="size-5 shrink-0 text-accent" /><span><span className="block text-xs text-muted">Duration</span><span className="font-semibold text-ink">{course.durationWeeks ? `${course.durationWeeks} weeks` : "Flexible"}</span></span></div>
+          <div className="flex items-center gap-3 border-b border-edge px-4 py-4 sm:border-b-0 sm:border-r md:px-6"><MonitorIcon className="size-5 shrink-0 text-accent" /><span><span className="block text-xs text-muted">Learning mode</span><span className="font-semibold text-ink">{deliveryModes || "Live classes"}</span></span></div>
+          <div className="flex items-center gap-3 border-r border-edge px-4 py-4 md:px-6"><CardIcon className="size-5 shrink-0 text-accent" /><span><span className="block text-xs text-muted">Payment</span><span className="font-semibold text-ink">{cohorts.some((cohort) => cohort.depositPercent) ? "Deposit available" : "Secure checkout"}</span></span></div>
+          <div className="flex items-center gap-3 px-4 py-4 md:px-6"><AwardIcon className="size-5 shrink-0 text-accent" /><span><span className="block text-xs text-muted">Credential</span><span className="font-semibold text-ink">{course.certificateEnabled ? "Verified certificate" : "Practical outcomes"}</span></span></div>
+        </div>
+      </section>
+
+      <nav aria-label="Course sections" className="sticky top-[68px] z-20 border-y border-edge bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-[1200px] gap-1 overflow-x-auto px-5 sm:px-8">{courseNav.map((item) => <a key={item.href} href={item.href} className="shrink-0 border-b-2 border-transparent px-3 py-3.5 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent">{item.label}</a>)}</div></nav>
+
+      <div className="mx-auto grid max-w-[1200px] items-start gap-10 px-5 py-12 sm:px-8 md:py-16 lg:grid-cols-[1.3fr_1fr]">
+        <div className="flex min-w-0 flex-col gap-10">
+          {course.description && (
+            <section id="overview" className="scroll-mt-36 flex flex-col gap-4">
+              <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Course overview</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What this course is designed to do</h2></div>
+              <Markdown>{course.description}</Markdown>
+            </section>
+          )}
+          {course.outcomes.length > 0 && (
+            <section id="outcomes" className="scroll-mt-36 rounded-[5px] border border-edge bg-white p-6 md:p-7">
+              <h2 className="font-display text-2xl font-bold text-ink">What you&apos;ll be able to do</h2>
+              <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                {course.outcomes.map((o) => (
+                  <li key={o} className="flex gap-2.5 text-[15px] leading-relaxed text-body">
+                    <CheckIcon className="mt-0.5 size-5 shrink-0 text-accent" /> {o}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <section className="grid gap-4 sm:grid-cols-3">
+            {[{ icon: UsersIcon, title: "Hands-on learning", text: "Practise each concept in class and apply it to work you can show." }, { icon: MonitorIcon, title: "Live instructor support", text: "Ask questions, get unstuck and learn with feedback in real time." }, { icon: CardIcon, title: "Flexible ways to pay", text: cohorts.some((cohort) => cohort.depositPercent) ? "Reserve your place with a deposit and pay the balance later." : "Pay securely online or use the available transfer option." }].map(({ icon: Icon, title, text }) => <div key={title} className="rounded-[5px] border border-edge bg-panel p-5"><Icon className="size-5 text-accent" /><h3 className="mt-4 font-display text-lg font-bold text-ink">{title}</h3><p className="mt-1.5 text-sm leading-6 text-muted">{text}</p></div>)}
+          </section>
+          {course.certificateEnabled && <section className="flex items-start gap-4 rounded-[5px] border border-accent-muted/40 bg-accent-soft/40 p-6">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-[5px] bg-white text-accent shadow-sm"><AwardIcon className="size-6" /></span>
+            <div><h2 className="font-display text-xl font-bold text-ink">Earn a verified certificate</h2><p className="mt-1 text-[15px] leading-6 text-muted">Complete the course with at least {course.certificateMinAttendance}% attendance, {course.certificateMinAssignments}% of assignments submitted, and a {course.certificateMinScore}% average score. Your certificate includes a public verification link and QR code.</p></div>
+          </section>}
+          {course.curriculum.length > 0 && (
+            <section id="curriculum" className="scroll-mt-36 flex flex-col gap-5">
+              <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Curriculum</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What you&apos;ll learn, week by week</h2></div>
+              <ol className="divide-y divide-line border-y border-line">
+                {course.curriculum.map((module, index) => <li key={`${module.title}-${index}`} className="grid gap-3 py-5 sm:grid-cols-[42px_1fr]"><span className="font-mono text-sm font-semibold text-accent">{String(index + 1).padStart(2, "0")}</span><div><h3 className="font-display text-lg font-bold text-ink">{module.title}</h3>{module.summary && <p className="mt-1 text-[15px] leading-6 text-muted">{module.summary}</p>}</div></li>)}
+              </ol>
+            </section>
+          )}
+          {(course.portfolioProjects.length > 0 || course.jobRoles.length > 0) && (
+            <section className="grid gap-5 sm:grid-cols-2">
+              {course.portfolioProjects.length > 0 && <div className="rounded-[5px] border border-edge bg-white p-6"><h2 className="font-display text-xl font-bold text-ink">Portfolio projects</h2><ul className="mt-4 space-y-3">{course.portfolioProjects.map((project) => <li key={project} className="flex gap-2.5 text-[15px] text-body"><CheckIcon className="mt-0.5 size-5 shrink-0 text-cyan-ink" />{project}</li>)}</ul></div>}
+              {course.jobRoles.length > 0 && <div className="rounded-[5px] border border-edge bg-white p-6"><h2 className="font-display text-xl font-bold text-ink">Roles this supports</h2><div className="mt-4 flex flex-wrap gap-2">{course.jobRoles.map((role) => <Badge key={role} tone="accent">{role}</Badge>)}</div></div>}
+            </section>
+          )}
+          {instructors.length > 0 && (
+            <section className="flex flex-col gap-5">
+              <h2 className="font-display text-2xl font-bold text-ink">Your {instructors.length === 1 ? "instructor" : "instructors"}</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {instructors.map((i) => (
+                  <div key={i.id} className="flex gap-4 rounded-[14px] border border-edge bg-white p-5">
+                    <Avatar name={i.name} src={i.avatarUrl} size="lg" />
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <p className="font-display text-lg font-bold text-ink">{i.name}</p>
+                      {i.bio && <p className="text-sm leading-relaxed text-muted">{i.bio}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+
+        <aside id="cohorts" className="scroll-mt-36 flex flex-col gap-4 lg:sticky lg:top-36">
+          <h2 className="font-display text-xl font-bold text-ink">Choose a cohort</h2>
+          {cancelled && <Notice tone="amber">Payment was cancelled, so you haven&apos;t been charged. You can try again whenever you&apos;re ready.</Notice>}
+          {cohorts.length === 0 && (
+            <div className="rounded-[5px] border border-dashed border-edge-strong bg-panel p-6 text-[15px] text-muted">
+              No cohorts are scheduled right now.{settings.supportEmail && <> Email <a href={`mailto:${settings.supportEmail}`} className="font-semibold text-accent">{settings.supportEmail}</a> to hear about the next one.</>}
+            </div>
+          )}
+          {cohorts.map((cohort) => {
+            const enrolled = myCohortIds.has(cohort.id);
+            return (
+              <div key={cohort.id} id={`cohort-${cohort.id}`} className="flex scroll-mt-36 flex-col gap-4 rounded-[5px] border border-edge bg-white p-5 transition hover:border-accent-muted hover:shadow-[0_18px_40px_-30px_rgba(25,17,46,.4)] target:border-accent target:ring-2 target:ring-accent/20 md:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="font-display text-lg font-bold text-ink">{cohort.name}</p>
+                    <p className="text-sm text-muted">
+                      {cohort.startDate ? `${formatDateOnly(cohort.startDate)}${cohort.endDate ? ` – ${formatDateOnly(cohort.endDate)}` : ""}` : "Dates to be confirmed"}
+                    </p>
+                  </div>
+                  <ModeBadge mode={cohort.deliveryMode} />
+                </div>
+                {(cohort.schedule || cohort.venue) && (
+                  <ul className="flex flex-col gap-1.5 text-sm text-body">
+                    {cohort.schedule && <li className="flex gap-2"><ClockIcon className="mt-0.5 size-4 shrink-0 text-muted" /> {cohort.schedule}</li>}
+                    {cohort.venue && cohort.deliveryMode !== "virtual" && <li className="flex gap-2"><PinIcon className="mt-0.5 size-4 shrink-0 text-muted" /> {cohort.venue}</li>}
+                  </ul>
+                )}
+                {cohort.seatsLeft !== null && !cohort.full && cohort.seatsLeft <= 5 && <Badge tone="cyan" className="w-fit">Only {cohort.seatsLeft} seats left</Badge>}
+                <div className="border-t border-line pt-4">
+                  {enrolled ? (
+                    <Link href={`/dashboard/cohorts/${cohort.id}`} className="flex h-11 w-fit items-center rounded-lg bg-emerald-700 px-5 text-[15px] font-semibold text-white hover:bg-emerald-800">You&apos;re enrolled: go to class</Link>
+                  ) : cohort.full ? (
+                    <p className="text-[15px] font-semibold text-muted">This cohort is full.</p>
+                  ) : !cohort.enrollmentOpen ? (
+                    <p className="text-[15px] font-semibold text-muted">Enrolment is closed.</p>
+                  ) : (
+                    isFree(cohort) ? <FreeEnroll cohortId={cohort.id} signedIn={Boolean(user)} /> : <EnrollForm cohortId={cohort.id} prices={onlinePrices(cohort.prices)} preferred={settings.currencies} signedIn={Boolean(user)} depositPercent={cohort.depositPercent} bank={bank.enabled && cohort.prices[bank.currency] ? { currency: bank.currency, amount: cohort.prices[bank.currency]! } : null} />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </aside>
+      </div>
+    </>
+  );
+}

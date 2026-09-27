@@ -1,0 +1,135 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+
+  /* Tekskillup brand: purple #7134D9, cyan #31C4F0, deep navy #19112E, white */
+  --color-accent: #7134d9;
+  --color-accent-dark: #5a24b8;
+  --color-accent-soft: #f1eafc;
+  --color-accent-muted: #b495ee;
+  --color-accent-mid: #8e5ce6;
+  --color-ink: #19112e;
+  --color-body: #3d3650;
+  --color-muted: #5e576d;
+  --color-page: #f7f6fb;
+  --color-panel: #faf9fd;
+  --color-line: #e8e5ef;
+  --color-edge: #e2deeb;
+  --color-edge-strong: #d6d1e2;
+  --color-navy: #19112e;
+  --color-navy-soft: #2b2147;
+  --color-cyan: #31c4f0;
+  --color-cyan-soft: #e4f7fd;
+  --color-cyan-ink: #0a6d8c;
+  --color-cyan-light: #8fdff7;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+@keyframes portal-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes portal-orbit {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-14px, 10px, 0); }
+}
+
+@keyframes progress-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.portal-main {
+  background-image: radial-gradient(circle at 100% 0%, rgb(113 52 217 / 0.035), transparent 25rem);
+}
+
+.portal-main > * {
+  animation: portal-enter 420ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.portal-main > :nth-child(2) { animation-delay: 45ms; }
+.portal-main > :nth-child(3) { animation-delay: 80ms; }
+.portal-main > :nth-child(4) { animation-delay: 115ms; }
+.portal-main > :nth-child(n+5) { animation-delay: 145ms; }
+
+.portal-hero-orb { animation: portal-orbit 11s ease-in-out infinite; }
+.progress-fill { transform-origin: left; animation: progress-in 700ms cubic-bezier(.2,.8,.2,1) both; }
+.stat-tile:hover > span[aria-hidden="true"] { transform: translate(-3px, -3px) rotate(-4deg); }
+.stat-tile > span[aria-hidden="true"] { transition: transform 300ms ease; }
+
+.sidebar-group-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 220ms cubic-bezier(.2,.8,.2,1), opacity 160ms ease;
+}
+
+.sidebar-group-grid.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+::selection {
+  background: var(--color-cyan);
+  color: var(--color-navy);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .portal-main > *, .portal-hero-orb, .progress-fill {
+    animation: none;
+  }
+
+  .sidebar-group-grid { transition: none; }
+}
+
+@media print {
+  @page { size: A4 landscape; margin: 0; }
+  .certificate-toolbar { display: none !important; }
+  .certificate-page { min-height: 0; padding: 0; background: white; }
+  .certificate-sheet { width: 297mm; height: 210mm; max-width: none; border: 0; box-shadow: none; }
+}
+
+/* Native disclosure widgets used for FAQ and menus */
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.policy-copy a {
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.policy-copy ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.policy-copy li + li {
+  margin-top: 0.5rem;
+}

@@ -1,0 +1,241 @@
+/**
+ * Built-in email templates. Admins can override the subject and body of each one
+ * (Admin > Emails); the stored override lives in the email_templates table.
+ *
+ * Bodies are Markdown. {{variable}} inserts a value and [[Button label|{{url}}]]
+ * on its own line renders a button.
+ */
+export type TemplateDef = {
+  name: string;
+  description: string;
+  /** Variable -> sample value used for previews and test sends. */
+  variables: Record<string, string>;
+  subject: string;
+  body: string;
+};
+
+/** Available in every template. */
+export const COMMON_VARIABLES: Record<string, string> = {
+  name: "Ada",
+  siteName: "Tekskillup Academy",
+  siteUrl: "https://example.com",
+  supportEmail: "hello@example.com",
+};
+
+export const EMAIL_TEMPLATES = {
+  welcome: {
+    name: "Welcome",
+    description: "Sent when a student creates an account. Includes the email verification link.",
+    variables: { verifyUrl: "https://example.com/verify-email?token=sample" },
+    subject: "Welcome to {{siteName}}",
+    body: `Hi {{name}},
+
+Welcome to **{{siteName}}**. Your account is ready, so you can browse upcoming cohorts and enrol whenever you're ready.
+
+Please confirm your email address so we can send you class reminders and feedback:
+
+[[Confirm my email|{{verifyUrl}}]]
+
+See you in class,
+The {{siteName}} team`,
+  },
+  verify_email: {
+    name: "Confirm email",
+    description: "Sent when someone asks for a new verification link.",
+    variables: { verifyUrl: "https://example.com/verify-email?token=sample" },
+    subject: "Confirm your email address",
+    body: `Hi {{name}},
+
+Confirm your email address to keep receiving class reminders, assignment feedback and receipts.
+
+[[Confirm my email|{{verifyUrl}}]]
+
+This link expires in 3 days. If you didn't ask for it, you can ignore this email.`,
+  },
+  password_reset: {
+    name: "Password reset",
+    description: "Sent when someone uses \"Forgot password\".",
+    variables: { resetUrl: "https://example.com/reset-password?token=sample" },
+    subject: "Reset your {{siteName}} password",
+    body: `Hi {{name}},
+
+We received a request to reset your password. Choose a new one here:
+
+[[Reset password|{{resetUrl}}]]
+
+This link expires in 1 hour. If you didn't ask for a reset, you can safely ignore this email; your password won't change.`,
+  },
+  invite: {
+    name: "Account invitation",
+    description: "Sent when an admin adds an instructor, admin or student account.",
+    variables: { role: "instructor", inviteUrl: "https://example.com/reset-password?token=sample" },
+    subject: "You've been invited to {{siteName}}",
+    body: `Hi {{name}},
+
+You've been added to **{{siteName}}** as an **{{role}}**. Set your password to sign in:
+
+[[Set my password|{{inviteUrl}}]]
+
+This link expires in 7 days.`,
+  },
+  enrollment_confirmed: {
+    name: "Enrolment confirmed",
+    description: "Sent when a student's place on a cohort is confirmed (paid, free or added by an admin).",
+    variables: { courseTitle: "Data Analytics with Power BI", cohortName: "October 2026", startDate: "6 Oct 2026", deliveryMode: "Hybrid", dashboardUrl: "https://example.com/dashboard" },
+    subject: "You're in: {{courseTitle}} ({{cohortName}})",
+    body: `Hi {{name}},
+
+Your place on **{{courseTitle}}** ({{cohortName}}) is confirmed.
+
+- **Starts:** {{startDate}}
+- **Format:** {{deliveryMode}}
+
+Your timetable, joining links, venue details and assignments are all in your dashboard. We'll also email you a reminder the day before and an hour before each class.
+
+[[Go to my dashboard|{{dashboardUrl}}]]`,
+  },
+  payment_receipt: {
+    name: "Payment receipt",
+    description: "Sent after a successful payment.",
+    variables: { amount: "£499", reference: "TSU-8K2P-1Q4Z", description: "Data Analytics with Power BI – October 2026", paidAt: "26 Sep 2026", gateway: "Stripe", paymentsUrl: "https://example.com/dashboard/payments" },
+    subject: "Receipt for your payment of {{amount}}",
+    body: `Hi {{name}},
+
+Thanks for your payment. Here are the details for your records:
+
+| | |
+|---|---|
+| **Amount** | {{amount}} |
+| **For** | {{description}} |
+| **Reference** | {{reference}} |
+| **Date** | {{paidAt}} |
+| **Paid via** | {{gateway}} |
+
+[[View my payments|{{paymentsUrl}}]]`,
+  },
+  balance_reminder: {
+    name: "Outstanding balance reminder",
+    description: "Sent manually by an admin when a student has a remaining course balance.",
+    variables: { courseTitle: "Data Analytics with Power BI", cohortName: "October 2026", amount: "£349.30", paid: "£149.70", paymentsUrl: "https://example.com/dashboard/payments" },
+    subject: "Reminder: {{amount}} balance for {{courseTitle}}",
+    body: `Hi {{name}},
+
+This is a friendly reminder that **{{amount}}** remains to be paid for **{{courseTitle}}** ({{cohortName}}).
+
+You have already paid **{{paid}}**. You can securely pay the remaining balance from your dashboard:
+
+[[Pay my balance|{{paymentsUrl}}]]
+
+If you have already arranged payment with the academy, please ignore this message or contact us at {{supportEmail}}.`,
+  },
+  session_reminder: {
+    name: "Class reminder",
+    description: "Sent the day before and one hour before each class.",
+    variables: { sessionTitle: "Week 2: Data modelling", courseTitle: "Data Analytics with Power BI", when: "Tue 7 Oct, 18:00 – 20:00 BST", leadTime: "tomorrow", modeLabel: "Live online", location: "Join link: https://meet.google.com/abc-defg-hij", sessionUrl: "https://example.com/dashboard/cohorts/1" },
+    subject: "Reminder: {{sessionTitle}} is {{leadTime}}",
+    body: `Hi {{name}},
+
+A quick reminder that your class is **{{leadTime}}**.
+
+- **Class:** {{sessionTitle}} ({{courseTitle}})
+- **When:** {{when}}
+- **Format:** {{modeLabel}}
+- {{location}}
+
+[[View class details|{{sessionUrl}}]]`,
+  },
+  session_updated: {
+    name: "Class changed",
+    description: "Sent when a class is rescheduled, moved or cancelled.",
+    variables: { sessionTitle: "Week 2: Data modelling", courseTitle: "Data Analytics with Power BI", change: "The class has moved to Wed 8 Oct, 18:00 – 20:00 BST.", sessionUrl: "https://example.com/dashboard/cohorts/1" },
+    subject: "Update: {{sessionTitle}}",
+    body: `Hi {{name}},
+
+There's an update to **{{sessionTitle}}** ({{courseTitle}}):
+
+{{change}}
+
+[[View the timetable|{{sessionUrl}}]]`,
+  },
+  assignment_published: {
+    name: "New assignment",
+    description: "Sent to students when an instructor publishes an assignment.",
+    variables: { assignmentTitle: "Build a sales dashboard", courseTitle: "Data Analytics with Power BI", dueDate: "Sun 12 Oct, 23:59 BST", assignmentUrl: "https://example.com/dashboard/assignments/1" },
+    subject: "New assignment: {{assignmentTitle}}",
+    body: `Hi {{name}},
+
+A new assignment has been set for **{{courseTitle}}**.
+
+**{{assignmentTitle}}**
+Due: {{dueDate}}
+
+[[Open the assignment|{{assignmentUrl}}]]`,
+  },
+  assignment_due: {
+    name: "Assignment due soon",
+    description: "Sent about a day before the deadline to students who haven't submitted.",
+    variables: { assignmentTitle: "Build a sales dashboard", courseTitle: "Data Analytics with Power BI", dueDate: "Sun 12 Oct, 23:59 BST", assignmentUrl: "https://example.com/dashboard/assignments/1" },
+    subject: "Due soon: {{assignmentTitle}}",
+    body: `Hi {{name}},
+
+**{{assignmentTitle}}** for {{courseTitle}} is due **{{dueDate}}**, and we haven't received your submission yet.
+
+[[Submit my work|{{assignmentUrl}}]]
+
+If you're stuck, reply to your instructor in class or reach out at {{supportEmail}}.`,
+  },
+  submission_received: {
+    name: "Submission received (instructor)",
+    description: "Sent to the cohort's instructors when a student submits work.",
+    variables: { studentName: "Ada Obi", assignmentTitle: "Build a sales dashboard", courseTitle: "Data Analytics with Power BI", gradeUrl: "https://example.com/teach/submissions/1" },
+    subject: "{{studentName}} submitted {{assignmentTitle}}",
+    body: `Hi {{name}},
+
+**{{studentName}}** has submitted **{{assignmentTitle}}** ({{courseTitle}}).
+
+[[Review and give feedback|{{gradeUrl}}]]`,
+  },
+  feedback_posted: {
+    name: "Feedback ready",
+    description: "Sent to a student when their work is graded or returned for changes.",
+    variables: { assignmentTitle: "Build a sales dashboard", result: "You scored 86 / 100.", assignmentUrl: "https://example.com/dashboard/assignments/1" },
+    subject: "Feedback on {{assignmentTitle}}",
+    body: `Hi {{name}},
+
+Your instructor has reviewed **{{assignmentTitle}}**. {{result}}
+
+[[Read the feedback|{{assignmentUrl}}]]`,
+  },
+  announcement: {
+    name: "Cohort announcement",
+    description: "Sent to every student in a cohort when an instructor posts an announcement.",
+    variables: { title: "Bring your laptop on Saturday", message: "We'll be building dashboards together, so please install Power BI Desktop beforehand.", courseTitle: "Data Analytics with Power BI", cohortUrl: "https://example.com/dashboard/cohorts/1" },
+    subject: "{{courseTitle}}: {{title}}",
+    body: `Hi {{name}},
+
+**{{title}}**
+
+{{message}}
+
+[[Open my class|{{cohortUrl}}]]`,
+  },
+  certificate_issued: {
+    name: "Certificate issued",
+    description: "Sent when a student meets the completion requirements and receives a certificate.",
+    variables: { courseTitle: "Data Analytics with Power BI", certificateCode: "TSU-2026-A1B2C3", certificateUrl: "https://example.com/certificates/TSU-2026-A1B2C3" },
+    subject: "Your {{courseTitle}} certificate is ready",
+    body: `Hi {{name}},
+
+Congratulations — you have completed **{{courseTitle}}** and your verified certificate is ready.
+
+Certificate ID: **{{certificateCode}}**
+
+[[View and download my certificate|{{certificateUrl}}]]`,
+  },
+} satisfies Record<string, TemplateDef>;
+
+export type TemplateKey = keyof typeof EMAIL_TEMPLATES;
+
+export function isTemplateKey(key: string): key is TemplateKey {
+  return Object.hasOwn(EMAIL_TEMPLATES, key);
+}

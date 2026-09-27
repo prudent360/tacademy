@@ -1,0 +1,311 @@
+import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+
+export const ROLES = ["admin", "instructor", "student"] as const;
+export type Role = (typeof ROLES)[number];
+
+export const DELIVERY_MODES = ["virtual", "physical", "hybrid"] as const;
+export type DeliveryMode = (typeof DELIVERY_MODES)[number];
+export const SESSION_MODES = ["virtual", "physical"] as const;
+export type SessionMode = (typeof SESSION_MODES)[number];
+
+export const ENROLLMENT_STATUSES = ["pending", "active", "completed", "cancelled"] as const;
+export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
+
+export const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export type Gateway = "stripe" | "paystack" | "manual" | "test";
+
+export const ATTENDANCE_STATUSES = ["present", "late", "absent", "excused"] as const;
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
+
+export const SUBMISSION_STATUSES = ["submitted", "graded", "resubmit"] as const;
+export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number];
+
+/** Amounts in minor units (pence, kobo) keyed by ISO currency code. */
+export type PriceMap = Partial<Record<string, number>>;
+
+const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash"),
+  role: text("role").$type<Role>().notNull().default("student"),
+  phone: text("phone").notNull().default(""),
+  bio: text("bio").notNull().default(""),
+  avatarUrl: text("avatar_url"),
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  emailReminders: boolean("email_reminders").notNull().default(true),
+  /** Bumped to sign the user out everywhere (password reset, deactivation). */
+  sessionVersion: integer("session_version").notNull().default(1),
+  active: boolean("active").notNull().default(true),
+  createdAt: createdAt(),
+});
+
+/** One-time links for email verification, password resets and invitations. Only the hash is stored. */
+export const authTokens = pgTable("auth_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  purpose: text("purpose").$type<"verify" | "reset" | "invite">().notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+export const loginAttempts = pgTable("login_attempts", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull(),
+  createdAt: createdAt(),
+}, (t) => [index("login_attempts_key_idx").on(t.key, t.createdAt)]);
+
+export type Stat = { value: string; label: string };
+
+/** Secrets are stored encrypted (lib/secrets.ts); empty string means "not set, use the environment variable". */
+export type GatewaySettings = {
+  enabled: boolean;
+  mode: "test" | "live";
+  testPublicKey: string;
+  testSecretKey: string;
+  livePublicKey: string;
+  liveSecretKey: string;
+  testWebhookSecret?: string;
+  liveWebhookSecret?: string;
+};
+export type BankTransferSettings = { enabled: boolean; accountName: string; bankName: string; accountNumber: string; sortCode: string; currency: string; instructions: string };
+export type PaymentSettings = { stripe: GatewaySettings; paystack: GatewaySettings; bank: BankTransferSettings };
+export type EmailSettings = { apiKey: string; fromName: string; fromAddress: string; replyTo: string };
+export type ReminderSettings = { dayBefore: boolean; hourBefore: boolean; hourLeadMinutes: number; assignmentDue: boolean; assignmentLeadHours: number };
+export type Faq = { question: string; answer: string };
+export type Testimonial = { quote: string; name: string; role: string };
+export type CourseModule = { title: string; summary: string };
+
+export const settings = pgTable("settings", {
+  id: integer("id").primaryKey().default(1),
+  siteName: text("site_name").notNull().default("Academy"),
+  tagline: text("tagline").notNull().default(""),
+  heroEyebrow: text("hero_eyebrow").notNull().default(""),
+  heroTitle: text("hero_title").notNull().default(""),
+  heroSubtitle: text("hero_subtitle").notNull().default(""),
+  logoUrl: text("logo_url"),
+  supportEmail: text("support_email").notNull().default(""),
+  phone: text("phone").notNull().default(""),
+  address: text("address").notNull().default(""),
+  timezone: text("timezone").notNull().default("Europe/London"),
+  currencies: jsonb("currencies").$type<string[]>().notNull().default(["GBP"]),
+  stats: jsonb("stats").$type<Stat[]>().notNull().default([]),
+  faqs: jsonb("faqs").$type<Faq[]>().notNull().default([]),
+  testimonials: jsonb("testimonials").$type<Testimonial[]>().notNull().default([]),
+  payment: jsonb("payment").$type<Partial<PaymentSettings>>().notNull().default({}),
+  email: jsonb("email").$type<Partial<EmailSettings>>().notNull().default({}),
+  reminders: jsonb("reminders").$type<Partial<ReminderSettings>>().notNull().default({}),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const courses = pgTable("courses", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  description: text("description").notNull().default(""),
+  category: text("category").notNull().default(""),
+  level: text("level").notNull().default("Beginner"),
+  durationWeeks: integer("duration_weeks"),
+  outcomes: jsonb("outcomes").$type<string[]>().notNull().default([]),
+  curriculum: jsonb("curriculum").$type<CourseModule[]>().notNull().default([]),
+  portfolioProjects: jsonb("portfolio_projects").$type<string[]>().notNull().default([]),
+  jobRoles: jsonb("job_roles").$type<string[]>().notNull().default([]),
+  certificateEnabled: boolean("certificate_enabled").notNull().default(true),
+  certificateMinAttendance: integer("certificate_min_attendance").notNull().default(70),
+  certificateMinAssignments: integer("certificate_min_assignments").notNull().default(80),
+  certificateMinScore: integer("certificate_min_score").notNull().default(50),
+  imageUrl: text("image_url"),
+  published: boolean("published").notNull().default(false),
+  featured: boolean("featured").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const cohorts = pgTable("cohorts", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  /** YYYY-MM-DD */
+  startDate: text("start_date"),
+  endDate: text("end_date"),
+  deliveryMode: text("delivery_mode").$type<DeliveryMode>().notNull().default("virtual"),
+  /** Default venue for in-person sessions. */
+  venue: text("venue").notNull().default(""),
+  schedule: text("schedule").notNull().default(""),
+  capacity: integer("capacity"),
+  prices: jsonb("prices").$type<PriceMap>().notNull().default({}),
+  depositPercent: integer("deposit_percent"),
+  enrollmentOpen: boolean("enrollment_open").notNull().default(true),
+  createdAt: createdAt(),
+}, (t) => [index("cohorts_course_idx").on(t.courseId)]);
+
+export const cohortInstructors = pgTable("cohort_instructors", {
+  cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+}, (t) => [primaryKey({ columns: [t.cohortId, t.userId] })]);
+
+export const classSessions = pgTable("class_sessions", {
+  id: serial("id").primaryKey(),
+  cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  mode: text("mode").$type<SessionMode>().notNull().default("virtual"),
+  meetingUrl: text("meeting_url"),
+  venue: text("venue").notNull().default(""),
+  recordingUrl: text("recording_url"),
+  cancelled: boolean("cancelled").notNull().default(false),
+  reminderDaySentAt: timestamp("reminder_day_sent_at", { withTimezone: true }),
+  reminderHourSentAt: timestamp("reminder_hour_sent_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("class_sessions_cohort_idx").on(t.cohortId, t.startsAt)]);
+
+export const enrollments = pgTable("enrollments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
+  status: text("status").$type<EnrollmentStatus>().notNull().default("pending"),
+  source: text("source").$type<"payment" | "free" | "manual">().notNull().default("payment"),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("enrollments_user_cohort_idx").on(t.userId, t.cohortId), index("enrollments_cohort_idx").on(t.cohortId)]);
+
+/** Verifiable completion credentials. One certificate can be issued per enrolment. */
+export const certificates = pgTable("certificates", {
+  id: serial("id").primaryKey(),
+  enrollmentId: integer("enrollment_id").notNull().references(() => enrollments.id, { onDelete: "cascade" }).unique(),
+  code: text("code").notNull().unique(),
+  issuedById: integer("issued_by_id").references(() => users.id, { onDelete: "set null" }),
+  issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});
+
+export const discountCodes = pgTable("discount_codes", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  percentOff: integer("percent_off").notNull(),
+  active: boolean("active").notNull().default(true),
+  maxUses: integer("max_uses"),
+  usedCount: integer("used_count").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+export type Certificate = typeof certificates.$inferSelect;
+
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  /** Our own reference, sent to the gateway and used to reconcile. */
+  reference: text("reference").notNull().unique(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  cohortId: integer("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  gateway: text("gateway").$type<Gateway>().notNull(),
+  providerId: text("provider_id"),
+  amount: integer("amount").notNull(),
+  currency: text("currency").notNull(),
+  status: text("status").$type<PaymentStatus>().notNull().default("pending"),
+  description: text("description").notNull().default(""),
+  originalAmount: integer("original_amount"),
+  paymentPlan: text("payment_plan").$type<"full" | "deposit" | "balance">().notNull().default("full"),
+  discountCodeId: integer("discount_code_id").references(() => discountCodes.id, { onDelete: "set null" }),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("payments_user_idx").on(t.userId)]);
+
+export const attendance = pgTable("attendance", {
+  sessionId: integer("session_id").notNull().references(() => classSessions.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").$type<AttendanceStatus>().notNull(),
+  markedAt: timestamp("marked_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.sessionId, t.userId] })]);
+
+export const assignments = pgTable("assignments", {
+  id: serial("id").primaryKey(),
+  cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  instructions: text("instructions").notNull().default(""),
+  attachmentUrl: text("attachment_url"),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  maxScore: integer("max_score").notNull().default(100),
+  published: boolean("published").notNull().default(true),
+  reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+  createdById: integer("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+}, (t) => [index("assignments_cohort_idx").on(t.cohortId)]);
+
+export const submissions = pgTable("submissions", {
+  id: serial("id").primaryKey(),
+  assignmentId: integer("assignment_id").notNull().references(() => assignments.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull().default(""),
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  linkUrl: text("link_url"),
+  status: text("status").$type<SubmissionStatus>().notNull().default("submitted"),
+  score: integer("score"),
+  feedback: text("feedback").notNull().default(""),
+  gradedById: integer("graded_by_id").references(() => users.id, { onDelete: "set null" }),
+  gradedAt: timestamp("graded_at", { withTimezone: true }),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("submissions_assignment_user_idx").on(t.assignmentId, t.userId)]);
+
+export const announcements = pgTable("announcements", {
+  id: serial("id").primaryKey(),
+  cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
+  authorId: integer("author_id").references(() => users.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  createdAt: createdAt(),
+}, (t) => [index("announcements_cohort_idx").on(t.cohortId)]);
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  href: text("href"),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("notifications_user_idx").on(t.userId, t.createdAt)]);
+
+/** Admin overrides of the built-in email templates in lib/email-templates.ts. */
+export const emailTemplates = pgTable("email_templates", {
+  key: text("key").primaryKey(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const emailLog = pgTable("email_log", {
+  id: serial("id").primaryKey(),
+  to: text("to").notNull(),
+  template: text("template").notNull(),
+  subject: text("subject").notNull(),
+  html: text("html").notNull().default(""),
+  status: text("status").$type<"sent" | "failed" | "logged" | "skipped">().notNull(),
+  error: text("error"),
+  providerId: text("provider_id"),
+  createdAt: createdAt(),
+}, (t) => [index("email_log_created_idx").on(t.createdAt)]);
+
+export type User = typeof users.$inferSelect;
+export type Settings = typeof settings.$inferSelect;
+export type Course = typeof courses.$inferSelect;
+export type Cohort = typeof cohorts.$inferSelect;
+export type ClassSession = typeof classSessions.$inferSelect;
+export type Enrollment = typeof enrollments.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
+export type Assignment = typeof assignments.$inferSelect;
+export type Submission = typeof submissions.$inferSelect;
+export type Announcement = typeof announcements.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;

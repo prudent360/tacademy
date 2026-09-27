@@ -1,0 +1,285 @@
+import "server-only";
+import { randomBytes } from "node:crypto";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import Stripe from "stripe";
+import { getDb } from "@/db";
+import { discountCodes, enrollments, payments, users, type Cohort, type Course, type Payment, type User } from "@/db/schema";
+import { getAdmins, getCohortWithCourse, getSettings } from "./data";
+import { sendEmails } from "./email";
+import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
+import { CURRENCY_CODES, formatMoney, gatewayFor } from "./money";
+import { notify } from "./notify";
+import { absoluteUrl } from "./site";
+import { formatDateOnly } from "./time";
+import { firstName, MODE_LABEL } from "./utils";
+
+/** True when the gateway is switched on in Settings and has a secret key. */
+export async function gatewayConfigured(gateway: Gateway): Promise<boolean> {
+  const cfg = await gatewayConfig(gateway);
+  return cfg.enabled && Boolean(cfg.secretKey);
+}
+
+/** Local development can complete purchases on a simulated checkout page when a gateway has no keys. */
+export function testPaymentsAllowed(): boolean {
+  return process.env.NODE_ENV !== "production" && !process.env.VERCEL;
+}
+
+/** Currencies students can pay in right now (gateway enabled, and keys set or test mode available). */
+export async function payableCurrencies(): Promise<string[]> {
+  const [stripeCfg, paystackCfg] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack")]);
+  const ok = (cfg: typeof stripeCfg) => cfg.enabled && (Boolean(cfg.secretKey) || testPaymentsAllowed());
+  return CURRENCY_CODES.filter((code) => ok(gatewayFor(code) === "stripe" ? stripeCfg : paystackCfg));
+}
+
+const stripeClients = new Map<string, Stripe>();
+function stripe(secretKey: string): Stripe {
+  if (!stripeClients.has(secretKey)) stripeClients.set(secretKey, new Stripe(secretKey));
+  return stripeClients.get(secretKey)!;
+}
+
+async function paystack<T>(secretKey: string, path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`https://api.paystack.co${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/json", ...init?.headers },
+    cache: "no-store",
+  });
+  const data = (await response.json()) as { status: boolean; message: string; data: T };
+  if (!response.ok || !data.status) throw new Error(`Paystack: ${data.message ?? response.status}`);
+  return data.data;
+}
+
+function newReference(): string {
+  return `TSU-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+export function describePurchase(course: Course, cohort: Cohort): string {
+  return `${course.title} – ${cohort.name}`;
+}
+
+async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, currency: string, details: {
+  amount: number;
+  originalAmount: number;
+  paymentPlan: "full" | "deposit" | "balance";
+  discountCodeId?: number | null;
+  description: string;
+}): Promise<{ url: string } | { error: string }> {
+  const { amount, originalAmount, paymentPlan, discountCodeId, description } = details;
+  const gateway = gatewayFor(currency);
+  const cfg = await gatewayConfig(gateway);
+  if (!cfg.enabled) return { error: `Payments in ${currency} are currently switched off. Please choose another option.` };
+  const configured = Boolean(cfg.secretKey);
+  if (!configured && !testPaymentsAllowed()) return { error: `Online payments in ${currency} aren't set up yet. Please contact us to enrol.` };
+
+  const reference = newReference();
+  const db = await getDb();
+  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: configured ? gateway : "test", amount, currency, description, originalAmount, paymentPlan, discountCodeId });
+  const returnUrl = absoluteUrl(`/checkout/return?ref=${reference}`);
+  if (!configured) return { url: `/checkout/test?ref=${reference}` };
+
+  try {
+    if (gateway === "stripe") {
+      const session = await stripe(cfg.secretKey).checkout.sessions.create({
+        mode: "payment",
+        customer_email: user.email,
+        client_reference_id: reference,
+        metadata: { reference },
+        payment_intent_data: { metadata: { reference }, description },
+        line_items: [{ quantity: 1, price_data: { currency: currency.toLowerCase(), unit_amount: amount, product_data: { name: description } } }],
+        success_url: returnUrl,
+        cancel_url: absoluteUrl(`/courses/${course.slug}?cancelled=1`),
+      });
+      await db.update(payments).set({ providerId: session.id }).where(eq(payments.reference, reference));
+      return { url: session.url! };
+    }
+
+    const data = await paystack<{ authorization_url: string; reference: string }>(cfg.secretKey, "/transaction/initialize", {
+      method: "POST",
+      body: JSON.stringify({ email: user.email, amount, currency, reference, callback_url: returnUrl, metadata: { reference, cohortId: cohort.id, userId: user.id } }),
+    });
+    await db.update(payments).set({ providerId: data.reference }).where(eq(payments.reference, reference));
+    return { url: data.authorization_url };
+  } catch (error) {
+    console.error("Checkout failed", error);
+    await db.update(payments).set({ status: "failed" }).where(eq(payments.reference, reference));
+    return { error: "We couldn't start the payment. Please try again in a moment." };
+  }
+}
+
+/**
+ * Creates a pending payment and returns the URL to send the student to:
+ * Stripe Checkout, Paystack's payment page, or the local test checkout.
+ */
+export async function startCheckout(user: User, course: Course, cohort: Cohort, currency: string, options: { plan?: "full" | "deposit"; discountCode?: string } = {}): Promise<{ url: string } | { error: string }> {
+  const originalAmount = cohort.prices[currency];
+  if (!originalAmount || originalAmount <= 0) return { error: "This cohort isn't sold in that currency." };
+  const db = await getDb();
+  const requestedCode = options.discountCode?.trim().toUpperCase();
+  const [discount] = requestedCode ? await db.select().from(discountCodes).where(and(eq(discountCodes.code, requestedCode), eq(discountCodes.active, true), or(isNull(discountCodes.expiresAt), sql`${discountCodes.expiresAt} > now()`))) : [];
+  if (requestedCode && (!discount || (discount.maxUses !== null && discount.usedCount >= discount.maxUses))) return { error: "That discount code is invalid or has expired." };
+  const discounted = discount ? Math.round(originalAmount * (100 - discount.percentOff) / 100) : originalAmount;
+  const paymentPlan = options.plan === "deposit" && cohort.depositPercent ? "deposit" : "full";
+  const amount = paymentPlan === "deposit" ? Math.max(1, Math.round(discounted * cohort.depositPercent! / 100)) : discounted;
+  const description = `${describePurchase(course, cohort)}${paymentPlan === "deposit" ? ` (${cohort.depositPercent}% deposit)` : ""}${discount ? ` · ${discount.code}` : ""}`;
+  return beginOnlinePayment(user, course, cohort, currency, { amount, originalAmount, paymentPlan, discountCodeId: discount?.id, description });
+}
+
+export type PaymentBalance = { total: number; paid: number; remaining: number; currency: string };
+
+/** Calculates the agreed course total and outstanding amount after a deposit or part-payment. */
+export async function paymentBalanceFor(userId: number, cohort: Cohort, currency: string): Promise<PaymentBalance> {
+  const db = await getDb();
+  const paidRows = await db.select().from(payments).where(and(eq(payments.userId, userId), eq(payments.cohortId, cohort.id), eq(payments.currency, currency), eq(payments.status, "paid")));
+  const deposit = paidRows.find((payment) => payment.paymentPlan === "deposit");
+  let total = deposit?.originalAmount ?? cohort.prices[currency] ?? 0;
+  if (deposit?.discountCodeId) {
+    const [discount] = await db.select().from(discountCodes).where(eq(discountCodes.id, deposit.discountCodeId));
+    if (discount) total = Math.round(total * (100 - discount.percentOff) / 100);
+  }
+  const paid = paidRows.reduce((sum, payment) => sum + payment.amount, 0);
+  return { total, paid, remaining: Math.max(0, total - paid), currency };
+}
+
+/** Starts checkout for the exact unpaid amount, preserving any discount used on the deposit. */
+export async function startBalanceCheckout(user: User, course: Course, cohort: Cohort, currency: string): Promise<{ url: string } | { error: string }> {
+  const balance = await paymentBalanceFor(user.id, cohort, currency);
+  if (!balance.total) return { error: "This cohort isn't sold in that currency." };
+  if (!balance.paid) return { error: "No deposit or previous payment was found for this cohort." };
+  if (!balance.remaining) return { error: "This cohort has already been paid in full." };
+  const db = await getDb();
+  await db.update(payments).set({ status: "failed" }).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.currency, currency), eq(payments.paymentPlan, "balance"), eq(payments.status, "pending")));
+  return beginOnlinePayment(user, course, cohort, currency, {
+    amount: balance.remaining,
+    originalAmount: balance.total,
+    paymentPlan: "balance",
+    description: `${describePurchase(course, cohort)} (remaining balance)`,
+  });
+}
+
+/**
+ * Creates a pending bank-transfer payment. The student sees the account details and a reference;
+ * an admin confirms it under Payments once the money arrives.
+ */
+export async function startBankTransfer(user: User, course: Course, cohort: Cohort): Promise<{ url: string } | { error: string }> {
+  const bank = await bankTransferConfig();
+  if (!bank.enabled) return { error: "Bank transfer isn't available." };
+  const amount = cohort.prices[bank.currency];
+  if (!amount) return { error: `This cohort has no ${bank.currency} price for bank transfer.` };
+  const db = await getDb();
+  // Reuse an open transfer for the same cohort rather than creating duplicates.
+  const [open] = await db.select().from(payments).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.gateway, "manual"), eq(payments.status, "pending")));
+  if (open) return { url: `/checkout/transfer?ref=${open.reference}` };
+  const reference = newReference();
+  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: "manual", amount, currency: bank.currency, description: describePurchase(course, cohort) });
+  await notify((await getAdmins()).map((a) => a.id), {
+    kind: "payment",
+    title: `Bank transfer expected: ${formatMoney(amount, bank.currency)}`,
+    body: `${user.name} chose bank transfer for ${describePurchase(course, cohort)} (ref ${reference}).`,
+    href: "/admin/payments?status=pending",
+  });
+  return { url: `/checkout/transfer?ref=${reference}` };
+}
+
+/** Asks the gateway whether a payment succeeded and fulfils it if so. Returns the latest payment row. */
+export async function verifyPayment(reference: string): Promise<Payment | null> {
+  const db = await getDb();
+  const [payment] = await db.select().from(payments).where(eq(payments.reference, reference));
+  if (!payment || payment.status === "paid") return payment ?? null;
+
+  try {
+    const cfg = payment.gateway === "stripe" || payment.gateway === "paystack" ? await gatewayConfig(payment.gateway) : null;
+    if (payment.gateway === "stripe" && payment.providerId && cfg?.secretKey) {
+      const session = await stripe(cfg.secretKey).checkout.sessions.retrieve(payment.providerId);
+      if (session.payment_status === "paid" && session.amount_total === payment.amount && session.currency?.toUpperCase() === payment.currency) {
+        await fulfilPayment(reference);
+      }
+    } else if (payment.gateway === "paystack" && cfg?.secretKey) {
+      const data = await paystack<{ status: string; amount: number; currency: string }>(cfg.secretKey, `/transaction/verify/${encodeURIComponent(reference)}`);
+      if (data.status === "success" && data.amount === payment.amount && data.currency === payment.currency) {
+        await fulfilPayment(reference);
+      } else if (data.status === "failed" || data.status === "abandoned") {
+        await db.update(payments).set({ status: "failed" }).where(and(eq(payments.reference, reference), eq(payments.status, "pending")));
+      }
+    }
+  } catch (error) {
+    console.error("Payment verification failed", reference, error);
+  }
+  const [latest] = await db.select().from(payments).where(eq(payments.reference, reference));
+  return latest ?? null;
+}
+
+/** Gives the student their place on the cohort, notifies them and emails confirmation. */
+export async function activateEnrollment(userId: number, cohortId: number, source: "payment" | "free" | "manual"): Promise<boolean> {
+  const db = await getDb();
+  const [existing] = await db.select().from(enrollments).where(and(eq(enrollments.userId, userId), eq(enrollments.cohortId, cohortId)));
+  if (existing && ["active", "completed"].includes(existing.status)) return false;
+  if (existing) {
+    await db.update(enrollments).set({ status: "active", source, activatedAt: new Date() }).where(eq(enrollments.id, existing.id));
+  } else {
+    await db.insert(enrollments).values({ userId, cohortId, status: "active", source, activatedAt: new Date() });
+  }
+
+  const found = await getCohortWithCourse(cohortId);
+  if (!found) return true;
+  const { cohort, course } = found;
+  await notify([userId], {
+    kind: "enrollment",
+    title: `You're enrolled on ${course.title}`,
+    body: `${cohort.name}${cohort.startDate ? `, starting ${formatDateOnly(cohort.startDate)}` : ""}.`,
+    href: `/dashboard/cohorts/${cohortId}`,
+    email: {
+      template: "enrollment_confirmed",
+      vars: {
+        courseTitle: course.title,
+        cohortName: cohort.name,
+        startDate: formatDateOnly(cohort.startDate) || "To be confirmed",
+        deliveryMode: MODE_LABEL[cohort.deliveryMode],
+        dashboardUrl: absoluteUrl(`/dashboard/cohorts/${cohortId}`),
+      },
+    },
+  });
+  return true;
+}
+
+/**
+ * Marks a payment paid exactly once (webhooks and the return page can race) and enrols the student.
+ * Safe to call repeatedly.
+ */
+export async function fulfilPayment(reference: string): Promise<void> {
+  const db = await getDb();
+  const [payment] = await db
+    .update(payments)
+    .set({ status: "paid", paidAt: new Date() })
+    .where(and(eq(payments.reference, reference), inArray(payments.status, ["pending", "failed"])))
+    .returning();
+  if (!payment) return;
+
+  if (payment.discountCodeId) await db.update(discountCodes).set({ usedCount: sql`${discountCodes.usedCount} + 1` }).where(eq(discountCodes.id, payment.discountCodeId));
+
+  const [user] = await db.select().from(users).where(eq(users.id, payment.userId));
+  if (!user) return;
+  const settings = await getSettings();
+  const amount = formatMoney(payment.amount, payment.currency);
+
+  await sendEmails([{
+    to: user.email,
+    template: "payment_receipt",
+    vars: {
+      name: firstName(user.name),
+      amount,
+      reference: payment.reference,
+      description: payment.description,
+      paidAt: new Intl.DateTimeFormat("en-GB", { timeZone: settings.timezone, day: "numeric", month: "short", year: "numeric" }).format(payment.paidAt ?? new Date()),
+      gateway: { stripe: "Card (Stripe)", paystack: "Paystack", manual: "Recorded by the academy", test: "Test payment" }[payment.gateway],
+      paymentsUrl: absoluteUrl("/dashboard/payments"),
+    },
+  }]);
+
+  if (payment.cohortId) await activateEnrollment(payment.userId, payment.cohortId, "payment");
+
+  await notify((await getAdmins()).map((a) => a.id), {
+    kind: "payment",
+    title: `Payment received: ${amount}`,
+    body: `${user.name} paid for ${payment.description}.`,
+    href: "/admin/payments",
+  });
+}

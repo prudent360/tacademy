@@ -1,0 +1,43 @@
+import { ActionForm, Checkbox, FileField, Input, Select, SubmitButton, Textarea } from "@/components/forms";
+import type { Course } from "@/db/schema";
+import type { FormState } from "@/lib/validation";
+
+export function CourseForm({ action, course }: { action: (state: FormState, formData: FormData) => Promise<FormState>; course?: Course }) {
+  return (
+    <ActionForm action={action}>
+      <div className="grid gap-5 md:grid-cols-2">
+        <Input label="Title" name="title" defaultValue={course?.title} required />
+        <Input label="Web address" name="slug" defaultValue={course?.slug} hint="Leave empty to generate from the title." />
+      </div>
+      <Textarea label="Summary" name="summary" defaultValue={course?.summary} rows={2} required hint="One or two sentences for course cards and search results." />
+      <Textarea label="Full description" name="description" defaultValue={course?.description} rows={10} hint="Markdown: ## headings, - lists, **bold**, links. Shown on the course page." />
+      <Textarea label="Learning outcomes" name="outcomes" defaultValue={course?.outcomes.join("\n")} rows={5} hint="One per line." />
+      <Textarea label="Curriculum" name="curriculum" defaultValue={course?.curriculum.map((module) => `${module.title}${module.summary ? ` | ${module.summary}` : ""}`).join("\n")} rows={7} hint="One module per line: Module title | short description" />
+      <div className="grid gap-5 md:grid-cols-2">
+        <Textarea label="Portfolio projects" name="portfolioProjects" defaultValue={course?.portfolioProjects.join("\n")} rows={4} hint="One practical project per line." />
+        <Textarea label="Relevant job roles" name="jobRoles" defaultValue={course?.jobRoles.join("\n")} rows={4} hint="One role per line." />
+      </div>
+      <div className="grid gap-5 md:grid-cols-4">
+        <Input label="Category" name="category" defaultValue={course?.category} placeholder="Data" />
+        <Select label="Level" name="level" defaultValue={course?.level ?? "Beginner"} options={["Beginner", "Intermediate", "Advanced", "All levels"].map((v) => ({ value: v, label: v }))} />
+        <Input label="Duration (weeks)" name="durationWeeks" type="number" min={1} max={200} defaultValue={course?.durationWeeks ?? ""} />
+        <Input label="Sort order" name="sortOrder" type="number" defaultValue={course?.sortOrder ?? 0} hint="Lower shows first." />
+      </div>
+      <FileField label="Cover image" name="image" current={course?.imageUrl} removeName="removeImage" hint="16:9 works best. Without one, generated artwork is used." />
+      <fieldset className="flex flex-col gap-4 rounded-[5px] border border-edge bg-panel p-4">
+        <legend className="px-1 text-sm font-semibold text-ink">Certificate requirements</legend>
+        <Checkbox label="Issue a certificate on completion" name="certificateEnabled" defaultChecked={course?.certificateEnabled ?? true} />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Input label="Minimum attendance %" name="certificateMinAttendance" type="number" min={0} max={100} defaultValue={course?.certificateMinAttendance ?? 70} />
+          <Input label="Assignments completed %" name="certificateMinAssignments" type="number" min={0} max={100} defaultValue={course?.certificateMinAssignments ?? 80} />
+          <Input label="Minimum average score %" name="certificateMinScore" type="number" min={0} max={100} defaultValue={course?.certificateMinScore ?? 50} />
+        </div>
+      </fieldset>
+      <div className="flex flex-col gap-3">
+        <Checkbox label="Published" name="published" defaultChecked={course?.published ?? false} hint="Visible on the website and open for enrolment." />
+        <Checkbox label="Featured on the home page" name="featured" defaultChecked={course?.featured ?? false} />
+      </div>
+      <SubmitButton>{course ? "Save course" : "Create course"}</SubmitButton>
+    </ActionForm>
+  );
+}
