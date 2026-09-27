@@ -121,12 +121,26 @@ export const courses = pgTable("courses", {
   certificateMinAssignments: integer("certificate_min_assignments").notNull().default(80),
   certificateMinScore: integer("certificate_min_score").notNull().default(50),
   imageUrl: text("image_url"),
+  /** Downloadable curriculum, given out in exchange for contact details. */
+  curriculumUrl: text("curriculum_url"),
   published: boolean("published").notNull().default(false),
   featured: boolean("featured").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: createdAt(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Leads from the "View curriculum" form on course pages. */
+export const curriculumRequests = pgTable("curriculum_requests", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id").references(() => courses.id, { onDelete: "set null" }),
+  /** Kept so the lead still makes sense if the course is deleted. */
+  courseTitle: text("course_title").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  createdAt: createdAt(),
+}, (t) => [index("curriculum_requests_created_idx").on(t.createdAt)]);
 
 export const cohorts = pgTable("cohorts", {
   id: serial("id").primaryKey(),
@@ -309,3 +323,4 @@ export type Assignment = typeof assignments.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type CurriculumRequest = typeof curriculumRequests.$inferSelect;

@@ -232,6 +232,21 @@ Certificate ID: **{{certificateCode}}**
 
 [[View and download my certificate|{{certificateUrl}}]]`,
   },
+  curriculum_request: {
+    name: "Curriculum download",
+    description: "Sent when a visitor requests a course curriculum from the course page.",
+    variables: { courseTitle: "Data Analytics with Power BI", curriculumUrl: "https://example.com/uploads/courses/curriculum.pdf", courseUrl: "https://example.com/courses/data-analytics" },
+    subject: "Your {{courseTitle}} curriculum",
+    body: `Hi {{name}},
+
+Thanks for your interest in **{{courseTitle}}**. Here's the full curriculum:
+
+[[Download the curriculum|{{curriculumUrl}}]]
+
+When you're ready, you can see upcoming dates and fees on the course page: {{courseUrl}}
+
+Any questions? Just reply to this email.`,
+  },
 } satisfies Record<string, TemplateDef>;
 
 export type TemplateKey = keyof typeof EMAIL_TEMPLATES;

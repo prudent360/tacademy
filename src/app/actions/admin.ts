@@ -63,6 +63,14 @@ async function saveCourse(id: number | null, formData: FormData): Promise<FormSt
   const [existing] = id ? await db.select().from(courses).where(eq(courses.id, id)) : [];
   const image = await imageField(formData, "image", "removeImage", existing?.imageUrl ?? null, "courses");
   if ("error" in image) return image;
+  let curriculumUrl: string | null;
+  try {
+    curriculumUrl = await resolveFileField(formData, { file: "curriculumFile", remove: "removeCurriculum", current: existing?.curriculumUrl ?? null, folder: "courses", kind: "document" });
+  } catch (error) {
+    const message = uploadErrorMessage(error);
+    if (message) return { error: message };
+    throw error;
+  }
 
   const values = {
     ...parsed.data,
@@ -76,12 +84,14 @@ async function saveCourse(id: number | null, formData: FormData): Promise<FormSt
     published: formData.get("published") === "on",
     featured: formData.get("featured") === "on",
     imageUrl: image.url,
+    curriculumUrl,
     updatedAt: new Date(),
   };
   revalidatePath("/", "layout");
   if (id) {
     await db.update(courses).set(values).where(eq(courses.id, id));
     await deleteIfReplaced(existing?.imageUrl, image.url);
+    await deleteIfReplaced(existing?.curriculumUrl, curriculumUrl);
     return id;
   }
   const [row] = await db.insert(courses).values(values).returning({ id: courses.id });
@@ -101,8 +111,8 @@ export async function updateCourse(id: number, _state: FormState, formData: Form
 
 export async function deleteCourse(id: number): Promise<void> {
   await requireRole("admin");
-  const [removed] = await (await getDb()).delete(courses).where(eq(courses.id, id)).returning({ imageUrl: courses.imageUrl });
-  await deleteUpload(removed?.imageUrl);
+  const [removed] = await (await getDb()).delete(courses).where(eq(courses.id, id)).returning({ imageUrl: courses.imageUrl, curriculumUrl: courses.curriculumUrl });
+  await Promise.all([deleteUpload(removed?.imageUrl), deleteUpload(removed?.curriculumUrl)]);
   revalidatePath("/", "layout");
   redirect("/admin/courses");
 }

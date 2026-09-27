@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ClockIcon, LayersIcon, MonitorIcon, PinIcon, UsersIcon } from "@/components/icons";
+import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ChevronRight, ClockIcon, LayersIcon, MonitorIcon, PinIcon, UsersIcon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
 import { CourseArt } from "@/components/site/course-art";
+import { CurriculumRequest } from "@/components/site/curriculum-request";
 import { EnrollForm } from "@/components/site/enroll-form";
 import { FreeEnroll } from "@/components/site/free-enroll";
 import { Avatar, Badge, ModeBadge, Notice } from "@/components/ui";
@@ -15,6 +16,9 @@ import { payableCurrencies } from "@/lib/payments";
 import { formatMoney } from "@/lib/money";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { formatDateOnly } from "@/lib/time";
+
+/** Default country code for the curriculum form's phone field, from the academy's main currency. */
+const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA" };
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ cancelled?: string }> };
 
@@ -40,6 +44,8 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const preferredPrices = preferredCurrency ? cohorts.map((cohort) => cohort.prices[preferredCurrency] ?? 0).filter((price) => price > 0) : [];
   const startingPrice = preferredCurrency && preferredPrices.length ? formatMoney(Math.min(...preferredPrices), preferredCurrency) : cohorts.some(isFree) ? "Free" : null;
   const deliveryModes = [...new Set(cohorts.map((cohort) => cohort.deliveryMode))].map((mode) => mode === "virtual" ? "Online" : mode === "physical" ? "In person" : "Hybrid").join(" or ");
+  const phoneCountry = PHONE_COUNTRY[preferredCurrency ?? settings.currencies[0] ?? ""];
+  const secondaryButton = "inline-flex h-12 cursor-pointer items-center rounded-[5px] border border-edge-strong bg-white px-6 font-semibold text-ink transition hover:border-accent-muted hover:bg-panel";
   const courseNav = [course.description && { href: "#overview", label: "Overview" }, course.curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
 
   const structuredData = {
@@ -64,13 +70,13 @@ export default async function CoursePage({ params, searchParams }: Props) {
       <section className="border-b border-line bg-white">
         <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 py-12 sm:px-8 md:py-16 lg:grid-cols-[1.3fr_1fr]">
           <div className="flex flex-col gap-5">
-            <Link href="/courses" className="w-fit text-sm font-semibold text-accent hover:text-accent-dark">← All courses</Link>
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm"><Link href="/courses" className="font-semibold text-muted transition hover:text-accent">Courses</Link><ChevronRight className="size-4 shrink-0 text-muted/60" /><span aria-current="page" className="truncate text-muted">{course.title}</span></nav>
             <div className="flex flex-wrap items-center gap-2">{cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full) && <Badge tone="green">Registration open</Badge>}{course.category && <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-accent md:text-[13px]">{course.category}</p>}</div>
             <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight text-ink md:text-5xl">{course.title}</h1>
             <p className="max-w-[620px] text-lg leading-relaxed text-muted">{course.summary}</p>
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-body"><span className="flex items-center gap-2"><LayersIcon className="size-4 text-accent" />{course.level}</span><span className="flex items-center gap-2"><CalendarIcon className="size-4 text-accent" />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span></div>
             {startingPrice && <div><p className="text-xs font-semibold uppercase tracking-[1.2px] text-muted">{startingPrice === "Free" ? "Course fee" : "From"}</p><p className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">{startingPrice}</p></div>}
-            <div className="flex flex-wrap gap-3"><a href="#cohorts" className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Choose a cohort <ArrowRight className="size-4" /></a>{course.curriculum.length > 0 && <a href="#curriculum" className="inline-flex h-12 items-center rounded-[5px] border border-edge-strong bg-white px-6 font-semibold text-ink transition hover:border-accent-muted hover:bg-panel">View curriculum</a>}</div>
+            <div className="flex flex-wrap gap-3"><a href="#cohorts" className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Choose a cohort <ArrowRight className="size-4" /></a>{course.curriculumUrl ? <CurriculumRequest courseId={course.id} courseTitle={course.title} defaultCountry={phoneCountry} className={secondaryButton} /> : course.curriculum.length > 0 && <a href="#curriculum" className={secondaryButton}>View curriculum</a>}</div>
           </div>
           <div className="overflow-hidden rounded-[5px] border border-edge shadow-[0_24px_60px_-38px_rgba(25,17,46,.4)]">
             {course.imageUrl ? (

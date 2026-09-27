@@ -29,6 +29,13 @@
       "when": 1790535950711,
       "tag": "0003_massive_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790551164735,
+      "tag": "0004_curriculum_requests",
+      "breakpoints": true
     }
   ]
 }

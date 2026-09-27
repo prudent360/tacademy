@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import {
-  AwardIcon, BellIcon, BookIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, ExternalIcon, GridIcon,
+  AwardIcon, BellIcon, BookIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DownloadIcon, ExternalIcon, GridIcon,
   LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon,
 } from "@/components/icons";
 import type { Role } from "@/db/schema";
@@ -42,6 +42,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number }): NavGro
       { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon },
       { href: "/admin/users", label: "People", icon: UsersIcon },
       { href: "/admin/payments", label: "Payments", icon: CardIcon },
+      { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon },
       { href: "/admin/discounts", label: "Discount codes", icon: CardIcon },
       { href: "/admin/insights", label: "Insights", icon: ChartIcon },
       { href: "/admin/certificates", label: "Certificates", icon: AwardIcon },
@@ -220,7 +221,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
         </Link>
         <button type="button" onClick={() => setDrawer(false)} className="flex size-9 items-center justify-center rounded-lg hover:bg-white/10 lg:hidden" aria-label="Close menu"><XIcon /></button>
       </div>
-      <nav aria-label="Portal" className="flex grow flex-col gap-2 overflow-y-auto px-3 py-5">
+      <nav aria-label="Portal" className="portal-nav-scroll flex grow flex-col gap-2 overflow-y-auto px-3 py-5">
         {groups.map((group) => {
           const containsActive = group.items.some((item) => isActive(pathname, item));
           const open = openGroups[group.label] ?? containsActive;

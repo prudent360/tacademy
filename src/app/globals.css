@@ -1,4 +1,13 @@
 @import "tailwindcss";
+
+.portal-nav-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.portal-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
 @plugin "@tailwindcss/typography";
 
 @theme {

@@ -24,6 +24,7 @@ export function CourseForm({ action, course }: { action: (state: FormState, form
         <Input label="Sort order" name="sortOrder" type="number" defaultValue={course?.sortOrder ?? 0} hint="Lower shows first." />
       </div>
       <FileField label="Cover image" name="image" current={course?.imageUrl} removeName="removeImage" hint="16:9 works best. Without one, generated artwork is used." />
+      <FileField label="Curriculum document" name="curriculumFile" current={course?.curriculumUrl} accept=".pdf,.doc,.docx,application/pdf" removeName="removeCurriculum" hint="PDF recommended, up to 4 MB. Visitors get it after leaving their name, email and phone under “View curriculum”." />
       <fieldset className="flex flex-col gap-4 rounded-[5px] border border-edge bg-panel p-4">
         <legend className="px-1 text-sm font-semibold text-ink">Certificate requirements</legend>
         <Checkbox label="Issue a certificate on completion" name="certificateEnabled" defaultChecked={course?.certificateEnabled ?? true} />
