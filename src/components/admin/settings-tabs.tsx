@@ -127,16 +127,17 @@ export function BrandingTab({ s }: { s: Settings }) {
 // ---------- Payments ----------
 
 export async function PaymentsTab({ s }: { s: Settings }) {
-  const [stripe, paystack, bank] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), bankTransferConfig()]);
+  const [stripe, paystack, pawapay, bank] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("pawapay"), bankTransferConfig()]);
   const saved = s.payment;
   const envNote = (cfg: ResolvedGateway, envName: string) => cfg.source === "environment" ? <Notice tone="accent">Currently using the <code className="font-mono">{envName}</code> environment variable. Keys saved here take priority.</Notice> : null;
 
   return (
     <ActionForm action={savePayments} className="flex flex-col gap-6">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           { name: "Stripe", logo: <Logo text="S" color="#635BFF" />, badge: gatewayBadge(stripe, true), text: "GBP · USD · EUR · CAD" },
           { name: "Paystack", logo: <Logo text="P" color="#0BA4DB" />, badge: gatewayBadge(paystack, true), text: "NGN · GHS · KES · ZAR" },
+          { name: "pawaPay", logo: <Logo text="M" color="#12A150" />, badge: gatewayBadge(pawapay, true), text: "Mobile money · 8 currencies" },
           { name: "Bank transfer", logo: <span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>, badge: bank.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : <Badge>Off</Badge>, text: bank.enabled ? `${bank.currency}, confirmed by admins` : "Manual confirmation" },
         ].map((g) => (
           <div key={g.name} className="flex items-center gap-3 rounded-[14px] border border-edge bg-white p-4">
@@ -189,6 +190,25 @@ export async function PaymentsTab({ s }: { s: Settings }) {
           </div>
         </div>
         <CopyField label="Webhook URL" value={absoluteUrl("/api/webhooks/paystack")} />
+      </Section>
+
+      <Section title="pawaPay" description="Mobile money (MTN, Airtel, Orange, M-Pesa, Wave and more) in NGN, GHS, KES, UGX, TZS, RWF, XOF and XAF." icon={<Logo text="M" color="#12A150" />} badge={gatewayBadge(pawapay)}
+        footer={<>Create API tokens in the <a href="https://dashboard.pawapay.io" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">pawaPay Dashboard → System configuration → API tokens</a> (the sandbox has its own dashboard and token). Paste the callback URL under System configuration → Callback URLs, for deposits.</>}>
+        <Switch label="Accept mobile money with pawaPay" name="pawapayEnabled" defaultChecked={pawapay.enabled} hint="Offered as “Mobile money” at checkout. UGX, TZS, RWF, XOF and XAF can only be paid this way." />
+        {envNote(pawapay, "PAWAPAY_API_TOKEN")}
+        <ModePicker name="pawapayMode" value={pawapay.mode} />
+        {pawapay.mode === "live" && <Notice tone="amber"><strong>Live mode:</strong> real mobile money payments will be taken.</Notice>}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="flex flex-col gap-4 rounded-xl border border-edge p-4">
+            <p className="text-xs font-semibold uppercase tracking-[1px] text-muted">Sandbox</p>
+            <SecretInput label="API token" name="pawapayTestSecretKey" masked={maskSecret(saved.pawapay?.testSecretKey)} placeholder="eyJ…" />
+          </div>
+          <div className="flex flex-col gap-4 rounded-xl border border-edge p-4">
+            <p className="text-xs font-semibold uppercase tracking-[1px] text-muted">Live</p>
+            <SecretInput label="API token" name="pawapayLiveSecretKey" masked={maskSecret(saved.pawapay?.liveSecretKey)} placeholder="eyJ…" />
+          </div>
+        </div>
+        <CopyField label="Deposit callback URL" value={absoluteUrl("/api/webhooks/pawapay")} />
       </Section>
 
       <Section title="Bank transfer" description="Students get your account details and a payment reference; you confirm under Payments when the money arrives." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>}>

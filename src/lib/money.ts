@@ -1,16 +1,44 @@
-export type CurrencyInfo = { code: string; name: string; gateway: "stripe" | "paystack" };
+export type CurrencyInfo = {
+  code: string;
+  name: string;
+  /** The gateway for "Pay online". */
+  gateway: "stripe" | "paystack" | "pawapay";
+  /** Countries (ISO 3166 alpha-3) where pawaPay takes mobile money in this currency. */
+  mobileMoney?: string[];
+};
 
-/** Paystack settles African currencies; Stripe handles the rest. */
+/** Stripe takes cards; Paystack settles the larger African currencies; pawaPay takes mobile money. */
 export const CURRENCIES: CurrencyInfo[] = [
   { code: "GBP", name: "British pound", gateway: "stripe" },
   { code: "USD", name: "US dollar", gateway: "stripe" },
   { code: "EUR", name: "Euro", gateway: "stripe" },
   { code: "CAD", name: "Canadian dollar", gateway: "stripe" },
-  { code: "NGN", name: "Nigerian naira", gateway: "paystack" },
-  { code: "GHS", name: "Ghanaian cedi", gateway: "paystack" },
-  { code: "KES", name: "Kenyan shilling", gateway: "paystack" },
+  { code: "NGN", name: "Nigerian naira", gateway: "paystack", mobileMoney: ["NGA"] },
+  { code: "GHS", name: "Ghanaian cedi", gateway: "paystack", mobileMoney: ["GHA"] },
+  { code: "KES", name: "Kenyan shilling", gateway: "paystack", mobileMoney: ["KEN"] },
   { code: "ZAR", name: "South African rand", gateway: "paystack" },
+  { code: "UGX", name: "Ugandan shilling", gateway: "pawapay", mobileMoney: ["UGA"] },
+  { code: "TZS", name: "Tanzanian shilling", gateway: "pawapay", mobileMoney: ["TZA"] },
+  { code: "RWF", name: "Rwandan franc", gateway: "pawapay", mobileMoney: ["RWA"] },
+  { code: "XOF", name: "West African CFA franc", gateway: "pawapay", mobileMoney: ["SEN", "CIV", "BEN", "BFA"] },
+  { code: "XAF", name: "Central African CFA franc", gateway: "pawapay", mobileMoney: ["CMR", "COG", "GAB"] },
 ];
+
+export const MOBILE_MONEY_COUNTRIES: Record<string, string> = {
+  NGA: "Nigeria", GHA: "Ghana", KEN: "Kenya", UGA: "Uganda", TZA: "Tanzania", RWA: "Rwanda",
+  SEN: "Senegal", CIV: "Côte d'Ivoire", BEN: "Benin", BFA: "Burkina Faso", CMR: "Cameroon", COG: "Republic of the Congo", GAB: "Gabon",
+};
+
+/** Phone dial code → mobile money country, to preselect where the student's wallet is. */
+export const MOBILE_MONEY_DIAL: Record<string, string> = {
+  "+234": "NGA", "+233": "GHA", "+254": "KEN", "+256": "UGA", "+255": "TZA", "+250": "RWA",
+  "+221": "SEN", "+225": "CIV", "+229": "BEN", "+226": "BFA", "+237": "CMR", "+242": "COG", "+241": "GAB",
+};
+
+/** Countries a currency can be paid from by mobile money; empty when pawaPay doesn't cover it. */
+export function mobileMoneyCountries(currency: string): string[] {
+  return currencyInfo(currency)?.mobileMoney ?? [];
+}
 
 export const CURRENCY_CODES = CURRENCIES.map((c) => c.code);
 
@@ -18,7 +46,7 @@ export function currencyInfo(code: string): CurrencyInfo | undefined {
   return CURRENCIES.find((c) => c.code === code);
 }
 
-export function gatewayFor(currency: string): "stripe" | "paystack" {
+export function gatewayFor(currency: string): CurrencyInfo["gateway"] {
   return currencyInfo(currency)?.gateway ?? "stripe";
 }
 

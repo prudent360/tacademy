@@ -358,7 +358,7 @@ export async function markPaymentPaid(reference: string): Promise<void> {
   revalidatePath("/admin/payments");
 }
 
-/** Re-asks Stripe/Paystack about a pending payment (useful if a webhook was missed). */
+/** Re-asks Stripe/Paystack/pawaPay about a pending payment (useful if a webhook was missed). */
 export async function recheckPayment(reference: string): Promise<void> {
   await requireRole("admin");
   await verifyPayment(reference);

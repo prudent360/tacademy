@@ -6,7 +6,7 @@ import { enrol, type EnrolState } from "@/app/actions/enroll";
 import { ArrowLeft } from "@/components/icons";
 import { COUNTRIES, PhoneInput } from "@/components/phone-input";
 import type { DeliveryMode, PriceMap } from "@/db/schema";
-import { formatMoney, gatewayFor } from "@/lib/money";
+import { formatMoney, gatewayFor, MOBILE_MONEY_COUNTRIES, MOBILE_MONEY_DIAL } from "@/lib/money";
 import { availablePlans, PLAN_LABEL, quote, type EnrolPlan } from "@/lib/pricing";
 import { MODE_LABEL, QUALIFICATIONS } from "@/lib/utils";
 
@@ -22,9 +22,11 @@ export type EnrolCohort = {
   registrationFees: PriceMap;
   depositPercent: number | null;
   registrationOnly: boolean;
-  /** Currencies this cohort can be paid in, and how. */
-  currencies: { code: string; online: boolean; bank: boolean }[];
+  /** Currencies this cohort can be paid in, and how. online: card via Stripe/Paystack · mobile: pawaPay countries. */
+  currencies: { code: string; online: boolean; mobile: string[]; bank: boolean }[];
 };
+
+type Method = "online" | "mobile" | "bank";
 
 type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; qualification: string };
 
@@ -74,8 +76,14 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
   const plans = cohort && currency ? availablePlans(cohort, currency.code) : ["full" as const];
   const [planChoice, setPlan] = useState<EnrolPlan>("full");
   const plan = plans.includes(planChoice) ? planChoice : "full";
-  const [methodChoice, setMethod] = useState<"online" | "bank">("online");
-  const method = currency?.online && currency?.bank ? methodChoice : currency?.bank ? "bank" : "online";
+  const [methodChoice, setMethod] = useState<Method>("online");
+  const methods: Method[] = currency ? (["online", "mobile", "bank"] as const).filter((m) => (m === "mobile" ? currency.mobile.length > 0 : currency[m])) : [];
+  const method = methods.includes(methodChoice) ? methodChoice : methods[0] ?? "online";
+  // The wallet country defaults to the phone number's country from step 1.
+  const [dial, setDial] = useState("");
+  const [countryChoice, setCountry] = useState("");
+  const mobileCountries = currency?.mobile ?? [];
+  const mobileCountry = [countryChoice, MOBILE_MONEY_DIAL[dial]].find((c) => c && mobileCountries.includes(c)) ?? mobileCountries[0] ?? "";
   const q = cohort && currency && !cohort.free ? quote(cohort, currency.code, plan) : null;
   const money = (minor: number) => (currency ? formatMoney(minor, currency.code) : "—");
 
@@ -89,6 +97,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (step === 1) {
+      setDial(String(new FormData(event.currentTarget).get("dialCode") ?? ""));
       setStep(2);
       top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -97,7 +106,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
     startTransition(() => formAction(formData));
   }
 
-  const payLabel = !cohort ? "Choose a cohort" : cohort.free ? "Confirm my place" : method === "bank" ? `Get transfer details · ${money(q?.dueNow ?? 0)}` : `Pay ${money(q?.dueNow ?? 0)}`;
+  const payLabel = !cohort ? "Choose a cohort" : cohort.free ? "Confirm my place" : method === "bank" ? `Get transfer details · ${money(q?.dueNow ?? 0)}` : method === "mobile" ? `Pay ${money(q?.dueNow ?? 0)} with mobile money` : `Pay ${money(q?.dueNow ?? 0)}`;
   const phoneDefault = signedIn?.dial ? COUNTRIES.find((c) => c.dial === signedIn.dial)?.code : undefined;
 
   return (
@@ -191,18 +200,27 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
             )}
             <input type="hidden" name="plan" value={plan} />
 
-            {cohort && !cohort.free && currency?.online && currency.bank && (
+            {cohort && !cohort.free && currency && methods.length > 1 && (
               <fieldset className="flex flex-col gap-2.5">
                 <legend className="mb-2 text-sm font-medium text-ink">Payment method</legend>
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  <Choice name="methodChoice" value="online" checked={method === "online"} onChange={() => setMethod("online")}><span className="font-semibold text-ink">Pay online</span><span className="text-sm text-muted">{gatewayFor(currency.code) === "paystack" ? "Card, bank transfer or USSD via Paystack" : "Secure card payment via Stripe"}</span></Choice>
-                  <Choice name="methodChoice" value="bank" checked={method === "bank"} onChange={() => setMethod("bank")}><span className="font-semibold text-ink">Direct bank transfer</span><span className="text-sm text-muted">Confirmed once we receive it</span></Choice>
+                <div className={`grid gap-2.5 ${methods.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+                  {currency.online && <Choice name="methodChoice" value="online" checked={method === "online"} onChange={() => setMethod("online")}><span className="font-semibold text-ink">Pay online</span><span className="text-sm text-muted">{gatewayFor(currency.code) === "paystack" ? "Card, bank transfer or USSD via Paystack" : "Secure card payment via Stripe"}</span></Choice>}
+                  {currency.mobile.length > 0 && <Choice name="methodChoice" value="mobile" checked={method === "mobile"} onChange={() => setMethod("mobile")}><span className="font-semibold text-ink">Mobile money</span><span className="text-sm text-muted">MTN, Airtel, Orange, M-Pesa and more via pawaPay</span></Choice>}
+                  {currency.bank && <Choice name="methodChoice" value="bank" checked={method === "bank"} onChange={() => setMethod("bank")}><span className="font-semibold text-ink">Direct bank transfer</span><span className="text-sm text-muted">Confirmed once we receive it</span></Choice>}
                 </div>
               </fieldset>
             )}
             <input type="hidden" name="method" value={method} />
 
-            {cohort && !cohort.free && method === "online" && (
+            {cohort && !cohort.free && method === "mobile" && (mobileCountries.length > 1 ? (
+              <Field label="Mobile money account country" htmlFor={`${id}-mm-country`} required>
+                <select id={`${id}-mm-country`} name="mobileCountry" value={mobileCountry} onChange={(e) => setCountry(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                  {mobileCountries.map((c) => <option key={c} value={c}>{MOBILE_MONEY_COUNTRIES[c] ?? c}</option>)}
+                </select>
+              </Field>
+            ) : <input type="hidden" name="mobileCountry" value={mobileCountry} />)}
+
+            {cohort && !cohort.free && method !== "bank" && (
               <Field label="Discount code" htmlFor={`${id}-discount`}>
                 <input id={`${id}-discount`} name="discountCode" maxLength={40} placeholder="Optional" className={`${inputClass} uppercase placeholder:normal-case`} />
               </Field>
@@ -252,7 +270,8 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
               {q.registrationFee > 0 && <div className="flex justify-between gap-4 text-sm"><span className="text-white/65">+ Registration fee</span><span>{money(q.registrationFee)}</span></div>}
               <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-white/10 pt-3"><span className="font-semibold">Total</span><span className="font-display text-3xl font-bold text-emerald-400">{money(q.dueNow)}</span></div>
               {q.later > 0 && <p className="text-xs text-white/55">{money(q.later)} tuition balance due later.</p>}
-              {method === "online" && <p className="text-xs text-white/55">Discount codes are applied at checkout.</p>}
+              {method !== "bank" && <p className="text-xs text-white/55">Discount codes are applied at checkout.</p>}
+              {method === "mobile" && <p className="text-xs text-white/55">You&apos;ll confirm the payment on your phone.</p>}
             </div>
           </>
         )}

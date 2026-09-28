@@ -3,7 +3,7 @@ import type { BankTransferSettings, EmailSettings, GatewaySettings, ReminderSett
 import { getSettings } from "./data";
 import { decryptSecret } from "./secrets";
 
-export type Gateway = "stripe" | "paystack";
+export type Gateway = "stripe" | "paystack" | "pawapay";
 export type ResolvedGateway = {
   enabled: boolean;
   mode: "test" | "live";
@@ -17,6 +17,7 @@ export type ResolvedGateway = {
 const ENV_SECRET: Record<Gateway, string | undefined> = {
   stripe: process.env.STRIPE_SECRET_KEY,
   paystack: process.env.PAYSTACK_SECRET_KEY,
+  pawapay: process.env.PAWAPAY_API_TOKEN,
 };
 
 const DEFAULT_GATEWAY: GatewaySettings = { enabled: true, mode: "test", testPublicKey: "", testSecretKey: "", livePublicKey: "", liveSecretKey: "" };

@@ -109,7 +109,7 @@ function checkKey(value: FormDataEntryValue | null, prefixes: string[], label: s
   return prefixes.some((p) => v.startsWith(p)) ? null : `${label} should start with ${prefixes.join(" or ")}.`;
 }
 
-function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack", existing: Partial<GatewaySettings> | undefined): GatewaySettings {
+function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "pawapay", existing: Partial<GatewaySettings> | undefined): GatewaySettings {
   return {
     enabled: formData.get(`${prefix}Enabled`) === "on",
     mode: formData.get(`${prefix}Mode`) === "live" ? "live" : "test",
@@ -139,6 +139,8 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
     checkKey(formData.get("paystackLiveSecretKey"), ["sk_live_"], "Paystack live secret key"),
     checkKey(formData.get("paystackTestPublicKey"), ["pk_test_"], "Paystack test public key"),
     checkKey(formData.get("paystackLivePublicKey"), ["pk_live_"], "Paystack live public key"),
+    checkKey(formData.get("pawapayTestSecretKey"), ["eyJ"], "The pawaPay sandbox API token"),
+    checkKey(formData.get("pawapayLiveSecretKey"), ["eyJ"], "The pawaPay live API token"),
   ].filter(Boolean);
   if (problems.length) return { error: problems[0]! };
 
@@ -159,7 +161,8 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
   }
   const stripe = gatewayFrom(formData, "stripe", current.stripe);
   const paystack = gatewayFrom(formData, "paystack", current.paystack);
-  await update({ payment: { stripe, paystack, bank } });
+  const pawapay = gatewayFrom(formData, "pawapay", current.pawapay);
+  await update({ payment: { stripe, paystack, pawapay, bank } });
   return { ok: "Payment settings saved." };
 }
 

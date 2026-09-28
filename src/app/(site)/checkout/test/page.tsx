@@ -11,13 +11,14 @@ import { testPaymentsAllowed } from "@/lib/payments";
 
 export const metadata: Metadata = { title: "Test checkout", robots: { index: false } };
 
-/** Stand-in for Stripe/Paystack during local development, when no gateway keys are set. */
+/** Stand-in for an online gateway during local development, when its keys are not set. */
 export default async function TestCheckoutPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   if (!testPaymentsAllowed()) notFound();
   const { ref = "" } = await searchParams;
   const [payment] = await (await getDb()).select().from(payments).where(eq(payments.reference, ref));
   if (!payment || !(await canViewPayment(payment)).allowed) notFound();
-  const gateway = gatewayFor(payment.currency) === "stripe" ? "Stripe" : "Paystack";
+  const simulatedGateway = payment.providerId?.startsWith("simulated:") ? payment.providerId.slice("simulated:".length) : gatewayFor(payment.currency);
+  const gateway = { stripe: "Stripe", paystack: "Paystack", pawapay: "pawaPay" }[simulatedGateway as "stripe" | "paystack" | "pawapay"] ?? "payment";
 
   return (
     <div className="mx-auto flex max-w-[480px] flex-col gap-6 px-5 py-16">

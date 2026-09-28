@@ -21,6 +21,7 @@ const PAGE_SIZE = 25;
 const GATEWAY = {
   stripe: { label: "Stripe", color: "#635BFF", short: "S" },
   paystack: { label: "Paystack", color: "#0BA4DB", short: "P" },
+  pawapay: { label: "pawaPay", color: "#12A150", short: "M" },
   manual: { label: "Bank / offline", color: "#19112E", short: "B" },
   test: { label: "Test", color: "#8b8598", short: "T" },
 } as const;
@@ -56,7 +57,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
     <>
       <PageHeader
         title="Payments"
-        description="Card payments confirm automatically through Stripe and Paystack. Confirm bank transfers here once the money arrives."
+        description="Card and mobile money payments confirm automatically through Stripe, Paystack and pawaPay. Confirm bank transfers here once the money arrives."
         actions={<>
           <a href={`/api/admin/payments/export${exportQs ? `?${exportQs}` : ""}`} className={buttonClass.secondary}><DownloadIcon className="size-4" /> Export CSV</a>
           <ModalButton label="Record payment" title="Record an offline payment" icon={<PlusIcon className="size-4" />}>
@@ -101,7 +102,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
         ]}
         right={
           <div className="flex flex-wrap gap-1.5 lg:border-l lg:border-line lg:pl-3">
-            {(["stripe", "paystack", "manual"] as const).map((g) => (
+            {(["stripe", "paystack", "pawapay", "manual"] as const).map((g) => (
               <Link key={g} href={url({ gateway: filters.gateway === g ? undefined : g })} className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-semibold ${filters.gateway === g ? "border-accent bg-accent-soft text-accent" : "border-edge text-muted hover:text-ink"}`}>
                 <span className="size-2 rounded-full" style={{ background: GATEWAY[g].color }} /> {GATEWAY[g].label}
               </Link>

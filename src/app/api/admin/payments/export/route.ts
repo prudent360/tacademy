@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { listPayments, parsePaymentFilters } from "@/lib/admin-payments";
 
-const GATEWAY = { stripe: "Stripe", paystack: "Paystack", manual: "Bank transfer / offline", test: "Test" } as const;
+const GATEWAY = { stripe: "Stripe", paystack: "Paystack", pawapay: "Mobile money (pawaPay)", manual: "Bank transfer / offline", test: "Test" } as const;
 
 function csv(value: string | number | null | undefined): string {
   const s = String(value ?? "");

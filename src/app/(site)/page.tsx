@@ -39,7 +39,7 @@ const FORMATS = [
 
 const STEPS = [
   { title: "Choose a cohort", text: "Pick a course and the start date and format that fit your schedule." },
-  { title: "Pay securely", text: "Pay by card with Stripe or in naira, cedi, shillings or rand with Paystack." },
+  { title: "Pay securely", text: "Pay by card with Stripe or Paystack, or with mobile money across Africa through pawaPay." },
   { title: "Learn and build", text: "Attend classes, get reminders before each one, and submit real assignments." },
   { title: "Get feedback", text: "Instructors grade your work with written feedback, so you know exactly how to improve." },
 ];

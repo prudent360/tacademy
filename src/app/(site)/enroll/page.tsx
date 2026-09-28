@@ -5,23 +5,24 @@ import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
 import { bankTransferConfig } from "@/lib/config";
 import { getPublishedCourses, getSettings, getStudentCohorts } from "@/lib/data";
-import { payableCurrencies } from "@/lib/payments";
+import { mobileMoneyCountries } from "@/lib/money";
+import { payableMethods } from "@/lib/payments";
 import { cohortCurrencies } from "@/lib/pricing";
 import { formatDateOnly } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Enrol", description: "Choose a course and cohort, tell us about yourself and secure your place.", alternates: { canonical: "/enroll" } };
 
 /** Default country for the phone field, from the academy's main currency. */
-const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA" };
+const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA", UGX: "UG", TZS: "TZ", RWF: "RW", XOF: "SN", XAF: "CM" };
 
 export default async function EnrolPage({ searchParams }: { searchParams: Promise<{ cohort?: string; course?: string }> }) {
-  const [params, settings, user, courses, payable, bank] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableCurrencies(), bankTransferConfig()]);
+  const [params, settings, user, courses, payable, bank] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableMethods(), bankTransferConfig()]);
   const enrolledIn = new Set(user ? (await getStudentCohorts(user.id)).map((row) => row.cohort.id) : []);
 
   const cohorts: EnrolCohort[] = (await withCohorts(courses)).flatMap((course) => course.cohorts
     .filter((cohort) => cohort.enrollmentOpen && !cohort.full && !enrolledIn.has(cohort.id))
     .map((cohort) => {
-      const currencies = cohortCurrencies(cohort).filter((c) => payable.includes(c) || (bank.enabled && c === bank.currency));
+      const currencies = cohortCurrencies(cohort).filter((c) => payable.card.includes(c) || payable.mobile.includes(c) || (bank.enabled && c === bank.currency));
       return {
         id: cohort.id,
         courseId: course.id,
@@ -34,7 +35,7 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
         registrationFees: cohort.registrationFees,
         depositPercent: cohort.depositPercent,
         registrationOnly: cohort.registrationOnly,
-        currencies: currencies.map((code) => ({ code, online: payable.includes(code), bank: bank.enabled && code === bank.currency })),
+        currencies: currencies.map((code) => ({ code, online: payable.card.includes(code), mobile: payable.mobile.includes(code) ? mobileMoneyCountries(code) : [], bank: bank.enabled && code === bank.currency })),
       };
     })
     .filter((cohort) => cohort.free || cohort.currencies.length > 0));
