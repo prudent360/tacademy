@@ -110,8 +110,9 @@ export function BrandingTab({ s }: { s: Settings }) {
       </Section>
       <Section title="Home page hero">
         <Input label="Eyebrow" name="heroEyebrow" defaultValue={s.heroEyebrow} placeholder="Online & in-person cohorts" />
-        <Input label="Headline" name="heroTitle" defaultValue={s.heroTitle} />
+        <Input label="Headline" name="heroTitle" defaultValue={s.heroTitle} hint="Wrap words in *asterisks* to highlight them, e.g. Learn tech skills with *real instructors*." />
         <Textarea label="Introduction" name="heroSubtitle" defaultValue={s.heroSubtitle} rows={3} />
+        <FileField label="Home hero photo" name="heroImage" current={s.heroImageUrl} removeName="removeHeroImage" hint="Shown on the right of the home page hero, blended into the background. A landscape or 4:3 photo with people towards the centre works best. Remove it to go back to the default team photo." />
         <Textarea label="Stats" name="stats" defaultValue={s.stats.map((x) => `${x.value} | ${x.label}`).join("\n")} rows={4} hint="Up to 4 lines of: value | label, e.g. 1,200+ | Students trained" />
       </Section>
       <Section title="Social proof and FAQs">

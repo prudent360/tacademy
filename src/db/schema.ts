@@ -94,6 +94,8 @@ export const settings = pgTable("settings", {
   heroTitle: text("hero_title").notNull().default(""),
   heroSubtitle: text("hero_subtitle").notNull().default(""),
   logoUrl: text("logo_url"),
+  /** Photo on the home page hero; a bundled team photo is used when empty. */
+  heroImageUrl: text("hero_image_url"),
   supportEmail: text("support_email").notNull().default(""),
   phone: text("phone").notNull().default(""),
   address: text("address").notNull().default(""),

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, BellIcon, BuildingIcon, CalendarIcon, CardIcon, CheckIcon, ClipboardIcon, MegaphoneIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
-import { ClassPreview } from "@/components/site/class-preview";
 import { CourseCard } from "@/components/site/course-card";
 import { ModeBadge } from "@/components/ui";
 import { isFree, withCohorts } from "@/lib/catalog";
@@ -62,6 +61,7 @@ export default async function HomePage() {
   const featured = (summaries.some((c) => c.featured) ? summaries.filter((c) => c.featured) : summaries).slice(0, 3);
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
   const currency = settings.currencies[0] ?? "GBP";
+  const heroPhoto = settings.heroImageUrl ?? "/images/home-hero-team.webp";
   const next = upcoming.find(({ cohort }) => !cohort.capacity || (taken.get(cohort.id) ?? 0) < cohort.capacity) ?? null;
   const nextStart = next?.cohort.startDate ? new Date(`${next.cohort.startDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : null;
   const nextSeats = next?.cohort.capacity ? next.cohort.capacity - (taken.get(next.cohort.id) ?? 0) : null;
@@ -81,43 +81,66 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-[linear-gradient(145deg,#f7f6fb_0%,#fff_52%,#eefaff_100%)]">
-        <div aria-hidden="true" className="absolute -left-40 top-16 size-80 rounded-full bg-accent/10 blur-3xl" />
-        <div aria-hidden="true" className="absolute -right-28 bottom-0 size-72 rounded-full bg-cyan/15 blur-3xl" />
-        <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-20 pt-14 sm:px-8 md:pb-28 md:pt-24 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
+      <section className="relative overflow-hidden bg-[linear-gradient(160deg,#19112e_0%,#221544_55%,#2b1a5c_100%)] text-white">
+        {/* Large screens: the photo fills the right half and melts into the background on its left edge. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 right-0 hidden w-[62%] lg:block"
+          style={{ maskImage: "linear-gradient(90deg, transparent 0%, #000 55%), linear-gradient(180deg, #000 70%, transparent 100%)", maskComposite: "intersect", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, #000 55%), linear-gradient(180deg, #000 70%, transparent 100%)", WebkitMaskComposite: "source-in" }}
+        >
+          {/* Taller than the hero and anchored to the bottom, so the backdrop banner above the faces is cropped off. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={heroPhoto} alt="" fetchPriority="high" className="absolute inset-x-0 bottom-0 h-[120%] w-full object-cover object-center" />
+          {/* Tints the photo towards the brand and darkens the top so nothing competes with the headline. */}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.7)_0%,rgba(25,17,46,.25)_30%,rgba(43,26,92,.25)_100%)]" />
+        </div>
+        <div aria-hidden="true" className="absolute -left-40 bottom-[-20%] size-96 rounded-full bg-accent/25 blur-[100px]" />
+        <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-16 pt-12 sm:px-8 md:pb-20 md:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
           <div className="flex flex-col gap-6">
             {settings.heroEyebrow && (
-              <p className="flex w-fit items-center gap-2 rounded-full border border-edge bg-white px-3.5 py-1.5 font-mono text-xs font-medium uppercase tracking-[1.2px] text-accent">
+              <p className="flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs font-medium uppercase tracking-[1.2px] text-cyan-light">
                 <span className="size-2 rounded-full bg-cyan" aria-hidden="true" /> {settings.heroEyebrow}
               </p>
             )}
-            <h1 className="max-w-[680px] font-display text-[42px] font-extrabold leading-[1.02] tracking-[-1.5px] text-ink sm:text-5xl lg:text-[68px] lg:tracking-[-2.5px]">
-              {settings.heroTitle || settings.siteName}
+            <h1 className="max-w-[600px] font-display text-[40px] font-extrabold leading-[1.04] tracking-[-1.5px] text-white sm:text-5xl lg:text-[56px] lg:tracking-[-2px]">
+              {/* Words wrapped in *asterisks* in Settings are highlighted. */}
+              {(settings.heroTitle || settings.siteName).split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <span key={i} className="text-cyan-light">{part}</span> : part))}
             </h1>
-            {settings.heroSubtitle && <p className="max-w-[560px] text-lg leading-[1.65] text-muted md:text-[19px]">{settings.heroSubtitle}</p>}
+            {settings.heroSubtitle && <p className="max-w-[560px] text-lg leading-[1.65] text-white/75 md:text-[19px]">{settings.heroSubtitle}</p>}
             <div className="mt-2 flex flex-wrap gap-3">
-              <Link href="/courses" className="flex h-13 items-center gap-2 rounded-xl bg-accent px-7 text-base font-semibold text-white shadow-[0_8px_24px_-10px_rgba(113,52,217,.8)] transition hover:-translate-y-0.5 hover:bg-accent-dark">
+              <Link href="/courses" className="flex h-13 items-center gap-2 rounded-xl bg-accent px-7 text-base font-semibold text-white shadow-[0_12px_32px_-10px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-mid">
                 Browse courses <ArrowRight className="size-[18px]" />
               </Link>
-              <a href="#formats" className="flex h-13 items-center rounded-xl border-[1.5px] border-accent bg-white px-7 text-base font-semibold text-accent hover:bg-accent-soft">How we teach</a>
+              <a href="#formats" className="flex h-13 items-center rounded-xl border-[1.5px] border-white/40 px-7 text-base font-semibold text-white transition hover:border-white hover:bg-white/10">How we teach</a>
             </div>
-            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-body" aria-label="Course benefits">
+            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-white/85" aria-label="Course benefits">
               {["Beginner-friendly", "Live instructor support", "Portfolio projects"].map((item) => (
-                <li key={item} className="flex items-center gap-2"><span className="flex size-5 items-center justify-center rounded-full bg-cyan-soft text-cyan-ink"><CheckIcon className="size-3.5" /></span>{item}</li>
+                <li key={item} className="flex items-center gap-2"><span className="flex size-5 items-center justify-center rounded-full bg-cyan/15 text-cyan-light"><CheckIcon className="size-3.5" /></span>{item}</li>
               ))}
             </ul>
             {settings.stats.length > 0 && (
-              <dl className="mt-6 grid grid-cols-2 gap-x-8 gap-y-5 border-t border-edge-strong pt-7 sm:grid-cols-4">
+              <dl className="mt-6 grid grid-cols-2 gap-x-8 gap-y-5 border-t border-white/15 pt-7 sm:grid-cols-4">
                 {settings.stats.map((s) => (
                   <div key={s.label} className="flex flex-col-reverse justify-end gap-1">
-                    <dt className="text-sm leading-snug text-muted">{s.label}</dt>
-                    <dd className="font-display text-3xl font-bold tracking-tight text-ink">{s.value}</dd>
+                    <dt className="text-sm leading-snug text-white/60">{s.label}</dt>
+                    <dd className="font-display text-3xl font-bold tracking-tight text-cyan">{s.value}</dd>
                   </div>
                 ))}
               </dl>
             )}
           </div>
-          <ClassPreview />
+          <div aria-hidden="true" className="relative select-none lg:min-h-[520px]">
+            {/* Phones and tablets: the photo sits below the text instead. */}
+            <div className="relative overflow-hidden rounded-[20px] lg:hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={heroPhoto} alt="" className="aspect-[4/3] w-full object-cover object-[center_30%]" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(43,26,92,.8)_100%)]" />
+            </div>
+            <div className="absolute -bottom-5 left-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_40px_-16px_rgba(0,0,0,.6)] lg:bottom-6 lg:left-auto lg:right-10">
+              <span className="flex size-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><CheckIcon className="size-5" /></span>
+              <span><span className="block text-sm font-semibold text-ink">Feedback received</span><span className="block text-xs text-muted">Sales dashboard · 86/100</span></span>
+            </div>
+          </div>
         </div>
       </section>
 

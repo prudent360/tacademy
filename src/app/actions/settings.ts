@@ -71,8 +71,10 @@ export async function saveBranding(_state: FormState, formData: FormData): Promi
   if (!parsed.success) return { error: firstError(parsed.error) };
   const current = await getSettings();
   let logoUrl: string | null;
+  let heroImageUrl: string | null;
   try {
     logoUrl = await resolveFileField(formData, { file: "logo", remove: "removeLogo", current: current.logoUrl, folder: "branding" });
+    heroImageUrl = await resolveFileField(formData, { file: "heroImage", remove: "removeHeroImage", current: current.heroImageUrl, folder: "branding" });
   } catch (error) {
     const message = uploadErrorMessage(error);
     if (message) return { error: message };
@@ -81,11 +83,13 @@ export async function saveBranding(_state: FormState, formData: FormData): Promi
   await update({
     ...parsed.data,
     logoUrl,
+    heroImageUrl,
     stats: parsePairs(formData.get("stats"), 4).map(([value, label]) => ({ value, label })),
     faqs: parseFaqs(formData.get("faqs")),
     testimonials: parsePairs(formData.get("testimonials"), 6).map(([quote, name, role]) => ({ quote, name, role: role ?? "" })),
   });
   await deleteIfReplaced(current.logoUrl, logoUrl);
+  await deleteIfReplaced(current.heroImageUrl, heroImageUrl);
   return { ok: "Branding saved." };
 }
 
