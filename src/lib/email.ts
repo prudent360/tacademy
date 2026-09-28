@@ -19,7 +19,7 @@ export async function emailConfigured(): Promise<boolean> {
 }
 
 /** Account-security emails can't be switched off. */
-export const REQUIRED_TEMPLATES: TemplateKey[] = ["password_reset", "verify_email", "invite", "welcome"];
+export const REQUIRED_TEMPLATES: TemplateKey[] = ["password_reset", "verify_email", "invite", "welcome", "account_setup"];
 
 export async function getTemplate(key: TemplateKey): Promise<{ subject: string; body: string; customised: boolean; enabled: boolean }> {
   const [row] = await (await getDb()).select().from(emailTemplates).where(eq(emailTemplates.key, key));

@@ -5,15 +5,13 @@ import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ChevronRight,
 import { Markdown } from "@/components/markdown";
 import { CourseArt } from "@/components/site/course-art";
 import { CurriculumRequest } from "@/components/site/curriculum-request";
-import { EnrollForm } from "@/components/site/enroll-form";
-import { FreeEnroll } from "@/components/site/free-enroll";
 import { Avatar, Badge, ModeBadge, Notice } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
-import { bankTransferConfig } from "@/lib/config";
 import { getCourseBySlug, getInstructorsByCohort, getSettings, getStudentCohorts } from "@/lib/data";
-import { payableCurrencies } from "@/lib/payments";
 import { formatMoney } from "@/lib/money";
+import { cohortCurrencies } from "@/lib/pricing";
+import type { Cohort } from "@/db/schema";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { formatDateOnly } from "@/lib/time";
 
@@ -37,9 +35,6 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const instructorsByCohort = await getInstructorsByCohort(cohorts.map((c) => c.id));
   const instructors = [...new Map([...instructorsByCohort.values()].flat().map((i) => [i.id, i])).values()];
   const myCohortIds = new Set(user ? (await getStudentCohorts(user.id)).map((r) => r.cohort.id) : []);
-  const [payable, bank] = await Promise.all([payableCurrencies(), bankTransferConfig()]);
-  const onlinePrices = (prices: Record<string, number | undefined>) =>
-    Object.fromEntries(Object.entries(prices).filter(([c, v]) => payable.includes(c) && (v ?? 0) > 0)) as Record<string, number>;
   const preferredCurrency = settings.currencies.find((currency) => cohorts.some((cohort) => (cohort.prices[currency] ?? 0) > 0));
   const preferredPrices = preferredCurrency ? cohorts.map((cohort) => cohort.prices[preferredCurrency] ?? 0).filter((price) => price > 0) : [];
   const startingPrice = preferredCurrency && preferredPrices.length ? formatMoney(Math.min(...preferredPrices), preferredCurrency) : cohorts.some(isFree) ? "Free" : null;
@@ -76,7 +71,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
             <p className="max-w-[620px] text-lg leading-relaxed text-muted">{course.summary}</p>
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-body"><span className="flex items-center gap-2"><LayersIcon className="size-4 text-accent" />{course.level}</span><span className="flex items-center gap-2"><CalendarIcon className="size-4 text-accent" />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span></div>
             {startingPrice && <div><p className="text-xs font-semibold uppercase tracking-[1.2px] text-muted">{startingPrice === "Free" ? "Course fee" : "From"}</p><p className="mt-1 font-display text-3xl font-bold tracking-tight text-ink">{startingPrice}</p></div>}
-            <div className="flex flex-wrap gap-3"><a href="#cohorts" className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Choose a cohort <ArrowRight className="size-4" /></a>{course.curriculumUrl ? <CurriculumRequest courseId={course.id} courseTitle={course.title} defaultCountry={phoneCountry} className={secondaryButton} /> : course.curriculum.length > 0 && <a href="#curriculum" className={secondaryButton}>View curriculum</a>}</div>
+            <div className="flex flex-wrap gap-3">{cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full) ? <Link href={`/enroll?course=${course.slug}`} className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Enrol now <ArrowRight className="size-4" /></Link> : <a href="#cohorts" className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">See dates <ArrowRight className="size-4" /></a>}{course.curriculumUrl ? <CurriculumRequest courseId={course.id} courseTitle={course.title} defaultCountry={phoneCountry} className={secondaryButton} /> : course.curriculum.length > 0 && <a href="#curriculum" className={secondaryButton}>View curriculum</a>}</div>
           </div>
           <div className="overflow-hidden rounded-[5px] border border-edge shadow-[0_24px_60px_-38px_rgba(25,17,46,.4)]">
             {course.imageUrl ? (
@@ -192,7 +187,10 @@ export default async function CoursePage({ params, searchParams }: Props) {
                   ) : !cohort.enrollmentOpen ? (
                     <p className="text-[15px] font-semibold text-muted">Enrolment is closed.</p>
                   ) : (
-                    isFree(cohort) ? <FreeEnroll cohortId={cohort.id} signedIn={Boolean(user)} /> : <EnrollForm cohortId={cohort.id} prices={onlinePrices(cohort.prices)} preferred={settings.currencies} signedIn={Boolean(user)} depositPercent={cohort.depositPercent} bank={bank.enabled && cohort.prices[bank.currency] ? { currency: bank.currency, amount: cohort.prices[bank.currency]! } : null} />
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <CohortPrice cohort={cohort} currencies={settings.currencies} />
+                      <Link href={`/enroll?cohort=${cohort.id}`} className="inline-flex h-11 items-center gap-2 rounded-[5px] bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-dark">Enrol now <ArrowRight className="size-4" /></Link>
+                    </div>
                   )}
                 </div>
               </div>
@@ -201,5 +199,19 @@ export default async function CoursePage({ params, searchParams }: Props) {
         </aside>
       </div>
     </>
+  );
+}
+
+function CohortPrice({ cohort, currencies }: { cohort: Cohort; currencies: string[] }) {
+  if (isFree(cohort)) return <p className="font-display text-2xl font-bold text-emerald-700">Free</p>;
+  const currency = [...currencies, ...cohortCurrencies(cohort)].find((c) => (cohort.prices[c] ?? 0) > 0 || (cohort.registrationFees[c] ?? 0) > 0);
+  if (!currency) return null;
+  const fee = cohort.registrationFees[currency] ?? 0;
+  return (
+    <div>
+      <p className="font-display text-2xl font-bold tracking-tight text-ink">{formatMoney(cohort.prices[currency] ?? 0, currency)}</p>
+      {fee > 0 && <p className="text-[13px] text-muted">+ {formatMoney(fee, currency)} registration fee</p>}
+      {cohort.depositPercent && <p className="text-[13px] text-muted">or {cohort.depositPercent}% deposit to start</p>}
+    </div>
   );
 }

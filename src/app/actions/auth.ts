@@ -3,7 +3,6 @@
 import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { createSession, destroySession, getCurrentUser, requireUser } from "@/lib/auth";
@@ -14,7 +13,7 @@ import { homeFor, sessionSecretProblem } from "@/lib/session";
 import { absoluteUrl } from "@/lib/site";
 import { consumeToken, issueToken } from "@/lib/tokens";
 import { firstName } from "@/lib/utils";
-import { email as emailSchema, firstError, safeNext, text, type FormState } from "@/lib/validation";
+import { email as emailSchema, safeNext, type FormState } from "@/lib/validation";
 
 // Compared against when the email is unknown so response time does not reveal which emails exist.
 const DUMMY_HASH = "$2b$12$5VB7dnnjtjRUJ7XA3FtvMuH/4ycLw3wFUgRnowYDR9B0x55JAdpBu";
@@ -49,41 +48,9 @@ export async function login(_state: FormState, formData: FormData): Promise<Form
   redirect(safeNext(formData.get("next")) ?? homeFor(user.role));
 }
 
-const registerSchema = z.object({
-  name: text(120).min(2, "Enter your full name."),
-  email: emailSchema,
-  password: z.string(),
-});
-
 async function sendVerification(user: { id: number; email: string; name: string }, template: "welcome" | "verify_email") {
   const token = await issueToken(user.id, "verify");
   await sendEmail(user.email, template, { name: firstName(user.name), verifyUrl: absoluteUrl(`/verify-email?token=${token}`) });
-}
-
-export async function register(_state: FormState, formData: FormData): Promise<FormState> {
-  const parsed = registerSchema.safeParse({ name: formData.get("name"), email: formData.get("email"), password: formData.get("password") });
-  if (!parsed.success) return { error: firstError(parsed.error) };
-  const problem = passwordProblem(parsed.data.password);
-  if (problem) return { error: problem };
-
-  // Registration is rate limited per address to slow down automated sign-ups.
-  const waitMinutes = await loginBlockedFor("*", "register");
-  if (waitMinutes) return { error: `Too many sign-ups from your network. Try again in ${waitMinutes} minutes.` };
-
-  const db = await getDb();
-  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, parsed.data.email));
-  if (existing) return { error: "An account with this email already exists. Sign in or reset your password." };
-
-  const blocked = secretError();
-  if (blocked) return blocked;
-  const [user] = await db
-    .insert(users)
-    .values({ name: parsed.data.name, email: parsed.data.email, passwordHash: await bcrypt.hash(parsed.data.password, 12), role: "student" })
-    .returning();
-  await recordLoginFailure("*", "register");
-  await sendVerification(user, "welcome");
-  await createSession(user);
-  redirect(safeNext(formData.get("next")) ?? "/dashboard?welcome=1");
 }
 
 export async function logout(): Promise<void> {

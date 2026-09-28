@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { markPaymentFailed, markPaymentPaid, recheckPayment, recordOfflinePayment, sendBalanceReminder } from "@/app/actions/admin";
 import { ActionButton, ActionForm, Input, ModalButton, Select, SubmitButton } from "@/components/forms";
 import { BankIcon, CardIcon, CheckCircleIcon, ClockIcon, DownloadIcon, PlusIcon, TrendIcon, XCircleIcon } from "@/components/icons";
@@ -12,6 +12,7 @@ import { listPayments, parsePaymentFilters, paymentSummary } from "@/lib/admin-p
 import { getSettings } from "@/lib/data";
 import { CURRENCIES, formatMoney } from "@/lib/money";
 import { paymentBalanceFor } from "@/lib/payments";
+import { PART_PAYMENT_PLANS } from "@/lib/pricing";
 import { formatDateTime } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Payments" };
@@ -36,7 +37,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
     paymentSummary(),
     listPayments(filters, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
     db.select({ id: cohorts.id, name: cohorts.name, course: courses.title }).from(cohorts).innerJoin(courses, eq(courses.id, cohorts.courseId)).orderBy(asc(courses.title), desc(cohorts.startDate)),
-    db.select({ payment: payments, user: users, cohort: cohorts, course: courses }).from(payments).innerJoin(users, eq(users.id, payments.userId)).innerJoin(cohorts, eq(cohorts.id, payments.cohortId)).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(and(eq(payments.status, "paid"), eq(payments.paymentPlan, "deposit"))).orderBy(desc(payments.paidAt)),
+    db.select({ payment: payments, user: users, cohort: cohorts, course: courses }).from(payments).innerJoin(users, eq(users.id, payments.userId)).innerJoin(cohorts, eq(cohorts.id, payments.cohortId)).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(and(eq(payments.status, "paid"), inArray(payments.paymentPlan, PART_PAYMENT_PLANS))).orderBy(desc(payments.paidAt)),
   ]);
   const uniqueDeposits = [...new Map(deposits.map((row) => [`${row.user.id}:${row.cohort.id}:${row.payment.currency}`, row])).values()];
   const outstanding = (await Promise.all(uniqueDeposits.map(async (row) => ({ ...row, balance: await paymentBalanceFor(row.user.id, row.cohort, row.payment.currency) })))).filter((row) => row.balance.remaining > 0);
@@ -85,7 +86,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
         <StatTile label="Failed" value={summary.failed} icon={XCircleIcon} tone="red" href={url({ status: "failed" })} />
       </div>
 
-      {outstanding.length > 0 && <section className="rounded-[5px] border border-amber-200 bg-amber-50/30 p-5 md:p-6"><div className="mb-4 flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-display text-lg font-bold text-ink">Outstanding course balances</h2><p className="mt-1 text-sm text-muted">Students who reserved a place with a deposit and still have a balance due.</p></div><span className="text-sm font-semibold text-amber-800">{outstanding.length} outstanding</span></div><div className="grid gap-3 lg:grid-cols-2">{outstanding.slice(0, 6).map(({ user, cohort, course, balance }) => <div key={`${user.id}:${cohort.id}:${balance.currency}`} className="flex flex-wrap items-center justify-between gap-3 rounded-[5px] border border-amber-200 bg-white p-4"><div className="min-w-0"><Link href={`/admin/users/${user.id}`} className="font-semibold text-ink hover:text-accent">{user.name}</Link><p className="truncate text-sm text-muted">{course.title} · {cohort.name}</p><p className="mt-1 text-xs text-muted">Paid {formatMoney(balance.paid, balance.currency)} of {formatMoney(balance.total, balance.currency)}</p></div><div className="flex items-center gap-3"><span className="font-display text-lg font-bold text-amber-800">{formatMoney(balance.remaining, balance.currency)}</span><ActionButton action={sendBalanceReminder.bind(null, user.id, cohort.id, balance.currency)} pendingText="Sending…" doneText="Sent">Remind</ActionButton></div></div>)}</div></section>}
+      {outstanding.length > 0 && <section className="rounded-[5px] border border-amber-200 bg-amber-50/30 p-5 md:p-6"><div className="mb-4 flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-display text-lg font-bold text-ink">Outstanding course balances</h2><p className="mt-1 text-sm text-muted">Students who reserved a place with a deposit or registration fee and still have tuition due.</p></div><span className="text-sm font-semibold text-amber-800">{outstanding.length} outstanding</span></div><div className="grid gap-3 lg:grid-cols-2">{outstanding.slice(0, 6).map(({ user, cohort, course, balance }) => <div key={`${user.id}:${cohort.id}:${balance.currency}`} className="flex flex-wrap items-center justify-between gap-3 rounded-[5px] border border-amber-200 bg-white p-4"><div className="min-w-0"><Link href={`/admin/users/${user.id}`} className="font-semibold text-ink hover:text-accent">{user.name}</Link><p className="truncate text-sm text-muted">{course.title} · {cohort.name}</p><p className="mt-1 text-xs text-muted">Paid {formatMoney(balance.paid, balance.currency)} of {formatMoney(balance.total, balance.currency)}</p></div><div className="flex items-center gap-3"><span className="font-display text-lg font-bold text-amber-800">{formatMoney(balance.remaining, balance.currency)}</span><ActionButton action={sendBalanceReminder.bind(null, user.id, cohort.id, balance.currency)} pendingText="Sending…" doneText="Sent">Remind</ActionButton></div></div>)}</div></section>}
 
       <TableToolbar
         action="/admin/payments"

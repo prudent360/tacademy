@@ -1,0 +1,70 @@
+import type { Metadata } from "next";
+import { EnrolForm, type EnrolCohort } from "@/components/site/enrol-form";
+import { getCurrentUser } from "@/lib/auth";
+import { isFree, withCohorts } from "@/lib/catalog";
+import { bankTransferConfig } from "@/lib/config";
+import { getPublishedCourses, getSettings, getStudentCohorts } from "@/lib/data";
+import { payableCurrencies } from "@/lib/payments";
+import { cohortCurrencies } from "@/lib/pricing";
+import { formatDateOnly } from "@/lib/time";
+
+export const metadata: Metadata = { title: "Enrol", description: "Choose a course and cohort, tell us about yourself and secure your place.", alternates: { canonical: "/enroll" } };
+
+/** Default country for the phone field, from the academy's main currency. */
+const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA" };
+
+export default async function EnrolPage({ searchParams }: { searchParams: Promise<{ cohort?: string; course?: string }> }) {
+  const [params, settings, user, courses, payable, bank] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableCurrencies(), bankTransferConfig()]);
+  const enrolledIn = new Set(user ? (await getStudentCohorts(user.id)).map((row) => row.cohort.id) : []);
+
+  const cohorts: EnrolCohort[] = (await withCohorts(courses)).flatMap((course) => course.cohorts
+    .filter((cohort) => cohort.enrollmentOpen && !cohort.full && !enrolledIn.has(cohort.id))
+    .map((cohort) => {
+      const currencies = cohortCurrencies(cohort).filter((c) => payable.includes(c) || (bank.enabled && c === bank.currency));
+      return {
+        id: cohort.id,
+        courseId: course.id,
+        courseTitle: course.title,
+        name: cohort.name,
+        dates: cohort.startDate ? `${formatDateOnly(cohort.startDate)}${cohort.endDate ? ` – ${formatDateOnly(cohort.endDate)}` : ""}` : "Dates to be confirmed",
+        deliveryMode: cohort.deliveryMode,
+        free: isFree(cohort),
+        prices: cohort.prices,
+        registrationFees: cohort.registrationFees,
+        depositPercent: cohort.depositPercent,
+        registrationOnly: cohort.registrationOnly,
+        currencies: currencies.map((code) => ({ code, online: payable.includes(code), bank: bank.enabled && code === bank.currency })),
+      };
+    })
+    .filter((cohort) => cohort.free || cohort.currencies.length > 0));
+
+  const requested = Number(params.cohort);
+  const selected = cohorts.find((c) => c.id === requested) ?? (params.course ? cohorts.find((c) => courses.find((course) => course.id === c.courseId)?.slug === params.course) : undefined);
+  const [phoneDial, ...phoneRest] = user?.phone.includes(" ") ? user.phone.split(" ") : [];
+
+  return (
+    <div className="relative bg-navy">
+      <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(113,52,217,.45),transparent_60%),linear-gradient(180deg,#19112e_0%,#2b1a5c_55%,#5a24b8_100%)]" />
+      <div className="relative mx-auto max-w-[1200px] px-5 pb-20 pt-14 sm:px-8 md:pt-20">
+        <h1 className="mx-auto max-w-[720px] text-center font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-white md:text-[56px]">Start your journey into tech</h1>
+        <p className="mx-auto mt-4 max-w-[560px] text-center text-lg text-white/70">Tell us about yourself, choose your cohort and secure your place. Your student account is created as soon as you&apos;re enrolled.</p>
+        <div className="mt-12">
+          {cohorts.length ? (
+            <EnrolForm
+              cohorts={cohorts}
+              preferred={settings.currencies}
+              initialCohortId={selected?.id ?? null}
+              signedIn={user ? { firstName: user.name.split(" ")[0], lastName: user.name.split(" ").slice(1).join(" "), email: user.email, dial: phoneDial ?? "", phone: phoneRest.join(" "), dateOfBirth: user.dateOfBirth ?? "", qualification: user.qualification } : null}
+              phoneCountry={PHONE_COUNTRY[settings.currencies[0] ?? ""]}
+            />
+          ) : (
+            <div className="mx-auto max-w-[560px] rounded-[24px] bg-white p-8 text-center">
+              <h2 className="font-display text-2xl font-bold text-ink">No cohorts are open right now</h2>
+              <p className="mt-2 text-muted">{settings.supportEmail ? <>Email <a href={`mailto:${settings.supportEmail}`} className="font-semibold text-accent">{settings.supportEmail}</a> to hear when the next one opens.</> : "Check back soon for new dates."}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

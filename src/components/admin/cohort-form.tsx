@@ -33,6 +33,16 @@ export function CohortForm({ action, cohort, instructors, assigned, currencies }
           ))}
         </div>
       </fieldset>
+      <fieldset className="flex flex-col gap-3 rounded-lg border border-edge bg-panel p-4">
+        <legend className="px-1 text-sm font-semibold text-ink">Registration fee</legend>
+        <p className="text-[13px] text-muted">Optional one-off fee added to the student&apos;s first payment, on top of tuition. Discount codes don&apos;t apply to it.</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {shown.map((c) => (
+            <Input key={c.code} label={c.code} name={`regfee-${c.code}`} inputMode="decimal" placeholder="0" defaultValue={toMajorInput(cohort?.registrationFees[c.code])} />
+          ))}
+        </div>
+        <Checkbox label="Let students pay only the registration fee at enrolment" name="registrationOnly" defaultChecked={cohort?.registrationOnly ?? false} hint="Their place is secured and the tuition is paid later from their dashboard." />
+      </fieldset>
       <Input label="Instalment deposit (%)" name="depositPercent" type="number" min={10} max={90} defaultValue={cohort?.depositPercent ?? ""} hint="Optional. Students can pay this percentage now and the balance later." />
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-1 text-sm font-semibold text-ink">Instructors</legend>

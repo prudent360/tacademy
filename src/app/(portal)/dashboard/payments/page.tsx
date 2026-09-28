@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { payableCurrencies, paymentBalanceFor } from "@/lib/payments";
+import { PART_PAYMENT_PLANS, PLAN_LABEL } from "@/lib/pricing";
 import { formatDateTime, hoursAgo } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Payments" };
@@ -20,7 +21,7 @@ export default async function PaymentsPage() {
   const db = await getDb();
   const rows = await db.select().from(payments).where(eq(payments.userId, user.id)).orderBy(desc(payments.createdAt));
   const payable = await payableCurrencies();
-  const depositKeys = [...new Map(rows.filter((p) => p.status === "paid" && p.paymentPlan === "deposit" && p.cohortId).map((p) => [`${p.cohortId}:${p.currency}`, p])).values()];
+  const depositKeys = [...new Map(rows.filter((p) => p.status === "paid" && PART_PAYMENT_PLANS.includes(p.paymentPlan) && p.cohortId).map((p) => [`${p.cohortId}:${p.currency}`, p])).values()];
   const balances = (await Promise.all(depositKeys.map(async (deposit) => {
     const [detail] = await db.select({ cohort: cohorts, course: courses }).from(cohorts).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(eq(cohorts.id, deposit.cohortId!));
     if (!detail) return null;
@@ -46,7 +47,7 @@ export default async function PaymentsPage() {
                 <td className="whitespace-nowrap text-muted">{formatDateTime(p.paidAt ?? p.createdAt, settings.timezone, { zone: false })}</td>
                 <td className="font-semibold text-ink">{p.description}</td>
                 <td className="whitespace-nowrap font-semibold">{formatMoney(p.amount, p.currency)}</td>
-                <td className="capitalize text-muted">{p.paymentPlan}</td>
+                <td className="text-muted">{PLAN_LABEL[p.paymentPlan]}</td>
                 <td><StatusBadge status={p.status} label={p.status === "pending" && p.gateway === "manual" ? "Awaiting transfer" : undefined} />{p.status === "pending" && p.gateway === "manual" && <Link href={`/checkout/transfer?ref=${p.reference}`} className="mt-1 block text-xs font-semibold text-accent">Bank details →</Link>}</td>
                 <td className="font-mono text-xs text-muted">{p.reference}</td>
               </tr>

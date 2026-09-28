@@ -18,7 +18,7 @@ export function fromPrice(cohorts: Cohort[], currencies: string[]): { amount: nu
 }
 
 export function isFree(cohort: Cohort): boolean {
-  return Object.values(cohort.prices).every((v) => !v);
+  return [...Object.values(cohort.prices), ...Object.values(cohort.registrationFees)].every((v) => !v);
 }
 
 /** Attaches current cohorts (with remaining seats) to each course. */

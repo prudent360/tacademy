@@ -14,6 +14,8 @@ export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 export const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export type Gateway = "stripe" | "paystack" | "manual" | "test";
+/** full: all tuition now · deposit: part of the tuition now · registration: registration fee only · balance: the rest later. */
+export type PaymentPlan = "full" | "deposit" | "registration" | "balance";
 
 export const ATTENDANCE_STATUSES = ["present", "late", "absent", "excused"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
@@ -36,6 +38,9 @@ export const users = pgTable("users", {
   bio: text("bio").notNull().default(""),
   avatarUrl: text("avatar_url"),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  /** YYYY-MM-DD, collected at enrolment. */
+  dateOfBirth: text("date_of_birth"),
+  qualification: text("qualification").notNull().default(""),
   emailReminders: boolean("email_reminders").notNull().default(true),
   /** Bumped to sign the user out everywhere (password reset, deactivation). */
   sessionVersion: integer("session_version").notNull().default(1),
@@ -156,6 +161,10 @@ export const cohorts = pgTable("cohorts", {
   capacity: integer("capacity"),
   prices: jsonb("prices").$type<PriceMap>().notNull().default({}),
   depositPercent: integer("deposit_percent"),
+  /** One-off fee added to the first payment, keyed by currency like prices. */
+  registrationFees: jsonb("registration_fees").$type<PriceMap>().notNull().default({}),
+  /** Lets students pay only the registration fee at enrolment and the tuition later. */
+  registrationOnly: boolean("registration_only").notNull().default(false),
   enrollmentOpen: boolean("enrollment_open").notNull().default(true),
   createdAt: createdAt(),
 }, (t) => [index("cohorts_course_idx").on(t.courseId)]);
@@ -228,7 +237,9 @@ export const payments = pgTable("payments", {
   status: text("status").$type<PaymentStatus>().notNull().default("pending"),
   description: text("description").notNull().default(""),
   originalAmount: integer("original_amount"),
-  paymentPlan: text("payment_plan").$type<"full" | "deposit" | "balance">().notNull().default("full"),
+  paymentPlan: text("payment_plan").$type<PaymentPlan>().notNull().default("full"),
+  /** The part of amount that is the registration fee rather than tuition. */
+  registrationFee: integer("registration_fee").notNull().default(0),
   discountCodeId: integer("discount_code_id").references(() => discountCodes.id, { onDelete: "set null" }),
   paidAt: timestamp("paid_at", { withTimezone: true }),
   createdAt: createdAt(),

@@ -27,3 +27,6 @@ export function plural(n: number, word: string, pluralWord = `${word}s`): string
 }
 
 export const MODE_LABEL = { virtual: "Live online", physical: "In person", hybrid: "Hybrid" } as const;
+
+/** Options for "Highest academic qualification" on the enrolment form. */
+export const QUALIFICATIONS = ["Secondary school (SSCE / WAEC / GCSE)", "OND / NCE / A-levels", "HND", "Bachelor's degree", "Master's degree", "PhD / Doctorate", "Other"] as const;

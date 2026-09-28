@@ -47,3 +47,11 @@ export function safeNext(value: FormDataEntryValue | string | null | undefined):
   const v = typeof value === "string" ? value : "";
   return v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\") ? v : null;
 }
+
+export const dialCode = z.string().trim().regex(/^\+\d{1,4}$/, "Choose a country code.");
+export const phoneNumber = z.string().trim().max(30).refine((v) => /^[\d\s()-]{6,20}$/.test(v), "Enter a valid phone number.");
+
+/** International form for storage: drops a leading trunk zero (07400… → +44 7400…). */
+export function formatPhone(dial: string, number: string): string {
+  return `${dial} ${number.trim().replace(/^0+/, "")}`;
+}

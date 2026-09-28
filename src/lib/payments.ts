@@ -3,13 +3,15 @@ import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { getDb } from "@/db";
-import { discountCodes, enrollments, payments, users, type Cohort, type Course, type Payment, type User } from "@/db/schema";
+import { discountCodes, enrollments, payments, users, type Cohort, type Course, type Payment, type PaymentPlan, type User } from "@/db/schema";
 import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
 import { CURRENCY_CODES, formatMoney, gatewayFor } from "./money";
 import { notify } from "./notify";
+import { PART_PAYMENT_PLANS, quote, type EnrolPlan } from "./pricing";
 import { absoluteUrl } from "./site";
+import { issueToken } from "./tokens";
 import { formatDateOnly } from "./time";
 import { firstName, MODE_LABEL } from "./utils";
 
@@ -59,11 +61,12 @@ export function describePurchase(course: Course, cohort: Cohort): string {
 async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, currency: string, details: {
   amount: number;
   originalAmount: number;
-  paymentPlan: "full" | "deposit" | "balance";
+  paymentPlan: PaymentPlan;
+  registrationFee?: number;
   discountCodeId?: number | null;
   description: string;
-}): Promise<{ url: string } | { error: string }> {
-  const { amount, originalAmount, paymentPlan, discountCodeId, description } = details;
+}): Promise<{ url: string; reference: string } | { error: string }> {
+  const { amount, originalAmount, paymentPlan, registrationFee = 0, discountCodeId, description } = details;
   const gateway = gatewayFor(currency);
   const cfg = await gatewayConfig(gateway);
   if (!cfg.enabled) return { error: `Payments in ${currency} are currently switched off. Please choose another option.` };
@@ -72,9 +75,9 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
 
   const reference = newReference();
   const db = await getDb();
-  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: configured ? gateway : "test", amount, currency, description, originalAmount, paymentPlan, discountCodeId });
+  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: configured ? gateway : "test", amount, currency, description, originalAmount, paymentPlan, registrationFee, discountCodeId });
   const returnUrl = absoluteUrl(`/checkout/return?ref=${reference}`);
-  if (!configured) return { url: `/checkout/test?ref=${reference}` };
+  if (!configured) return { url: `/checkout/test?ref=${reference}`, reference };
 
   try {
     if (gateway === "stripe") {
@@ -89,7 +92,7 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
         cancel_url: absoluteUrl(`/courses/${course.slug}?cancelled=1`),
       });
       await db.update(payments).set({ providerId: session.id }).where(eq(payments.reference, reference));
-      return { url: session.url! };
+      return { url: session.url!, reference };
     }
 
     const data = await paystack<{ authorization_url: string; reference: string }>(cfg.secretKey, "/transaction/initialize", {
@@ -97,7 +100,7 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
       body: JSON.stringify({ email: user.email, amount, currency, reference, callback_url: returnUrl, metadata: { reference, cohortId: cohort.id, userId: user.id } }),
     });
     await db.update(payments).set({ providerId: data.reference }).where(eq(payments.reference, reference));
-    return { url: data.authorization_url };
+    return { url: data.authorization_url, reference };
   } catch (error) {
     console.error("Checkout failed", error);
     await db.update(payments).set({ status: "failed" }).where(eq(payments.reference, reference));
@@ -105,37 +108,42 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
   }
 }
 
+function planNote(plan: EnrolPlan, cohort: Cohort, registrationFee: number): string {
+  const parts = [registrationFee ? "registration fee" : "", plan === "deposit" ? `${cohort.depositPercent}% deposit` : plan === "full" && registrationFee ? "full tuition" : ""].filter(Boolean);
+  return parts.length ? ` (${parts.join(" + ")})` : "";
+}
+
 /**
  * Creates a pending payment and returns the URL to send the student to:
  * Stripe Checkout, Paystack's payment page, or the local test checkout.
  */
-export async function startCheckout(user: User, course: Course, cohort: Cohort, currency: string, options: { plan?: "full" | "deposit"; discountCode?: string } = {}): Promise<{ url: string } | { error: string }> {
-  const originalAmount = cohort.prices[currency];
-  if (!originalAmount || originalAmount <= 0) return { error: "This cohort isn't sold in that currency." };
+export async function startCheckout(user: User, course: Course, cohort: Cohort, currency: string, options: { plan?: EnrolPlan; discountCode?: string } = {}): Promise<{ url: string; reference: string } | { error: string }> {
+  const plan = options.plan ?? "full";
+  const base = quote(cohort, currency, plan);
+  if (!base.dueNow) return { error: "This cohort isn't sold in that currency." };
   const db = await getDb();
   const requestedCode = options.discountCode?.trim().toUpperCase();
   const [discount] = requestedCode ? await db.select().from(discountCodes).where(and(eq(discountCodes.code, requestedCode), eq(discountCodes.active, true), or(isNull(discountCodes.expiresAt), sql`${discountCodes.expiresAt} > now()`))) : [];
   if (requestedCode && (!discount || (discount.maxUses !== null && discount.usedCount >= discount.maxUses))) return { error: "That discount code is invalid or has expired." };
-  const discounted = discount ? Math.round(originalAmount * (100 - discount.percentOff) / 100) : originalAmount;
-  const paymentPlan = options.plan === "deposit" && cohort.depositPercent ? "deposit" : "full";
-  const amount = paymentPlan === "deposit" ? Math.max(1, Math.round(discounted * cohort.depositPercent! / 100)) : discounted;
-  const description = `${describePurchase(course, cohort)}${paymentPlan === "deposit" ? ` (${cohort.depositPercent}% deposit)` : ""}${discount ? ` · ${discount.code}` : ""}`;
-  return beginOnlinePayment(user, course, cohort, currency, { amount, originalAmount, paymentPlan, discountCodeId: discount?.id, description });
+  const q = quote(cohort, currency, plan, discount?.percentOff ?? 0);
+  const paymentPlan = q.later > 0 ? plan : "full";
+  const description = `${describePurchase(course, cohort)}${planNote(paymentPlan, cohort, q.registrationFee)}${discount ? ` · ${discount.code}` : ""}`;
+  return beginOnlinePayment(user, course, cohort, currency, { amount: q.dueNow, originalAmount: q.tuitionPrice, paymentPlan, registrationFee: q.registrationFee, discountCodeId: discount?.id, description });
 }
 
 export type PaymentBalance = { total: number; paid: number; remaining: number; currency: string };
 
-/** Calculates the agreed course total and outstanding amount after a deposit or part-payment. */
+/** Calculates the agreed tuition and what is still owed after a deposit or registration-only payment. Registration fees are left out. */
 export async function paymentBalanceFor(userId: number, cohort: Cohort, currency: string): Promise<PaymentBalance> {
   const db = await getDb();
   const paidRows = await db.select().from(payments).where(and(eq(payments.userId, userId), eq(payments.cohortId, cohort.id), eq(payments.currency, currency), eq(payments.status, "paid")));
-  const deposit = paidRows.find((payment) => payment.paymentPlan === "deposit");
+  const deposit = paidRows.find((payment) => PART_PAYMENT_PLANS.includes(payment.paymentPlan));
   let total = deposit?.originalAmount ?? cohort.prices[currency] ?? 0;
   if (deposit?.discountCodeId) {
     const [discount] = await db.select().from(discountCodes).where(eq(discountCodes.id, deposit.discountCodeId));
     if (discount) total = Math.round(total * (100 - discount.percentOff) / 100);
   }
-  const paid = paidRows.reduce((sum, payment) => sum + payment.amount, 0);
+  const paid = paidRows.reduce((sum, payment) => sum + payment.amount - payment.registrationFee, 0);
   return { total, paid, remaining: Math.max(0, total - paid), currency };
 }
 
@@ -143,7 +151,8 @@ export async function paymentBalanceFor(userId: number, cohort: Cohort, currency
 export async function startBalanceCheckout(user: User, course: Course, cohort: Cohort, currency: string): Promise<{ url: string } | { error: string }> {
   const balance = await paymentBalanceFor(user.id, cohort, currency);
   if (!balance.total) return { error: "This cohort isn't sold in that currency." };
-  if (!balance.paid) return { error: "No deposit or previous payment was found for this cohort." };
+  const [started] = await (await getDb()).select({ id: payments.id }).from(payments).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.currency, currency), eq(payments.status, "paid")));
+  if (!started) return { error: "No deposit or previous payment was found for this cohort." };
   if (!balance.remaining) return { error: "This cohort has already been paid in full." };
   const db = await getDb();
   await db.update(payments).set({ status: "failed" }).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.currency, currency), eq(payments.paymentPlan, "balance"), eq(payments.status, "pending")));
@@ -159,24 +168,28 @@ export async function startBalanceCheckout(user: User, course: Course, cohort: C
  * Creates a pending bank-transfer payment. The student sees the account details and a reference;
  * an admin confirms it under Payments once the money arrives.
  */
-export async function startBankTransfer(user: User, course: Course, cohort: Cohort): Promise<{ url: string } | { error: string }> {
+export async function startBankTransfer(user: User, course: Course, cohort: Cohort, plan: EnrolPlan = "full"): Promise<{ url: string; reference: string } | { error: string }> {
   const bank = await bankTransferConfig();
   if (!bank.enabled) return { error: "Bank transfer isn't available." };
-  const amount = cohort.prices[bank.currency];
-  if (!amount) return { error: `This cohort has no ${bank.currency} price for bank transfer.` };
+  const q = quote(cohort, bank.currency, plan);
+  if (!q.dueNow) return { error: `This cohort has no ${bank.currency} price for bank transfer.` };
+  const paymentPlan = q.later > 0 ? plan : "full";
   const db = await getDb();
-  // Reuse an open transfer for the same cohort rather than creating duplicates.
-  const [open] = await db.select().from(payments).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.gateway, "manual"), eq(payments.status, "pending")));
-  if (open) return { url: `/checkout/transfer?ref=${open.reference}` };
+  // Reuse an open transfer for the same cohort and amount rather than creating duplicates.
+  const open = await db.select().from(payments).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.gateway, "manual"), eq(payments.status, "pending")));
+  const same = open.find((p) => p.amount === q.dueNow && p.paymentPlan === paymentPlan);
+  if (same) return { url: `/checkout/transfer?ref=${same.reference}`, reference: same.reference };
+  if (open.length) await db.update(payments).set({ status: "failed" }).where(inArray(payments.id, open.map((p) => p.id)));
   const reference = newReference();
-  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: "manual", amount, currency: bank.currency, description: describePurchase(course, cohort) });
+  const description = `${describePurchase(course, cohort)}${planNote(paymentPlan, cohort, q.registrationFee)}`;
+  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: "manual", amount: q.dueNow, currency: bank.currency, description, originalAmount: q.tuitionPrice, paymentPlan, registrationFee: q.registrationFee });
   await notify((await getAdmins()).map((a) => a.id), {
     kind: "payment",
-    title: `Bank transfer expected: ${formatMoney(amount, bank.currency)}`,
-    body: `${user.name} chose bank transfer for ${describePurchase(course, cohort)} (ref ${reference}).`,
+    title: `Bank transfer expected: ${formatMoney(q.dueNow, bank.currency)}`,
+    body: `${user.name} chose bank transfer for ${description} (ref ${reference}).`,
     href: "/admin/payments?status=pending",
   });
-  return { url: `/checkout/transfer?ref=${reference}` };
+  return { url: `/checkout/transfer?ref=${reference}`, reference };
 }
 
 /** Asks the gateway whether a payment succeeded and fulfils it if so. Returns the latest payment row. */
@@ -221,6 +234,12 @@ export async function activateEnrollment(userId: number, cohortId: number, sourc
   const found = await getCohortWithCourse(cohortId);
   if (!found) return true;
   const { cohort, course } = found;
+  // Accounts are created at enrolment without a password; the student sets one from this email.
+  const [student] = await db.select().from(users).where(eq(users.id, userId));
+  if (student && !student.passwordHash) {
+    const token = await issueToken(student.id, "invite");
+    await sendEmails([{ to: student.email, template: "account_setup", vars: { name: firstName(student.name), courseTitle: course.title, setupUrl: absoluteUrl(`/reset-password?token=${token}`) } }]);
+  }
   await notify([userId], {
     kind: "enrollment",
     title: `You're enrolled on ${course.title}`,

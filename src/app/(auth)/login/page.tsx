@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
       </ActionForm>
       <p className="border-t border-line pt-5 text-sm text-muted">
-        New here? <Link href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"} className="font-semibold text-accent hover:text-accent-dark">Create a free account</Link>
+        New here? Student accounts are created when you enrol. <Link href="/enroll" className="font-semibold text-accent hover:text-accent-dark">Enrol on a course</Link>
       </p>
     </>
   );

@@ -6,7 +6,7 @@ import { CopyField } from "@/components/copy-field";
 import { BankIcon, ClockIcon } from "@/components/icons";
 import { getDb } from "@/db";
 import { payments } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { canViewPayment } from "@/lib/checkout-access";
 import { bankTransferConfig } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
 
@@ -14,9 +14,10 @@ export const metadata: Metadata = { title: "Bank transfer", robots: { index: fal
 
 export default async function TransferPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   const { ref = "" } = await searchParams;
-  const user = await requireUser();
-  const [payment] = await (await getDb()).select().from(payments).where(and(eq(payments.reference, ref), eq(payments.userId, user.id), eq(payments.gateway, "manual")));
+  const [payment] = await (await getDb()).select().from(payments).where(and(eq(payments.reference, ref), eq(payments.gateway, "manual")));
   if (!payment) notFound();
+  const { allowed, signedIn } = await canViewPayment(payment);
+  if (!allowed) notFound();
   const bank = await bankTransferConfig();
 
   if (payment.status === "paid") {
@@ -24,7 +25,7 @@ export default async function TransferPage({ searchParams }: { searchParams: Pro
       <div className="mx-auto flex max-w-[560px] flex-col items-center gap-4 px-5 py-20 text-center">
         <h1 className="font-display text-3xl font-bold text-ink">Transfer received</h1>
         <p className="text-lg text-muted">Your place is confirmed. See you in class!</p>
-        {payment.cohortId && <Link href={`/dashboard/cohorts/${payment.cohortId}`} className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Go to my class</Link>}
+        {payment.cohortId && signedIn && <Link href={`/dashboard/cohorts/${payment.cohortId}`} className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Go to my class</Link>}
       </div>
     );
   }
@@ -58,12 +59,12 @@ export default async function TransferPage({ searchParams }: { searchParams: Pro
         </dl>
         <CopyField label="Payment reference (use as the transfer description)" value={payment.reference} />
         {bank.instructions && <p className="text-sm leading-relaxed text-body">{bank.instructions}</p>}
-        <p className="flex items-start gap-2 rounded-xl bg-amber-50 p-3.5 text-sm text-amber-900"><ClockIcon className="mt-0.5 size-4 shrink-0" /> Your place is reserved and will be confirmed by email as soon as we receive the transfer.</p>
+        <p className="flex items-start gap-2 rounded-xl bg-amber-50 p-3.5 text-sm text-amber-900"><ClockIcon className="mt-0.5 size-4 shrink-0" /> Your place is reserved and will be confirmed by email as soon as we receive the transfer.{!signedIn && " That email also has the link to set up your student account."}</p>
       </div>
-      <div className="flex flex-wrap justify-center gap-3">
+      {signedIn && <div className="flex flex-wrap justify-center gap-3">
         <Link href="/dashboard" className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Go to my dashboard</Link>
         <Link href="/dashboard/payments" className="flex h-12 items-center rounded-lg border border-edge-strong bg-white px-6 font-semibold text-ink hover:bg-page">My payments</Link>
-      </div>
+      </div>}
     </div>
   );
 }

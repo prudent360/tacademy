@@ -17,7 +17,7 @@ export function SiteHeader({ settings, user }: { settings: Settings; user: User 
     : (
       <>
         <Link href="/login" className="flex h-11 items-center rounded-lg px-4 text-[15px] font-semibold text-ink hover:bg-page">Sign in</Link>
-        <Link href="/register" className="flex h-11 items-center rounded-lg bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-dark">Get started</Link>
+        <Link href="/enroll" className="flex h-11 items-center rounded-lg bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-dark">Enrol now</Link>
       </>
     );
   return (

@@ -94,6 +94,21 @@ Your timetable, joining links, venue details and assignments are all in your das
 
 [[Go to my dashboard|{{dashboardUrl}}]]`,
   },
+  account_setup: {
+    name: "Student account set-up",
+    description: "Sent when someone who enrolled without an account is given their place. Lets them choose a password.",
+    variables: { courseTitle: "Data Analytics with Power BI", setupUrl: "https://example.com/reset-password?token=sample" },
+    subject: "Set up your {{siteName}} student account",
+    body: `Hi {{name}},
+
+Welcome to **{{siteName}}**! Your place on **{{courseTitle}}** is confirmed and your student account is ready.
+
+Choose a password to sign in and see your timetable, class links and assignments:
+
+[[Set my password|{{setupUrl}}]]
+
+This link expires in 7 days. If it runs out, use "Forgot password" on the sign-in page.`,
+  },
   payment_receipt: {
     name: "Payment receipt",
     description: "Sent after a successful payment.",

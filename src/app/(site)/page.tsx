@@ -316,7 +316,7 @@ export default async function HomePage() {
               <p className="max-w-[520px] text-lg text-white/80">Create a free account to save your place, track your classes and get reminders.</p>
             </div>
             <div className="relative flex flex-wrap gap-3">
-              <Link href="/register" className="flex h-13 items-center rounded-lg bg-white px-7 text-base font-semibold text-accent hover:bg-accent-soft">Create free account</Link>
+              <Link href="/enroll" className="flex h-13 items-center rounded-lg bg-white px-7 text-base font-semibold text-accent hover:bg-accent-soft">Enrol now</Link>
               <Link href="/courses" className="flex h-13 items-center gap-2 rounded-lg border-[1.5px] border-white/60 px-7 text-base font-semibold text-white hover:bg-white/10"><UsersIcon className="size-5" /> See courses</Link>
             </div>
           </div>

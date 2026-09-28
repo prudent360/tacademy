@@ -13,6 +13,7 @@ import { requireUser } from "@/lib/auth";
 import { getSettings, getStudentCohorts } from "@/lib/data";
 import { STATE_LABEL, announcementsFor, assignmentState, assignmentsForStudent, upcomingSessionsFor } from "@/lib/student";
 import { paymentBalanceFor } from "@/lib/payments";
+import { PART_PAYMENT_PLANS } from "@/lib/pricing";
 import { formatMoney } from "@/lib/money";
 import { formatDateOnly, formatDayMonth, formatSessionRange, greeting, relativeTime, thisWeek, untilLabel } from "@/lib/time";
 import { MODE_LABEL, firstName } from "@/lib/utils";
@@ -37,7 +38,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
     cohortIds.length ? db.select({ sessionId: attendance.sessionId, status: attendance.status }).from(attendance).where(eq(attendance.userId, user.id)) : [],
     db.select().from(payments).where(eq(payments.userId, user.id)),
   ]);
-  const depositKeys = [...new Map(studentPayments.filter((payment) => payment.status === "paid" && payment.paymentPlan === "deposit" && payment.cohortId).map((payment) => [`${payment.cohortId}:${payment.currency}`, payment])).values()];
+  const depositKeys = [...new Map(studentPayments.filter((payment) => payment.status === "paid" && PART_PAYMENT_PLANS.includes(payment.paymentPlan) && payment.cohortId).map((payment) => [`${payment.cohortId}:${payment.currency}`, payment])).values()];
   const outstanding = (await Promise.all(depositKeys.map(async (payment) => {
     const detail = cohorts.find((row) => row.cohort.id === payment.cohortId);
     return detail ? { ...detail, balance: await paymentBalanceFor(user.id, detail.cohort, payment.currency) } : null;

@@ -133,13 +133,13 @@ const cohortSchema = z
   .refine((v) => !v.startDate || !v.endDate || v.startDate <= v.endDate, "The end date must be on or after the start date.")
   .refine((v) => v.deliveryMode === "virtual" || v.venue.length > 0, "Add a venue for in-person or hybrid cohorts.");
 
-function parsePrices(formData: FormData): { prices: PriceMap } | { error: string } {
+function parsePrices(formData: FormData, prefix = "price", label = "price"): { prices: PriceMap } | { error: string } {
   const prices: PriceMap = {};
   for (const code of CURRENCY_CODES) {
-    const raw = String(formData.get(`price-${code}`) ?? "");
+    const raw = String(formData.get(`${prefix}-${code}`) ?? "");
     const minor = parseMajor(raw);
     if (minor === null) continue;
-    if (Number.isNaN(minor)) return { error: `Enter the ${code} price as a number, e.g. 499 or 499.99.` };
+    if (Number.isNaN(minor)) return { error: `Enter the ${code} ${label} as a number, e.g. 499 or 499.99.` };
     if (minor > 0) prices[code] = minor;
   }
   return { prices };
@@ -158,6 +158,8 @@ async function saveCohort(id: number | null, courseId: number, formData: FormDat
   if (!parsed.success) return { error: firstError(parsed.error) };
   const priced = parsePrices(formData);
   if ("error" in priced) return priced;
+  const fees = parsePrices(formData, "regfee", "registration fee");
+  if ("error" in fees) return fees;
   const values = {
     ...parsed.data,
     startDate: parsed.data.startDate || null,
@@ -165,6 +167,8 @@ async function saveCohort(id: number | null, courseId: number, formData: FormDat
     capacity: parsed.data.capacity ? Number(parsed.data.capacity) : null,
     depositPercent: parsed.data.depositPercent ? Number(parsed.data.depositPercent) : null,
     prices: priced.prices,
+    registrationFees: fees.prices,
+    registrationOnly: formData.get("registrationOnly") === "on",
     enrollmentOpen: formData.get("enrollmentOpen") === "on",
   };
   const db = await getDb();

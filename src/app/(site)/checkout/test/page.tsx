@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { completeTestPayment } from "@/app/actions/checkout";
 import { getDb } from "@/db";
 import { payments } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { canViewPayment } from "@/lib/checkout-access";
 import { formatMoney, gatewayFor } from "@/lib/money";
 import { testPaymentsAllowed } from "@/lib/payments";
 
@@ -15,9 +15,8 @@ export const metadata: Metadata = { title: "Test checkout", robots: { index: fal
 export default async function TestCheckoutPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   if (!testPaymentsAllowed()) notFound();
   const { ref = "" } = await searchParams;
-  const user = await requireUser();
-  const [payment] = await (await getDb()).select().from(payments).where(and(eq(payments.reference, ref), eq(payments.userId, user.id)));
-  if (!payment) notFound();
+  const [payment] = await (await getDb()).select().from(payments).where(eq(payments.reference, ref));
+  if (!payment || !(await canViewPayment(payment)).allowed) notFound();
   const gateway = gatewayFor(payment.currency) === "stripe" ? "Stripe" : "Paystack";
 
   return (
