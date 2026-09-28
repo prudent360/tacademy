@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { EnrolForm, type EnrolCohort } from "@/components/site/enrol-form";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
@@ -44,9 +45,13 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="relative bg-navy">
-      <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(113,52,217,.45),transparent_60%),linear-gradient(180deg,#19112e_0%,#2b1a5c_55%,#5a24b8_100%)]" />
+      <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
+        <Image src="/images/enrol-classroom.webp" alt="" fill priority sizes="100vw" className="object-cover object-[center_30%]" />
+        {/* Darkens the photo behind the heading, then fades into brand purple behind the form. */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.82)_0%,rgba(25,17,46,.68)_30%,rgba(58,24,130,.85)_58%,#5a24b8_100%)]" />
+      </div>
       <div className="relative mx-auto max-w-[1200px] px-5 pb-20 pt-14 sm:px-8 md:pt-20">
-        <h1 className="mx-auto max-w-[720px] text-center font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-white md:text-[56px]">Start your journey into tech</h1>
+        <h1 className="mx-auto max-w-[720px] text-center [text-shadow:0_2px_24px_rgba(0,0,0,.35)] font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-white md:text-[56px]">Start your journey into tech</h1>
         <p className="mx-auto mt-4 max-w-[560px] text-center text-lg text-white/70">Tell us about yourself, choose your cohort and secure your place. Your student account is created as soon as you&apos;re enrolled.</p>
         <div className="mt-12">
           {cohorts.length ? (
