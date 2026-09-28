@@ -3,6 +3,7 @@ import { desc } from "drizzle-orm";
 import { runRemindersNow, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendTestEmailNow } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
+import { EmailDriverFields } from "@/components/admin/email-driver";
 import { ActionButton, ActionForm, FileField, Input, SecretInput, Select, SubmitButton, Switch, Textarea } from "@/components/forms";
 import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon } from "@/components/icons";
 import { Badge, DataTable, Notice, StatusBadge } from "@/components/ui";
@@ -238,15 +239,33 @@ export async function EmailTab({ s }: { s: Settings }) {
   return (
     <div className="flex flex-col gap-6">
       <ActionForm action={saveEmailSettings} className="flex flex-col gap-6">
-        <Section title="Email delivery" description="Automatic emails (receipts, reminders, feedback) are sent through Resend." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-ink text-white"><MailIcon className="size-5" /></span>}
-          badge={cfg.apiKey ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> Delivering</Badge> : <Badge tone="amber"><AlertIcon className="size-3.5" /> Logging only</Badge>}
-          footer={<>Create an API key at <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">resend.com/api-keys</a> and verify your domain under Domains so emails come from your own address.</>}>
-          {!cfg.apiKey && <Notice tone="amber">No API key yet, so emails are written to the log below instead of being delivered.</Notice>}
-          {cfg.source === "environment" && <Notice tone="accent">Currently using the <code className="font-mono">RESEND_API_KEY</code> environment variable. A key saved here takes priority.</Notice>}
-          <SecretInput label="Resend API key" name="apiKey" masked={maskSecret(s.email.apiKey)} placeholder="re_…" />
+        <Section title="Email delivery" description="Automatic emails (receipts, reminders, feedback) are sent through Resend or your own mail server (SMTP)." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-ink text-white"><MailIcon className="size-5" /></span>}
+          badge={cfg.ready ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> Delivering via {cfg.driver === "smtp" ? "SMTP" : "Resend"}</Badge> : <Badge tone="amber"><AlertIcon className="size-3.5" /> Logging only</Badge>}>
+          {!cfg.ready && cfg.driver !== "log" && <Notice tone="amber">{cfg.driver === "smtp" ? "SMTP isn't fully set up yet" : "No Resend API key yet"}, so emails are written to the log below instead of being delivered.</Notice>}
+          <EmailDriverFields
+            initial={cfg.driver}
+            resend={<>
+              {cfg.source === "environment" && <Notice tone="accent">Currently using the <code className="font-mono">RESEND_API_KEY</code> environment variable. A key saved here takes priority.</Notice>}
+              <SecretInput label="Resend API key" name="apiKey" masked={maskSecret(s.email.apiKey)} placeholder="re_…" />
+              <p className="text-xs text-muted">Create an API key at <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">resend.com/api-keys</a> and verify your domain under Domains so emails come from your own address.</p>
+            </>}
+            smtp={<>
+              <div className="grid gap-5 md:grid-cols-[2fr_1fr_1fr]">
+                <Input label="Host" name="smtpHost" defaultValue={s.email.smtpHost} placeholder="smtp.hostinger.com" className="[&_input]:font-mono [&_input]:text-sm" />
+                <Input label="Port" name="smtpPort" type="number" min={1} max={65535} defaultValue={s.email.smtpPort ?? 465} />
+                <Select label="Encryption" name="smtpSecurity" defaultValue={s.email.smtpSecurity ?? "ssl"} options={[{ value: "ssl", label: "SSL (port 465)" }, { value: "tls", label: "TLS (port 587)" }, { value: "none", label: "None" }]} />
+              </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                <Input label="Username" name="smtpUser" defaultValue={s.email.smtpUser} placeholder="hello@yourdomain.com" autoComplete="off" />
+                <SecretInput label="Password" name="smtpPassword" masked={maskSecret(s.email.smtpPassword)} placeholder="Mailbox password" />
+              </div>
+              <p className="text-xs text-muted"><strong className="text-body">Hostinger:</strong> smtp.hostinger.com, 465, SSL, your full mailbox address and its password. <strong className="text-body">Gmail:</strong> smtp.gmail.com, 587, TLS, with an App Password.</p>
+            </>}
+            log={<Notice tone="accent">Emails are written to the log below and never delivered. Useful while testing.</Notice>}
+          />
           <div className="grid gap-5 md:grid-cols-3">
             <Input label="Sender name" name="fromName" defaultValue={s.email.fromName} placeholder={s.siteName} />
-            <Input label="Sender address" name="fromAddress" type="email" defaultValue={s.email.fromAddress} placeholder="hello@yourdomain.com" hint="Must be on a domain verified in Resend." />
+            <Input label="Sender address" name="fromAddress" type="email" defaultValue={s.email.fromAddress} placeholder="hello@yourdomain.com" hint="A domain verified in Resend, or for SMTP usually the mailbox you log in with." />
             <Input label="Reply-to" name="replyTo" type="email" defaultValue={s.email.replyTo} placeholder={s.supportEmail || "support@yourdomain.com"} />
           </div>
           <p className="text-sm text-muted">Emails currently go out as <span className="font-semibold text-ink">{cfg.from}</span>.</p>

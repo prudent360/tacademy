@@ -7,6 +7,7 @@ import { getPublishedCourses, getSettings } from "@/lib/data";
 import type { DeliveryMode } from "@/db/schema";
 import Link from "next/link";
 import { MODE_LABEL } from "@/lib/utils";
+import { visitorCurrencies } from "@/lib/visitor";
 
 export const metadata: Metadata = { title: "Courses", description: "Browse live online, in-person and hybrid courses." };
 
@@ -15,7 +16,7 @@ const FILTERS: (DeliveryMode | "all")[] = ["all", "virtual", "physical", "hybrid
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ mode?: string; category?: string; q?: string }> }) {
   const { mode = "all", category, q = "" } = await searchParams;
   const [settings, courses] = await Promise.all([getSettings(), getPublishedCourses()]);
-  const all = await withCohorts(courses);
+  const [all, { currencies }] = await Promise.all([withCohorts(courses), visitorCurrencies(settings)]);
   const categories = [...new Set(all.map((c) => c.category).filter(Boolean))];
   const query = q.trim().toLowerCase();
   const shown = all.filter((c) => {
@@ -54,7 +55,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       </div>
       {shown.length ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {shown.map((course) => <CourseCard key={course.id} course={course} currencies={settings.currencies} />)}
+          {shown.map((course) => <CourseCard key={course.id} course={course} currencies={currencies} />)}
         </div>
       ) : (
         <EmptyState icon={BookIcon} title="No courses match">Try a different format or topic, or check back soon for new cohorts.</EmptyState>

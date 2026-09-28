@@ -9,6 +9,7 @@ import { mobileMoneyCountries } from "@/lib/money";
 import { payableMethods } from "@/lib/payments";
 import { cohortCurrencies } from "@/lib/pricing";
 import { formatDateOnly } from "@/lib/time";
+import { visitorCurrencies } from "@/lib/visitor";
 
 export const metadata: Metadata = { title: "Enrol", description: "Choose a course and cohort, tell us about yourself and secure your place.", alternates: { canonical: "/enroll" } };
 
@@ -17,6 +18,7 @@ const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US",
 
 export default async function EnrolPage({ searchParams }: { searchParams: Promise<{ cohort?: string; course?: string }> }) {
   const [params, settings, user, courses, payable, bank] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableMethods(), bankTransferConfig()]);
+  const visitor = await visitorCurrencies(settings);
   const enrolledIn = new Set(user ? (await getStudentCohorts(user.id)).map((row) => row.cohort.id) : []);
 
   const cohorts: EnrolCohort[] = (await withCohorts(courses)).flatMap((course) => course.cohorts
@@ -58,10 +60,10 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
           {cohorts.length ? (
             <EnrolForm
               cohorts={cohorts}
-              preferred={settings.currencies}
+              preferred={visitor.currencies}
               initialCohortId={selected?.id ?? null}
               signedIn={user ? { firstName: user.name.split(" ")[0], lastName: user.name.split(" ").slice(1).join(" "), email: user.email, dial: phoneDial ?? "", phone: phoneRest.join(" "), dateOfBirth: user.dateOfBirth ?? "", qualification: user.qualification } : null}
-              phoneCountry={PHONE_COUNTRY[settings.currencies[0] ?? ""]}
+              phoneCountry={visitor.country ?? PHONE_COUNTRY[settings.currencies[0] ?? ""]}
             />
           ) : (
             <div className="mx-auto max-w-[560px] rounded-[24px] bg-white p-8 text-center">

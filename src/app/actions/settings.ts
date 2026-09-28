@@ -168,6 +168,8 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
 
 // ---------- Email ----------
 
+const EMAIL_DRIVERS = ["resend", "smtp", "log"] as const;
+
 export async function saveEmailSettings(_state: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
   const parsed = z.object({ fromName: text(80), fromAddress: optionalEmail, replyTo: optionalEmail }).safeParse(formValues(formData));
@@ -175,7 +177,15 @@ export async function saveEmailSettings(_state: FormState, formData: FormData): 
   const problem = checkKey(formData.get("apiKey"), ["re_"], "The Resend API key");
   if (problem) return { error: problem };
   const current = (await getSettings()).email;
-  await update({ email: { ...parsed.data, apiKey: secretField(formData, "apiKey", current.apiKey) } });
+  const driver = EMAIL_DRIVERS.find((d) => d === formData.get("driver")) ?? "resend";
+  const smtpPort = Number(formData.get("smtpPort") || 465);
+  if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) return { error: "Enter a valid SMTP port, such as 465 or 587." };
+  const smtpSecurity = (["ssl", "tls", "none"] as const).find((v) => v === formData.get("smtpSecurity")) ?? "ssl";
+  const smtpHost = String(formData.get("smtpHost") ?? "").trim().slice(0, 200);
+  const smtpUser = String(formData.get("smtpUser") ?? "").trim().slice(0, 200);
+  const smtpPassword = secretField(formData, "smtpPassword", current.smtpPassword);
+  if (driver === "smtp" && (!smtpHost || !smtpUser || !smtpPassword)) return { error: "Add the SMTP host, username and password to send with SMTP." };
+  await update({ email: { ...parsed.data, driver, apiKey: secretField(formData, "apiKey", current.apiKey), smtpHost, smtpPort, smtpSecurity, smtpUser, smtpPassword } });
   return { ok: "Email settings saved." };
 }
 

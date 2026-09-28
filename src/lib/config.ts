@@ -1,5 +1,5 @@
 import "server-only";
-import type { BankTransferSettings, EmailSettings, GatewaySettings, ReminderSettings } from "@/db/schema";
+import type { BankTransferSettings, EmailDriver, EmailSettings, GatewaySettings, ReminderSettings } from "@/db/schema";
 import { getSettings } from "./data";
 import { decryptSecret } from "./secrets";
 
@@ -47,17 +47,31 @@ export async function bankTransferConfig(): Promise<BankTransferSettings> {
   return { ...DEFAULT_BANK, ...((await getSettings()).payment.bank ?? {}) };
 }
 
-export type ResolvedEmail = { apiKey: string; from: string; replyTo: string; source: "settings" | "environment" | "none" };
+export type ResolvedSmtp = { host: string; port: number; security: EmailSettings["smtpSecurity"]; user: string; password: string };
+export type ResolvedEmail = {
+  driver: EmailDriver;
+  /** True when the chosen driver has what it needs to deliver; otherwise emails are only logged. */
+  ready: boolean;
+  apiKey: string;
+  smtp: ResolvedSmtp;
+  from: string;
+  replyTo: string;
+  /** Where the Resend key comes from, for the settings page. */
+  source: "settings" | "environment" | "none";
+};
 
 export async function emailConfig(): Promise<ResolvedEmail> {
   const settings = await getSettings();
   const saved: Partial<EmailSettings> = settings.email ?? {};
   const savedKey = decryptSecret(saved.apiKey);
   const apiKey = savedKey || process.env.RESEND_API_KEY || "";
+  const driver = saved.driver ?? "resend";
+  const smtp: ResolvedSmtp = { host: saved.smtpHost ?? "", port: saved.smtpPort ?? 465, security: saved.smtpSecurity ?? "ssl", user: saved.smtpUser ?? "", password: decryptSecret(saved.smtpPassword) };
+  const ready = driver === "resend" ? Boolean(apiKey) : driver === "smtp" ? Boolean(smtp.host && smtp.user && smtp.password) : false;
   const from = saved.fromAddress
     ? `${saved.fromName || settings.siteName} <${saved.fromAddress}>`
-    : process.env.EMAIL_FROM?.trim() || `${settings.siteName} <onboarding@resend.dev>`;
-  return { apiKey, from, replyTo: saved.replyTo || settings.supportEmail, source: savedKey ? "settings" : process.env.RESEND_API_KEY ? "environment" : "none" };
+    : process.env.EMAIL_FROM?.trim() || (driver === "smtp" && smtp.user.includes("@") ? `${settings.siteName} <${smtp.user}>` : `${settings.siteName} <onboarding@resend.dev>`);
+  return { driver, ready, apiKey, smtp, from, replyTo: saved.replyTo || settings.supportEmail, source: savedKey ? "settings" : process.env.RESEND_API_KEY ? "environment" : "none" };
 }
 
 export async function reminderConfig(): Promise<ReminderSettings> {

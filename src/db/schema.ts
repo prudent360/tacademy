@@ -80,7 +80,20 @@ export type GatewaySettings = {
 };
 export type BankTransferSettings = { enabled: boolean; accountName: string; bankName: string; accountNumber: string; sortCode: string; currency: string; instructions: string };
 export type PaymentSettings = { stripe: GatewaySettings; paystack: GatewaySettings; pawapay: GatewaySettings; bank: BankTransferSettings };
-export type EmailSettings = { apiKey: string; fromName: string; fromAddress: string; replyTo: string };
+export type EmailDriver = "resend" | "smtp" | "log";
+/** smtpPassword and apiKey are stored encrypted. */
+export type EmailSettings = {
+  driver: EmailDriver;
+  apiKey: string;
+  fromName: string;
+  fromAddress: string;
+  replyTo: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecurity: "ssl" | "tls" | "none";
+  smtpUser: string;
+  smtpPassword: string;
+};
 export type ReminderSettings = { dayBefore: boolean; hourBefore: boolean; hourLeadMinutes: number; assignmentDue: boolean; assignmentLeadHours: number };
 export type Faq = { question: string; answer: string };
 export type Testimonial = { quote: string; name: string; role: string };

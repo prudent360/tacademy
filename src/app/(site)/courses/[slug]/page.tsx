@@ -14,6 +14,7 @@ import { cohortCurrencies } from "@/lib/pricing";
 import type { Cohort } from "@/db/schema";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { formatDateOnly } from "@/lib/time";
+import { visitorCurrencies } from "@/lib/visitor";
 
 /** Default country code for the curriculum form's phone field, from the academy's main currency. */
 const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA" };
@@ -35,11 +36,12 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const instructorsByCohort = await getInstructorsByCohort(cohorts.map((c) => c.id));
   const instructors = [...new Map([...instructorsByCohort.values()].flat().map((i) => [i.id, i])).values()];
   const myCohortIds = new Set(user ? (await getStudentCohorts(user.id)).map((r) => r.cohort.id) : []);
-  const preferredCurrency = settings.currencies.find((currency) => cohorts.some((cohort) => (cohort.prices[currency] ?? 0) > 0));
+  const visitor = await visitorCurrencies(settings);
+  const preferredCurrency = visitor.currencies.find((currency) => cohorts.some((cohort) => (cohort.prices[currency] ?? 0) > 0));
   const preferredPrices = preferredCurrency ? cohorts.map((cohort) => cohort.prices[preferredCurrency] ?? 0).filter((price) => price > 0) : [];
   const startingPrice = preferredCurrency && preferredPrices.length ? formatMoney(Math.min(...preferredPrices), preferredCurrency) : cohorts.some(isFree) ? "Free" : null;
   const deliveryModes = [...new Set(cohorts.map((cohort) => cohort.deliveryMode))].map((mode) => mode === "virtual" ? "Online" : mode === "physical" ? "In person" : "Hybrid").join(" or ");
-  const phoneCountry = PHONE_COUNTRY[preferredCurrency ?? settings.currencies[0] ?? ""];
+  const phoneCountry = visitor.country ?? PHONE_COUNTRY[preferredCurrency ?? settings.currencies[0] ?? ""];
   const photo = course.heroImageUrl;
   const secondaryButton = photo
     ? "inline-flex h-12 cursor-pointer items-center rounded-[5px] border border-white/40 bg-white/10 px-6 font-semibold text-white backdrop-blur transition hover:bg-white/20"
@@ -202,7 +204,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
                     <p className="text-[15px] font-semibold text-muted">Enrolment is closed.</p>
                   ) : (
                     <div className="flex flex-wrap items-end justify-between gap-3">
-                      <CohortPrice cohort={cohort} currencies={settings.currencies} />
+                      <CohortPrice cohort={cohort} currencies={visitor.currencies} />
                       <Link href={`/enroll?cohort=${cohort.id}`} className="inline-flex h-11 items-center gap-2 rounded-[5px] bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-dark">Enrol now <ArrowRight className="size-4" /></Link>
                     </div>
                   )}

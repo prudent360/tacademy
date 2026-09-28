@@ -8,6 +8,7 @@ import { getNextIntake, getPublishedCourses, getSettings, getUpcomingCohorts, se
 import { formatMoney } from "@/lib/money";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { MODE_LABEL } from "@/lib/utils";
+import { visitorCurrencies } from "@/lib/visitor";
 
 function SectionHeading({ eyebrow, title, subtitle, align = "center" }: { eyebrow?: string; title: string; subtitle?: string; align?: "center" | "left" }) {
   return (
@@ -60,7 +61,7 @@ export default async function HomePage() {
   const summaries = await withCohorts(courses);
   const featured = (summaries.some((c) => c.featured) ? summaries.filter((c) => c.featured) : summaries).slice(0, 3);
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
-  const currency = settings.currencies[0] ?? "GBP";
+  const { currencies } = await visitorCurrencies(settings);
   const heroPhoto = settings.heroImageUrl ?? "/images/home-hero-team.webp";
   const next = await getNextIntake();
   const nextStart = next?.cohort.startDate ? new Date(`${next.cohort.startDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : null;
@@ -209,7 +210,7 @@ export default async function HomePage() {
               <Link href="/courses" className="flex h-11 items-center gap-2 rounded-lg border border-edge-strong bg-white px-5 font-semibold text-ink hover:bg-page">All courses <ArrowRight className="size-4" /></Link>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featured.map((course) => <CourseCard key={course.id} course={course} currencies={settings.currencies} />)}
+              {featured.map((course) => <CourseCard key={course.id} course={course} currencies={currencies} />)}
             </div>
           </div>
         </section>
@@ -265,8 +266,8 @@ export default async function HomePage() {
             <ul className="flex flex-col divide-y divide-edge overflow-hidden rounded-[14px] border border-edge bg-white">
               {upcoming.map(({ cohort, course }) => {
                 const left = cohort.capacity ? Math.max(0, cohort.capacity - (taken.get(cohort.id) ?? 0)) : null;
-                const price = cohort.prices[currency] ?? Object.values(cohort.prices).find(Boolean);
-                const priceCurrency = cohort.prices[currency] ? currency : Object.keys(cohort.prices)[0];
+                const priceCurrency = [...currencies, ...Object.keys(cohort.prices)].find((c) => (cohort.prices[c] ?? 0) > 0);
+                const price = priceCurrency ? cohort.prices[priceCurrency] : undefined;
                 const [y, m, d] = (cohort.startDate ?? "").split("-");
                 const month = cohort.startDate ? new Date(Date.UTC(+y, +m - 1, +d)).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" }) : "TBC";
                 return (

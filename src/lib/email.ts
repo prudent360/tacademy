@@ -1,9 +1,10 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { marked } from "marked";
+import nodemailer from "nodemailer";
 import { getDb } from "@/db";
 import { emailLog, emailTemplates } from "@/db/schema";
-import { emailConfig } from "./config";
+import { emailConfig, type ResolvedEmail } from "./config";
 import { getSettings } from "./data";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "./email-templates";
 import { absoluteUrl, siteUrl } from "./site";
@@ -15,7 +16,7 @@ const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 export async function emailConfigured(): Promise<boolean> {
-  return Boolean((await emailConfig()).apiKey);
+  return (await emailConfig()).ready;
 }
 
 /** Account-security emails can't be switched off. */
@@ -79,8 +80,30 @@ ${content.replace(/<table>/g, '<table class="content" style="border-collapse:col
   return { subject, html, text };
 }
 
-async function deliver(messages: { to: string; subject: string; html: string; text: string }[]): Promise<{ ok: boolean; ids: (string | null)[]; error?: string }> {
+type Message = { to: string; subject: string; html: string; text: string };
+type Delivery = { ok: boolean; ids: (string | null)[]; error?: string };
+
+/** Sends one at a time over a single SMTP connection; the chunk fails as a whole if any message does. */
+async function deliverSmtp(cfg: ResolvedEmail, messages: Message[]): Promise<Delivery> {
+  const { host, port, security, user, password } = cfg.smtp;
+  const transport = nodemailer.createTransport({ host, port, secure: security === "ssl", requireTLS: security === "tls", auth: { user, pass: password }, connectionTimeout: 15_000 });
+  const ids: (string | null)[] = [];
+  try {
+    for (const m of messages) {
+      const info = await transport.sendMail({ from: cfg.from, to: m.to, subject: m.subject, html: m.html, text: m.text, replyTo: cfg.replyTo || undefined });
+      ids.push(info.messageId ?? null);
+    }
+    return { ok: true, ids };
+  } catch (error) {
+    return { ok: false, ids, error: error instanceof Error ? error.message : String(error) };
+  } finally {
+    transport.close();
+  }
+}
+
+async function deliver(messages: Message[]): Promise<Delivery> {
   const cfg = await emailConfig();
+  if (cfg.driver === "smtp") return deliverSmtp(cfg, messages);
   const from = cfg.from;
   const replyTo = cfg.replyTo || undefined;
   const payload = messages.map((m) => ({ from, to: [m.to], subject: m.subject, html: m.html, text: m.text, reply_to: replyTo }));
@@ -100,9 +123,9 @@ async function deliver(messages: { to: string; subject: string; html: string; te
 }
 
 /**
- * Sends templated emails (batched through Resend, 100 per request). Never throws:
- * email is best effort and every attempt is written to the email log.
- * Without RESEND_API_KEY messages are only logged, which is handy in development.
+ * Sends templated emails through the driver chosen in Settings > Email (Resend batches 100 per request; SMTP
+ * sends one by one). Never throws: email is best effort and every attempt is written to the email log.
+ * With the "log" driver, or no credentials, messages are only logged, which is handy in development.
  */
 export async function sendEmails(emails: OutgoingEmail[]): Promise<void> {
   if (!emails.length) return;
