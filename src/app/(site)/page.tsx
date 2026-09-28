@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, BellIcon, BuildingIcon, CalendarIcon, CardIcon, CheckIcon, ClipboardIcon, MegaphoneIcon, MessageIcon, MonitorIcon, SparkIcon, SwapIcon, UsersIcon } from "@/components/icons";
+import { ArrowRight, BellIcon, BuildingIcon, CalendarIcon, CardIcon, CheckIcon, ClipboardIcon, MegaphoneIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
 import { ClassPreview } from "@/components/site/class-preview";
 import { CourseCard } from "@/components/site/course-card";
 import { ModeBadge } from "@/components/ui";
@@ -8,6 +8,7 @@ import { isFree, withCohorts } from "@/lib/catalog";
 import { getPublishedCourses, getSettings, getUpcomingCohorts, seatsTaken } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { absoluteUrl, jsonLd } from "@/lib/site";
+import { MODE_LABEL } from "@/lib/utils";
 
 function SectionHeading({ eyebrow, title, subtitle, align = "center" }: { eyebrow?: string; title: string; subtitle?: string; align?: "center" | "left" }) {
   return (
@@ -61,6 +62,9 @@ export default async function HomePage() {
   const featured = (summaries.some((c) => c.featured) ? summaries.filter((c) => c.featured) : summaries).slice(0, 3);
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
   const currency = settings.currencies[0] ?? "GBP";
+  const next = upcoming.find(({ cohort }) => !cohort.capacity || (taken.get(cohort.id) ?? 0) < cohort.capacity) ?? null;
+  const nextStart = next?.cohort.startDate ? new Date(`${next.cohort.startDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : null;
+  const nextSeats = next?.cohort.capacity ? next.cohort.capacity - (taken.get(next.cohort.id) ?? 0) : null;
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -183,15 +187,20 @@ export default async function HomePage() {
       )}
 
       {/* How it works */}
-      <section id="how" className="scroll-mt-20 border-t border-line bg-navy text-white">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-5 py-20 sm:px-8 md:py-24">
+      <section id="how" className="relative scroll-mt-20 overflow-hidden border-t border-line bg-navy text-white">
+        <div aria-hidden="true" className="absolute inset-0">
+          <Image src="/images/how-it-works-classroom.webp" alt="" fill sizes="100vw" className="object-cover object-center" />
+          {/* Dark behind the heading, fading into brand purple behind the steps. */}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.86)_0%,rgba(25,17,46,.72)_35%,rgba(58,24,130,.86)_75%,#5a24b8_100%)]" />
+        </div>
+        <div className="relative mx-auto flex max-w-[1200px] flex-col gap-12 px-5 py-20 sm:px-8 md:py-28">
           <div className="flex flex-col gap-3.5">
             <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-cyan-light md:text-[13px]">How it works</p>
-            <h2 className="max-w-[640px] font-display text-3xl font-bold tracking-tight md:text-[44px] md:leading-[1.1]">From sign-up to your first piece of feedback</h2>
+            <h2 className="max-w-[640px] font-display text-3xl font-bold tracking-tight [text-shadow:0_2px_24px_rgba(0,0,0,.35)] md:text-[44px] md:leading-[1.1]">From sign-up to your first piece of feedback</h2>
           </div>
           <ol className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, i) => (
-              <li key={step.title} className="flex flex-col gap-3 rounded-[14px] border border-white/10 bg-navy-soft/60 p-6">
+              <li key={step.title} className="flex flex-col gap-3 rounded-[14px] border border-white/15 bg-navy/55 p-6 backdrop-blur-md">
                 <span className="font-mono text-sm text-accent-muted">0{i + 1}</span>
                 <h3 className="font-display text-xl font-bold">{step.title}</h3>
                 <p className="text-[15px] leading-relaxed text-white/75">{step.text}</p>
@@ -306,20 +315,40 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* CTA */}
+      {/* Closing: the real next start date and a person to talk to */}
       <section className="border-t border-line bg-white">
-        <div className="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 md:py-20">
-          <div className="relative flex flex-col items-start gap-6 overflow-hidden rounded-[20px] bg-accent px-7 py-12 text-white md:flex-row md:items-center md:justify-between md:px-12">
-            <div aria-hidden="true" className="absolute -right-16 -top-20 size-72 rounded-full border-[40px] border-white/10" />
-            <div className="relative flex flex-col gap-3">
-              <h2 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Your next cohort is waiting</h2>
-              <p className="max-w-[520px] text-lg text-white/80">Create a free account to save your place, track your classes and get reminders.</p>
-            </div>
-            <div className="relative flex flex-wrap gap-3">
-              <Link href="/enroll" className="flex h-13 items-center rounded-lg bg-white px-7 text-base font-semibold text-accent hover:bg-accent-soft">Enrol now</Link>
-              <Link href="/courses" className="flex h-13 items-center gap-2 rounded-lg border-[1.5px] border-white/60 px-7 text-base font-semibold text-white hover:bg-white/10"><UsersIcon className="size-5" /> See courses</Link>
-            </div>
+        <div className="mx-auto grid max-w-[1200px] gap-12 px-5 py-20 sm:px-8 md:py-28 lg:grid-cols-[1.5fr_1fr] lg:gap-20">
+          <div className="flex flex-col gap-6">
+            <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-accent md:text-[13px]">Next intake</p>
+            {next ? (
+              <>
+                <h2 className="font-display text-4xl font-bold leading-[1.05] tracking-[-1.5px] text-ink md:text-[64px]">
+                  The next class starts on <span className="text-accent">{nextStart ?? "a date we’ll confirm soon"}</span>.
+                </h2>
+                <p className="text-lg text-muted">
+                  <Link href={`/courses/${next.course.slug}`} className="font-semibold text-ink underline decoration-edge-strong underline-offset-4 hover:decoration-accent">{next.course.title}</Link>
+                  {" · "}{MODE_LABEL[next.cohort.deliveryMode]}
+                  {nextSeats !== null && nextSeats <= 10 && <> · <span className="font-semibold text-ink">{nextSeats === 1 ? "1 seat" : `${nextSeats} seats`} left</span></>}
+                </p>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
+                  <Link href={`/enroll?cohort=${next.cohort.id}`} className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-ink px-6 font-semibold text-white transition hover:bg-accent">Save my place <ArrowRight className="size-4" /></Link>
+                  <Link href="/courses" className="font-semibold text-ink underline decoration-edge-strong underline-offset-4 hover:decoration-accent">Or compare all courses</Link>
+                </div>
+              </>
+            ) : (
+              <h2 className="font-display text-4xl font-bold leading-[1.05] tracking-[-1.5px] text-ink md:text-[64px]">New cohorts are being scheduled.</h2>
+            )}
           </div>
+          {(settings.supportEmail || settings.phone) && (
+            <div className="flex flex-col gap-5 border-t border-line pt-8 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-2">
+              <p className="font-display text-xl font-bold text-ink">Not sure which course is right for you?</p>
+              <p className="leading-relaxed text-muted">Tell us where you are now and what you want to do next. Someone from the team will reply, usually within a working day.</p>
+              <ul className="flex flex-col gap-3 text-[15px]">
+                {settings.supportEmail && <li><a href={`mailto:${settings.supportEmail}?subject=${encodeURIComponent("Help choosing a course")}`} className="inline-flex items-center gap-2.5 font-semibold text-ink hover:text-accent"><MessageIcon className="size-5 text-accent" />{settings.supportEmail}</a></li>}
+                {settings.phone && <li><a href={`tel:${settings.phone.replace(/[^\d+]/g, "")}`} className="inline-flex items-center gap-2.5 font-semibold text-ink hover:text-accent"><PhoneIcon className="size-5 text-accent" />{settings.phone}</a></li>}
+              </ul>
+            </div>
+          )}
         </div>
       </section>
     </>
