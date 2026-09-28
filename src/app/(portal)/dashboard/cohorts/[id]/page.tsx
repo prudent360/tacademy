@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarIcon, ClipboardIcon, MegaphoneIcon, PinIcon } from "@/components/icons";
+import { BookIcon, CalendarIcon, ClipboardIcon, MegaphoneIcon, PinIcon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
 import { SessionRow } from "@/components/portal/session-row";
-import { Avatar, Badge, Card, ModeBadge, Notice, PageHeader } from "@/components/ui";
+import { Avatar, Badge, Card, ModeBadge, Notice, PageHeader, buttonClass } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { getCohortWithCourse, getInstructorsByCohort, getSettings, isEnrolled } from "@/lib/data";
 import { STATE_LABEL, announcementsFor, assignmentState, assignmentsForStudent, attendanceFor, pastSessionsFor, upcomingSessionsFor } from "@/lib/student";
@@ -40,7 +40,7 @@ export default async function StudentCohortPage({ params, searchParams }: { para
         back={{ href: "/dashboard", label: "Dashboard" }}
         title={course.title}
         description={<span className="flex flex-wrap items-center gap-2">{cohort.name}{cohort.startDate && <> · {formatDateOnly(cohort.startDate)}{cohort.endDate && ` – ${formatDateOnly(cohort.endDate)}`}</>} <ModeBadge mode={cohort.deliveryMode} /></span>}
-        actions={firstSession && <a href={`/api/sessions/${firstSession.id}/ics?all=1`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page"><CalendarIcon className="size-4" /> Add timetable to calendar</a>}
+        actions={<><Link href={`/dashboard/cohorts/${id}/learn`} className={buttonClass.primary}><BookIcon className="size-4" /> Start learning</Link>{firstSession && <a href={`/api/sessions/${firstSession.id}/ics?all=1`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page"><CalendarIcon className="size-4" /> Add timetable to calendar</a>}</>}
       />
       {welcome && <Notice>You&apos;re enrolled. We&apos;ve emailed your confirmation, and you&apos;ll get reminders before every class.</Notice>}
 

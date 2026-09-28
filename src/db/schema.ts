@@ -173,6 +173,34 @@ export const cohorts = pgTable("cohorts", {
   createdAt: createdAt(),
 }, (t) => [index("cohorts_course_idx").on(t.courseId)]);
 
+/** Reusable learning content owned by a course and shared by all of its cohorts. */
+export const courseModules = pgTable("course_modules", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  position: integer("position").notNull().default(0),
+  published: boolean("published").notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("course_modules_course_idx").on(t.courseId, t.position)]);
+
+export const lessons = pgTable("lessons", {
+  id: serial("id").primaryKey(),
+  moduleId: integer("module_id").notNull().references(() => courseModules.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  content: text("content").notNull().default(""),
+  videoUrl: text("video_url"),
+  resourceUrl: text("resource_url"),
+  resourceLabel: text("resource_label").notNull().default(""),
+  estimatedMinutes: integer("estimated_minutes").notNull().default(10),
+  position: integer("position").notNull().default(0),
+  published: boolean("published").notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("lessons_module_idx").on(t.moduleId, t.position)]);
+
 export const cohortInstructors = pgTable("cohort_instructors", {
   cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -204,6 +232,15 @@ export const enrollments = pgTable("enrollments", {
   activatedAt: timestamp("activated_at", { withTimezone: true }),
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("enrollments_user_cohort_idx").on(t.userId, t.cohortId), index("enrollments_cohort_idx").on(t.cohortId)]);
+
+/** Completion belongs to an enrolment so retaking a course in another cohort starts fresh. */
+export const lessonProgress = pgTable("lesson_progress", {
+  id: serial("id").primaryKey(),
+  enrollmentId: integer("enrollment_id").notNull().references(() => enrollments.id, { onDelete: "cascade" }),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id, { onDelete: "cascade" }),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+}, (t) => [uniqueIndex("lesson_progress_enrollment_lesson_idx").on(t.enrollmentId, t.lessonId), index("lesson_progress_enrollment_idx").on(t.enrollmentId)]);
 
 /** Verifiable completion credentials. One certificate can be issued per enrolment. */
 export const certificates = pgTable("certificates", {
@@ -331,6 +368,9 @@ export type User = typeof users.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
 export type Course = typeof courses.$inferSelect;
 export type Cohort = typeof cohorts.$inferSelect;
+export type LearningModule = typeof courseModules.$inferSelect;
+export type Lesson = typeof lessons.$inferSelect;
+export type LessonProgress = typeof lessonProgress.$inferSelect;
 export type ClassSession = typeof classSessions.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;
 export type Payment = typeof payments.$inferSelect;

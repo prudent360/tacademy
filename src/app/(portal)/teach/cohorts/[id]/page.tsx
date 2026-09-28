@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { createAssignment, createSessions, deleteAnnouncement, postAnnouncement } from "@/app/actions/teach";
 import { ActionForm, Checkbox, DeleteButton, FileField, Input, SubmitButton, Textarea } from "@/components/forms";
 import { Markdown } from "@/components/markdown";
 import { SessionRow } from "@/components/portal/session-row";
 import { SessionFields } from "@/components/teach/session-fields";
 import { Badge, Card, DataTable, EmptyState, ModeBadge, PageHeader, Tabs } from "@/components/ui";
-import { CalendarIcon, ClipboardIcon, MegaphoneIcon, UsersIcon } from "@/components/icons";
+import { BookIcon, CalendarIcon, ClipboardIcon, MegaphoneIcon, UsersIcon } from "@/components/icons";
 import { getDb } from "@/db";
-import { announcements, assignments, attendance, classSessions, submissions } from "@/db/schema";
+import { announcements, assignments, attendance, classSessions, courseModules, enrollments, lessonProgress, lessons, submissions } from "@/db/schema";
 import { requireTeacher } from "@/lib/auth";
 import { getCohortStudents, getCohortWithCourse, getSettings } from "@/lib/data";
 import { formatDateOnly, formatDateTime, relativeTime, toZonedInput } from "@/lib/time";
@@ -18,7 +18,7 @@ import { idParam } from "@/lib/validation";
 
 export const metadata: Metadata = { title: "Cohort" };
 
-type Tab = "classes" | "assignments" | "students" | "announcements";
+type Tab = "classes" | "learning" | "assignments" | "students" | "announcements";
 
 export default async function TeachCohortPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const [{ id: raw }, { tab: rawTab }] = await Promise.all([params, searchParams]);
@@ -30,14 +30,15 @@ export default async function TeachCohortPage({ params, searchParams }: { params
   const { cohort, course } = found;
   const settings = await getSettings();
   const tz = settings.timezone;
-  const tab: Tab = (["classes", "assignments", "students", "announcements"] as const).find((t) => t === rawTab) ?? "classes";
+  const tab: Tab = (["classes", "learning", "assignments", "students", "announcements"] as const).find((t) => t === rawTab) ?? "classes";
   const db = await getDb();
 
-  const [sessions, work, students, news] = await Promise.all([
+  const [sessions, work, students, news, learning] = await Promise.all([
     db.select().from(classSessions).where(eq(classSessions.cohortId, id)).orderBy(asc(classSessions.startsAt)),
     db.select().from(assignments).where(eq(assignments.cohortId, id)).orderBy(asc(assignments.dueAt)),
     getCohortStudents(id),
     db.select().from(announcements).where(eq(announcements.cohortId, id)).orderBy(desc(announcements.createdAt)),
+    db.select({ module: courseModules, lesson: lessons }).from(courseModules).leftJoin(lessons, eq(lessons.moduleId, courseModules.id)).where(eq(courseModules.courseId, course.id)).orderBy(asc(courseModules.position), asc(lessons.position)),
   ]);
   const now = new Date();
   const base = `/teach/cohorts/${id}`;
@@ -55,6 +56,7 @@ export default async function TeachCohortPage({ params, searchParams }: { params
       />
       <Tabs current={tab} items={[
         { key: "classes", label: "Classes", href: base, count: sessions.length },
+        { key: "learning", label: "Learning", href: `${base}?tab=learning`, count: learning.filter((row) => row.lesson?.published && row.module.published).length },
         { key: "assignments", label: "Assignments", href: `${base}?tab=assignments`, count: work.length },
         { key: "students", label: "Students", href: `${base}?tab=students`, count: students.length },
         { key: "announcements", label: "Announcements", href: `${base}?tab=announcements`, count: news.length },
@@ -95,6 +97,8 @@ export default async function TeachCohortPage({ params, searchParams }: { params
         </div>
       )}
 
+      {tab === "learning" && <LearningTab cohortId={id} learning={learning} students={students} />}
+
       {tab === "assignments" && <AssignmentsTab cohortId={id} work={work} studentCount={students.length} timeZone={tz} />}
 
       {tab === "students" && <StudentsTab cohortId={id} students={students} sessionIds={sessions.filter((s) => new Date(s.endsAt) < now && !s.cancelled).map((s) => s.id)} assignmentIds={work.map((w) => w.id)} />}
@@ -131,6 +135,23 @@ export default async function TeachCohortPage({ params, searchParams }: { params
       )}
     </>
   );
+}
+
+async function LearningTab({ cohortId, learning, students }: { cohortId: number; learning: { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect | null }[]; students: Awaited<ReturnType<typeof getCohortStudents>> }) {
+  const published = learning.filter((row): row is { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect } => Boolean(row.module.published && row.lesson?.published));
+  const db = await getDb();
+  const studentIds = students.map((student) => student.id);
+  const lessonIds = published.map((row) => row.lesson.id);
+  const completions = studentIds.length && lessonIds.length ? await db.select({ userId: enrollments.userId, lessonId: lessonProgress.lessonId }).from(lessonProgress).innerJoin(enrollments, eq(enrollments.id, lessonProgress.enrollmentId)).where(and(eq(enrollments.cohortId, cohortId), inArray(enrollments.userId, studentIds), inArray(lessonProgress.lessonId, lessonIds), sql`${lessonProgress.completedAt} is not null`)) : [];
+  if (!learning.length) return <EmptyState icon={BookIcon} title="No learning modules yet">An admin can add reusable modules and lessons from the course page.</EmptyState>;
+  return <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+    <Card title="Published course outline">
+      {published.length ? <div className="flex flex-col gap-5">{[...new Map(published.map((row) => [row.module.id, row.module])).values()].map((module) => <section key={module.id}><h3 className="font-display font-bold text-ink">{module.title}</h3>{module.summary && <p className="mt-1 text-sm text-muted">{module.summary}</p>}<ul className="mt-2 divide-y divide-line">{published.filter((row) => row.module.id === module.id).map((row) => { const n = completions.filter((item) => item.lessonId === row.lesson.id).length; return <li key={row.lesson.id} className="flex items-center justify-between gap-3 py-2.5 text-sm"><span className="font-medium text-ink">{row.lesson.title}</span><span className="text-muted">{n}/{students.length} complete</span></li>; })}</ul></section>)}</div> : <p className="text-sm text-muted">Modules exist, but none have published lessons yet.</p>}
+    </Card>
+    <Card title="Student progress">
+      {students.length ? <ul className="divide-y divide-line">{students.map((student) => { const done = new Set(completions.filter((item) => item.userId === student.id).map((item) => item.lessonId)).size; const pct = lessonIds.length ? Math.round((done / lessonIds.length) * 100) : 0; return <li key={student.id} className="py-3"><div className="mb-1 flex justify-between gap-3 text-sm"><span className="font-semibold text-ink">{student.name}</span><span className="text-muted">{done}/{lessonIds.length} · {pct}%</span></div><div className="h-2 overflow-hidden rounded-full bg-page"><div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} /></div></li>; })}</ul> : <p className="text-sm text-muted">No students are enrolled yet.</p>}
+    </Card>
+  </div>;
 }
 
 async function AssignmentsTab({ cohortId, work, studentCount, timeZone }: { cohortId: number; work: (typeof assignments.$inferSelect)[]; studentCount: number; timeZone: string }) {

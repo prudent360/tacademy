@@ -57,6 +57,13 @@
       "when": 1790557907687,
       "tag": "0007_home_hero_image",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790595383461,
+      "tag": "0008_narrow_maximus",
+      "breakpoints": true
     }
   ]
 }

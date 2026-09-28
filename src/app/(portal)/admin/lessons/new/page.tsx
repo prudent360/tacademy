@@ -1,0 +1,20 @@
+import type { Metadata } from "next";
+import { eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
+import { createLesson } from "@/app/actions/learning";
+import { LessonForm } from "@/components/admin/learning-forms";
+import { Card, PageHeader } from "@/components/ui";
+import { getDb } from "@/db";
+import { courseModules, courses } from "@/db/schema";
+import { idParam } from "@/lib/validation";
+
+export const metadata: Metadata = { title: "New lesson" };
+
+export default async function NewLessonPage({ searchParams }: { searchParams: Promise<{ module?: string }> }) {
+  const { module: raw } = await searchParams;
+  const moduleId = idParam(raw ?? "");
+  if (!moduleId) notFound();
+  const [found] = await (await getDb()).select({ module: courseModules, course: courses }).from(courseModules).innerJoin(courses, eq(courses.id, courseModules.courseId)).where(eq(courseModules.id, moduleId));
+  if (!found) notFound();
+  return <><PageHeader back={{ href: `/admin/modules/${moduleId}`, label: found.module.title }} title="New lesson" description={found.course.title} /><Card><LessonForm action={createLesson.bind(null, moduleId)} /></Card></>;
+}
