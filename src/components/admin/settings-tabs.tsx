@@ -88,7 +88,7 @@ export function GeneralTab({ s }: { s: Settings }) {
             {CURRENCIES.map((c) => (
               <label key={c.code} className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-edge-strong px-3.5 text-sm font-semibold has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent">
                 <input type="checkbox" name="currencies" value={c.code} defaultChecked={s.currencies.includes(c.code)} className="size-4 accent-accent" />
-                {c.code} <span className="font-normal text-muted">{c.gateway === "stripe" ? "Stripe" : "Paystack"}</span>
+                {c.code} <span className="font-normal text-muted">{[{ stripe: "Stripe", paystack: "Paystack", pawapay: "pawaPay" }[c.gateway], c.gateway !== "pawapay" && c.mobileMoney ? "pawaPay" : ""].filter(Boolean).join(" · ")}</span>
               </label>
             ))}
           </div>
