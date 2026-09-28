@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { and, eq, inArray } from "drizzle-orm";
 import {
-  AwardIcon, BookIcon, CalendarIcon, CardIcon, ClipboardIcon, ClockIcon, MegaphoneIcon, MessageIcon, PinIcon, UserIcon, VideoIcon,
+  AwardIcon, BookIcon, CalendarIcon, CardIcon, ClipboardIcon, ClockIcon, MegaphoneIcon, MessageIcon, PinIcon, SparkIcon, UserIcon, VideoIcon,
 } from "@/components/icons";
 import { Countdown } from "@/components/portal/countdown";
 import { BannerButton, DateChip, GreetingBanner, Panel, PanelEmpty, ProgressBar, QuickAction, StatTile } from "@/components/portal/dash";
@@ -17,6 +17,7 @@ import { PART_PAYMENT_PLANS } from "@/lib/pricing";
 import { formatMoney } from "@/lib/money";
 import { formatDateOnly, formatDayMonth, formatSessionRange, greeting, relativeTime, thisWeek, untilLabel } from "@/lib/time";
 import { MODE_LABEL, firstName } from "@/lib/utils";
+import { XP, xpForUser } from "@/lib/xp";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -30,13 +31,14 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
   const cohortIds = cohorts.map((c) => c.cohort.id);
   const activeIds = cohorts.filter((c) => c.enrollment.status === "active").map((c) => c.cohort.id);
 
-  const [upcoming, work, news, allSessions, marks, studentPayments] = await Promise.all([
+  const [upcoming, work, news, allSessions, marks, studentPayments, xp] = await Promise.all([
     upcomingSessionsFor(activeIds, 8),
     assignmentsForStudent(user.id, cohortIds),
     announcementsFor(activeIds, 3),
     cohortIds.length ? db.select({ id: classSessions.id, cohortId: classSessions.cohortId, endsAt: classSessions.endsAt, startsAt: classSessions.startsAt, cancelled: classSessions.cancelled }).from(classSessions).where(inArray(classSessions.cohortId, cohortIds)) : [],
     cohortIds.length ? db.select({ sessionId: attendance.sessionId, status: attendance.status }).from(attendance).where(eq(attendance.userId, user.id)) : [],
     db.select().from(payments).where(eq(payments.userId, user.id)),
+    xpForUser(user.id),
   ]);
   const learningRows = activeIds.length ? await db.select({ cohortId: enrollments.cohortId, lesson: lessons, courseModule: courseModules, completedAt: lessonProgress.completedAt, releaseAt: moduleReleases.releaseAt })
     .from(enrollments)
@@ -111,6 +113,31 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
         <StatTile label="Assignments to do" value={due.length} icon={ClipboardIcon} tone={due.some((d) => d.state === "overdue") ? "red" : "amber"} hint={due.some((d) => d.state === "overdue") ? "Some are overdue" : undefined} href="/dashboard/assignments" />
         <StatTile label="Average score" value={average === null ? "–" : `${average}%`} icon={AwardIcon} tone="green" hint={`${graded.length} graded`} />
       </div>
+
+      <Panel title="Your XP" icon={SparkIcon}>
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+          <div className="flex items-center gap-4">
+            <span className="flex size-16 shrink-0 flex-col items-center justify-center rounded-full bg-accent text-white shadow-[0_10px_24px_-12px_rgba(113,52,217,.9)]">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-white/75">Level</span>
+              <span className="font-display text-2xl font-bold leading-none">{xp.level}</span>
+            </span>
+            <div className="flex min-w-0 grow flex-col gap-2">
+              <p className="font-display text-2xl font-bold text-ink">{xp.total.toLocaleString("en-GB")} XP</p>
+              <ProgressBar value={xp.total - xp.floor} max={xp.next - xp.floor} detail={`${(xp.next - xp.total).toLocaleString("en-GB")} XP to Level ${xp.level + 1}`} />
+            </div>
+          </div>
+          {xp.recent.length ? (
+            <ul className="flex flex-col divide-y divide-line text-sm">
+              {xp.recent.map((item, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 py-2">
+                  <span className="min-w-0 truncate text-body">{item.label}</span>
+                  <span className="shrink-0 font-semibold text-accent">+{item.points} XP</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-sm text-muted">Earn XP by completing lessons ({XP.lesson}), attending classes ({XP.present}), submitting assignments ({XP.submitted}+) and finishing courses ({XP.completed}).</p>}
+        </div>
+      </Panel>
 
       {(nextLearning || due[0] || next) && (
         <Link href={nextLearning ? `/dashboard/cohorts/${nextLearning.cohortId}/learn/${nextLearning.lesson.id}` : due[0] ? `/dashboard/assignments/${due[0].assignment.id}` : `/dashboard/cohorts/${next!.session.cohortId}`} className="group flex items-center justify-between gap-5 rounded-[5px] border border-accent-muted/50 bg-[linear-gradient(100deg,#f4edff,#eefcff)] p-5 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_16px_35px_-28px_rgba(113,52,217,.75)]">

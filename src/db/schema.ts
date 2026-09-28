@@ -100,6 +100,23 @@ export type EmailSettings = {
   smtpUser: string;
   smtpPassword: string;
 };
+export type AiProvider = "openai" | "anthropic";
+/**
+ * Keys are stored encrypted; an empty key falls back to OPENAI_API_KEY / ANTHROPIC_API_KEY.
+ * apiKey and model are Anthropic's (kept for settings saved before OpenAI was added).
+ */
+export type AiSettings = {
+  enabled: boolean;
+  provider: AiProvider;
+  openaiApiKey: string;
+  openaiModel: string;
+  apiKey: string;
+  model: string;
+  advisor: boolean;
+  studyBuddy: boolean;
+  grading: boolean;
+  writing: boolean;
+};
 export type ReminderSettings = { dayBefore: boolean; hourBefore: boolean; hourLeadMinutes: number; assignmentDue: boolean; assignmentLeadHours: number };
 export type Faq = { question: string; answer: string };
 export type Testimonial = { quote: string; name: string; role: string };
@@ -126,6 +143,7 @@ export const settings = pgTable("settings", {
   payment: jsonb("payment").$type<Partial<PaymentSettings>>().notNull().default({}),
   email: jsonb("email").$type<Partial<EmailSettings>>().notNull().default({}),
   reminders: jsonb("reminders").$type<Partial<ReminderSettings>>().notNull().default({}),
+  ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -259,6 +277,8 @@ export const enrollments = pgTable("enrollments", {
   status: text("status").$type<EnrollmentStatus>().notNull().default("pending"),
   source: text("source").$type<EnrollmentSource>().notNull().default("payment"),
   activatedAt: timestamp("activated_at", { withTimezone: true }),
+  /** When an admin marked the course completed; dates the completion XP. */
+  completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("enrollments_user_cohort_idx").on(t.userId, t.cohortId), index("enrollments_cohort_idx").on(t.cohortId)]);
 

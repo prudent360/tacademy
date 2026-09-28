@@ -201,7 +201,7 @@ function StudentIdPill({ id }: { id: string }) {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, notifications, today, studentId, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, notifications, today, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null };
@@ -213,6 +213,8 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   today: string;
   /** Shown instead of the date for students. */
   studentId?: string;
+  /** Students' level and XP, next to their ID. */
+  xp?: { level: number; total: number };
   logout: () => Promise<void>;
   markAllRead: () => Promise<void>;
 }) {
@@ -319,6 +321,12 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setDrawer(true)} className="flex size-10 items-center justify-center rounded-lg text-ink hover:bg-page lg:hidden" aria-label="Open menu"><MenuIcon /></button>
             <Link href={home} className="flex items-center gap-2 lg:hidden" aria-label={`${siteName} home`}><BrandMark className="size-8" /></Link>
+            {xp && (
+              <Link href="/dashboard" className="hidden items-center gap-1.5 rounded-full border border-edge bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition hover:border-accent-muted md:flex" title="Your level and XP">
+                <span className="rounded-full bg-accent px-1.5 py-px text-[10px] font-bold text-white">Lv {xp.level}</span>
+                {xp.total.toLocaleString("en-GB")} XP
+              </Link>
+            )}
             {studentId ? <StudentIdPill id={studentId} /> : (
               <span className="hidden items-center gap-2 rounded-full border border-edge bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink shadow-sm sm:flex">
                 <CalendarIcon className="size-3.5 text-accent" /> {today}

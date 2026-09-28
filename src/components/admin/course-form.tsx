@@ -1,8 +1,10 @@
 import { ActionForm, Checkbox, FileField, Input, Select, SubmitButton, Textarea } from "@/components/forms";
+import { draftCourseText } from "@/app/actions/ai";
+import { AiDraftButton } from "@/components/ai/draft-button";
 import type { Course } from "@/db/schema";
 import type { FormState } from "@/lib/validation";
 
-export function CourseForm({ action, course }: { action: (state: FormState, formData: FormData) => Promise<FormState>; course?: Course }) {
+export function CourseForm({ action, course, ai = false }: { action: (state: FormState, formData: FormData) => Promise<FormState>; course?: Course; ai?: boolean }) {
   return (
     <ActionForm action={action}>
       <div className="grid gap-5 md:grid-cols-2">
@@ -12,8 +14,11 @@ export function CourseForm({ action, course }: { action: (state: FormState, form
       <Select label="Type" name="kind" defaultValue={course?.kind ?? "course"} options={[{ value: "course", label: "Course" }, { value: "internship", label: "Internship programme" }]} hint="Internships are listed on their own Internships page. Run them with cohorts like a course; on each cohort you can let academy graduates join free." className="max-w-[420px]" />
       <Textarea label="Summary" name="summary" defaultValue={course?.summary} rows={2} required hint="One or two sentences for course cards and search results." />
       <Textarea label="Full description" name="description" defaultValue={course?.description} rows={10} hint="Markdown: ## headings, - lists, **bold**, links. Shown on the course page." />
+      {ai && <AiDraftButton draft={draftCourseText.bind(null, "description")} label="Draft description with AI" />}
       <Textarea label="Learning outcomes" name="outcomes" defaultValue={course?.outcomes.join("\n")} rows={5} hint="One per line." />
+      {ai && <AiDraftButton draft={draftCourseText.bind(null, "outcomes")} label="Draft outcomes with AI" />}
       <Textarea label="Curriculum" name="curriculum" defaultValue={course?.curriculum.map((module) => `${module.title}${module.summary ? ` | ${module.summary}` : ""}`).join("\n")} rows={7} hint="One module per line: Module title | short description" />
+      {ai && <AiDraftButton draft={draftCourseText.bind(null, "curriculum")} label="Draft curriculum with AI" />}
       <div className="grid gap-5 md:grid-cols-2">
         <Textarea label="Portfolio projects" name="portfolioProjects" defaultValue={course?.portfolioProjects.join("\n")} rows={4} hint="One practical project per line." />
         <Textarea label="Relevant job roles" name="jobRoles" defaultValue={course?.jobRoles.join("\n")} rows={4} hint="One role per line." />

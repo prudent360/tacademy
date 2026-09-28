@@ -10,6 +10,7 @@ import { getCohortWithCourse, getInstructorsByCohort, getSettings, isEnrolled } 
 import { STATE_LABEL, announcementsFor, assignmentState, assignmentsForStudent, attendanceFor, pastSessionsFor, upcomingSessionsFor } from "@/lib/student";
 import { formatDateOnly, formatDateTime, relativeTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
+import { cohortLeaderboard } from "@/lib/xp";
 
 export const metadata: Metadata = { title: "My class" };
 
@@ -22,13 +23,17 @@ export default async function StudentCohortPage({ params, searchParams }: { para
   const { cohort, course } = found;
   const tz = settings.timezone;
 
-  const [upcoming, past, work, news, instructors] = await Promise.all([
+  const [upcoming, past, work, news, instructors, leaderboard] = await Promise.all([
     upcomingSessionsFor([id]),
     pastSessionsFor([id]),
     assignmentsForStudent(user.id, [id]),
     announcementsFor([id]),
     getInstructorsByCohort([id]),
+    cohortLeaderboard(id),
   ]);
+  const me = leaderboard.find((row) => row.userId === user.id);
+  const top = leaderboard.slice(0, 10);
+  const shownBoard = me && !top.includes(me) ? [...top, me] : top;
   const marks = await attendanceFor(user.id, past.map((p) => p.session.id));
   const attended = [...marks.values()].filter((s) => s === "present" || s === "late").length;
   const markedCount = marks.size;
@@ -106,6 +111,21 @@ export default async function StudentCohortPage({ params, searchParams }: { para
               </ul>
             ) : <p className="flex items-center gap-2 text-[15px] text-muted"><MegaphoneIcon className="size-5" /> Nothing posted yet.</p>}
           </Card>
+          {leaderboard.length > 1 && (
+            <Card title="Leaderboard" action={me ? <span className="text-sm text-muted">You&apos;re #{me.rank} of {leaderboard.length}</span> : undefined}>
+              <ol className="-my-1 flex flex-col gap-1">
+                {shownBoard.map((row) => (
+                  <li key={row.userId} className={`flex items-center gap-3 rounded-lg px-2 py-1.5 ${row.userId === user.id ? "bg-accent-soft" : ""}`}>
+                    <span className={`w-6 text-center font-display text-sm font-bold ${row.rank <= 3 ? "text-accent" : "text-muted"}`}>{row.rank}</span>
+                    <Avatar name={row.name} src={row.avatarUrl} size="sm" />
+                    <span className="min-w-0 grow truncate text-sm font-semibold text-ink">{row.userId === user.id ? "You" : row.name}</span>
+                    <span className="shrink-0 text-sm font-semibold text-accent">{row.points.toLocaleString("en-GB")} XP</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-3 text-xs text-muted">XP earned on this cohort: lessons, classes, assignments and completion.</p>
+            </Card>
+          )}
           {(instructors.get(id) ?? []).length > 0 && (
             <Card title="Instructors">
               <ul className="flex flex-col gap-4">

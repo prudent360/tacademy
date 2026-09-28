@@ -6,6 +6,9 @@ import { Card, Notice, PageHeader } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { getTemplate, renderEmail } from "@/lib/email";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
+import { draftEmailTemplate } from "@/app/actions/ai";
+import { AiDraftButton } from "@/components/ai/draft-button";
+import { aiAvailable } from "@/lib/ai";
 
 export const metadata: Metadata = { title: "Edit email" };
 
@@ -16,6 +19,7 @@ export default async function EditEmailPage({ params, searchParams }: { params: 
   const current = await getTemplate(key);
   const preview = await renderEmail(current, { ...COMMON_VARIABLES, ...def.variables });
   const variables = { ...COMMON_VARIABLES, ...def.variables };
+  const aiWriting = await aiAvailable("writing");
 
   return (
     <>
@@ -26,6 +30,7 @@ export default async function EditEmailPage({ params, searchParams }: { params: 
           <ActionForm action={saveTemplate.bind(null, key)}>
             <Input label="Subject" name="subject" defaultValue={current.subject} required />
             <Textarea label="Body" name="body" defaultValue={current.body} rows={16} required />
+            {aiWriting && <AiDraftButton draft={draftEmailTemplate.bind(null, key)} label="Improve wording with AI" />}
             <div className="rounded-lg border border-edge bg-panel p-4 text-[13px] leading-relaxed text-body">
               <p className="mb-2 font-semibold text-ink">How to write templates</p>
               <p>Markdown formatting: <code>**bold**</code>, <code>- list item</code>, <code>[link text](https://…)</code>.</p>

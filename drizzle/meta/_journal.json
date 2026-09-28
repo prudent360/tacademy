@@ -78,6 +78,20 @@
       "when": 1790610724678,
       "tag": "0010_internships",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790616507639,
+      "tag": "0011_enrollment_completed_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790616772464,
+      "tag": "0012_ai_settings",
+      "breakpoints": true
     }
   ]
 }

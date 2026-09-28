@@ -9,7 +9,7 @@ const WINDOW_MS = 15 * 60 * 1000;
 const MAX_PER_ACCOUNT = 5;
 const MAX_PER_ADDRESS = 20;
 
-async function clientAddress(): Promise<string> {
+export async function clientAddress(): Promise<string> {
   const h = await headers();
   // Vercel sets x-forwarded-for itself, so the first entry is the real client.
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";

@@ -46,6 +46,14 @@ The student's place is confirmed by the gateway's **webhook** (and double-checke
 
 Vercel Cron calls it daily (`vercel.json`). The Hobby plan only allows daily crons, so `.github/workflows/reminders.yml` also calls it every 15 minutes for the one-hour reminders. Add the repository secrets `SITE_URL` and `CRON_SECRET` to enable it.
 
+## XP and levels
+
+Students earn XP for what they do: 10 per lesson completed, 20 per class attended (10 if late), 25 per assignment submitted (+10 on time), up to 50 more by grade, 200 per course or internship completed and 100 per certificate. XP is calculated from those records (`src/lib/xp.ts`), so past activity counts and corrections to attendance or grades adjust it. Students see their level in the top bar, an XP panel on their dashboard and a leaderboard on each cohort page.
+
+## AI assistant
+
+Optional features powered by OpenAI or Anthropic (Claude), chosen and connected in **Settings → AI** with that provider's API key (or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`): a public course advisor, a study buddy on each lesson, a grading assistant for instructors, and "Draft with AI" for course copy, announcements and email templates. People review every draft before it is saved or sent. Requests are capped per person per hour; set a monthly spending limit in your provider's dashboard too.
+
 ## Deploy to Vercel
 
 1. Push this folder to a new GitHub repository and import it in Vercel.

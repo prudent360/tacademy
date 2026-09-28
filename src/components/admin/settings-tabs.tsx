@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
-import { runRemindersNow, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendTestEmailNow } from "@/app/actions/settings";
+import { runRemindersNow, saveAiSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
+import { AiProviderFields } from "@/components/admin/ai-provider";
 import { EmailDriverFields } from "@/components/admin/email-driver";
 import { ActionButton, ActionForm, FileField, Input, SecretInput, Select, SubmitButton, Switch, Textarea } from "@/components/forms";
-import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon } from "@/components/icons";
+import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon, SparkIcon } from "@/components/icons";
 import { Badge, DataTable, Notice, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
 import { emailLog, emailTemplates, type Settings } from "@/db/schema";
 import { bankTransferConfig, emailConfig, gatewayConfig, reminderConfig, type ResolvedGateway } from "@/lib/config";
+import { AI_MODELS, aiConfig } from "@/lib/ai";
 import { REQUIRED_TEMPLATES } from "@/lib/email";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "@/lib/email-templates";
 import { CURRENCIES } from "@/lib/money";
@@ -339,6 +341,51 @@ export async function TemplatesTab() {
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+// ---------- AI ----------
+
+export async function AiTab({ s }: { s: Settings }) {
+  const cfg = await aiConfig();
+  const ready = cfg.enabled && Boolean(cfg.key);
+  return (
+    <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <ActionForm action={saveAiSettings} className="flex flex-col gap-6">
+        <Section title="AI assistant" description="Powers the course advisor, study buddy, grading assistant and writing helper. Every draft is reviewed by a person before it's saved or sent." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-accent text-white"><SparkIcon className="size-5" /></span>}
+          badge={ready ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On · {cfg.provider === "openai" ? "OpenAI" : "Claude"}</Badge> : cfg.enabled ? <Badge tone="amber"><AlertIcon className="size-3.5" /> No API key</Badge> : <Badge>Off</Badge>}
+          footer="Set a monthly spending limit in your provider's dashboard as well. Usage is also capped per person per hour here.">
+          <Switch label="Turn on AI features" name="aiEnabled" defaultChecked={cfg.enabled} />
+          {cfg.source === "environment" && <Notice tone="accent">Currently using the <code className="font-mono">{cfg.provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"}</code> environment variable. A key saved here takes priority.</Notice>}
+          <AiProviderFields
+            initial={cfg.provider}
+            openai={<>
+              <SecretInput label="OpenAI API key" name="openaiApiKey" masked={maskSecret(s.ai?.openaiApiKey)} placeholder="sk-…" />
+              <Select label="Model" name="openaiModel" defaultValue={cfg.openaiModel} options={AI_MODELS.openai.map((m) => ({ value: m.id, label: m.label }))} hint="Sol is a good balance. Luna costs far less, which suits the public course advisor; Astra is the most capable." className="max-w-[420px]" />
+              <p className="text-xs text-muted">Create a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">platform.openai.com/api-keys</a> and add credit under Billing.</p>
+            </>}
+            anthropic={<>
+              <SecretInput label="Anthropic API key" name="aiApiKey" masked={maskSecret(s.ai?.apiKey)} placeholder="sk-ant-…" />
+              <Select label="Model" name="aiModel" defaultValue={cfg.model} options={AI_MODELS.anthropic.map((m) => ({ value: m.id, label: m.label }))} hint="Opus gives the best answers and grading. Sonnet or Haiku cost less." className="max-w-[420px]" />
+              <p className="text-xs text-muted">Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">console.anthropic.com</a>.</p>
+            </>}
+          />
+        </Section>
+        <Section title="Features">
+          <Switch label="Course advisor" name="aiAdvisor" defaultChecked={cfg.advisor} hint="A “Find your course” chat on the public website that recommends programmes from your catalogue. Limited to 30 questions per visitor per hour." />
+          <Switch label="Lesson study buddy" name="aiStudyBuddy" defaultChecked={cfg.studyBuddy} hint="Students can ask questions about each lesson and get quizzed on it. 40 questions per student per hour." />
+          <Switch label="Grading assistant" name="aiGrading" defaultChecked={cfg.grading} hint="“Suggest a grade with AI” on submissions: a score and feedback for the instructor to edit. It reads written answers, not attached files." />
+          <Switch label="Writing helper" name="aiWriting" defaultChecked={cfg.writing} hint="“Draft with AI” for course descriptions, outcomes, curriculum, announcements and email templates." />
+        </Section>
+        <div><SubmitButton>Save AI settings</SubmitButton></div>
+      </ActionForm>
+      <Section title="Check the connection">
+        <p className="text-sm text-muted">Save your key first, then send a tiny test request to the chosen provider.</p>
+        <ActionForm action={testAiConnection} className="flex flex-col gap-3">
+          <SubmitButton pendingText="Testing…">Test connection</SubmitButton>
+        </ActionForm>
+      </Section>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { getSettings } from "@/lib/data";
 import { latestNotifications, toGradeCount, unreadCount } from "@/lib/portal";
 import { relativeTime } from "@/lib/time";
 import { studentId } from "@/lib/utils";
+import { xpForUser } from "@/lib/xp";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const [settings, unread, toGrade, recent] = await Promise.all([getSettings(), unreadCount(user.id), toGradeCount(user), latestNotifications(user.id)]);
+  const xp = user.role === "student" ? await xpForUser(user.id, 0) : null;
   const today = new Intl.DateTimeFormat("en-GB", { timeZone: settings.timezone, weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date());
 
   return (
@@ -28,6 +30,7 @@ export default async function PortalLayout({ children }: { children: React.React
       toGrade={toGrade}
       today={today}
       studentId={user.role === "student" ? studentId(user) : undefined}
+      xp={xp ? { level: xp.level, total: xp.total } : undefined}
       notifications={recent.map((n) => ({ id: n.id, title: n.title, body: n.body, href: n.href, read: Boolean(n.readAt), when: relativeTime(n.createdAt) }))}
       logout={logout}
       markAllRead={markAllRead}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site/footer";
 import { SiteHeader } from "@/components/site/header";
+import { CourseAdvisor } from "@/components/site/course-advisor";
+import { aiAvailable } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
 
@@ -19,13 +21,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const [settings, user] = await Promise.all([getSettings(), getCurrentUser()]);
+  const [settings, user, advisor] = await Promise.all([getSettings(), getCurrentUser(), aiAvailable("advisor")]);
   return (
     <>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2">Skip to content</a>
       <SiteHeader settings={settings} user={user} />
       <main id="main">{children}</main>
       <SiteFooter settings={settings} />
+      {advisor && <CourseAdvisor />}
     </>
   );
 }

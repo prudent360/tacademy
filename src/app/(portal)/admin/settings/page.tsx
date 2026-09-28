@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { BrandingTab, EmailTab, GeneralTab, PaymentsTab, RemindersTab, TemplatesTab } from "@/components/admin/settings-tabs";
-import { CardIcon, ClockIcon, CogIcon, FileIcon, MailIcon, PaletteIcon } from "@/components/icons";
+import { AiTab, BrandingTab, EmailTab, GeneralTab, PaymentsTab, RemindersTab, TemplatesTab } from "@/components/admin/settings-tabs";
+import { CardIcon, ClockIcon, CogIcon, FileIcon, MailIcon, PaletteIcon, SparkIcon } from "@/components/icons";
 import { PageHeader, Tabs } from "@/components/ui";
 import { getSettings } from "@/lib/data";
 
@@ -13,6 +13,7 @@ const TABS = [
   { key: "email", label: "Email", icon: MailIcon },
   { key: "templates", label: "Email templates", icon: FileIcon },
   { key: "reminders", label: "Reminders", icon: ClockIcon },
+  { key: "ai", label: "AI", icon: SparkIcon },
 ] as const;
 
 type Tab = (typeof TABS)[number]["key"];
@@ -31,6 +32,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {tab === "email" && <EmailTab s={s} />}
       {tab === "templates" && <TemplatesTab />}
       {tab === "reminders" && <RemindersTab />}
+      {tab === "ai" && <AiTab s={s} />}
     </>
   );
 }

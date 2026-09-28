@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { settings, type GatewaySettings, type Settings } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
+import { AI_MODELS, AI_PROVIDERS, DEFAULT_AI, DEFAULT_MODEL, pingAi } from "@/lib/ai";
 import { DEFAULT_BANK, DEFAULT_REMINDERS } from "@/lib/config";
 import { getSettings } from "@/lib/data";
 import { sendEmail } from "@/lib/email";
@@ -193,6 +194,44 @@ export async function saveEmailSettings(_state: FormState, formData: FormData): 
 export async function sendTestEmailNow(): Promise<void> {
   const admin = await requireRole("admin");
   await sendEmail(admin.email, "verify_email", { name: firstName(admin.name), verifyUrl: "https://example.com/this-is-a-test" });
+}
+
+// ---------- AI ----------
+
+export async function saveAiSettings(_state: FormState, formData: FormData): Promise<FormState> {
+  await requireRole("admin");
+  const current = { ...DEFAULT_AI, ...((await getSettings()).ai ?? {}) };
+  const provider = AI_PROVIDERS.find((p) => p.id === formData.get("aiProvider"))?.id ?? "openai";
+  // Only the chosen provider's fields are read: the others are hidden but still submitted.
+  const problem = provider === "openai"
+    ? checkKey(formData.get("openaiApiKey"), ["sk-"], "The OpenAI API key")
+    : checkKey(formData.get("aiApiKey"), ["sk-ant-"], "The Anthropic API key");
+  if (problem) return { error: problem };
+  const pick = (name: string, fallback: string) => {
+    const value = String(formData.get(name) ?? "");
+    return AI_MODELS[provider].some((m) => m.id === value) ? value : fallback;
+  };
+  await update({
+    ai: {
+      ...current,
+      enabled: formData.get("aiEnabled") === "on",
+      provider,
+      ...(provider === "openai"
+        ? { openaiApiKey: secretField(formData, "openaiApiKey", current.openaiApiKey), openaiModel: pick("openaiModel", DEFAULT_MODEL.openai) }
+        : { apiKey: secretField(formData, "aiApiKey", current.apiKey), model: pick("aiModel", DEFAULT_MODEL.anthropic) }),
+      advisor: formData.get("aiAdvisor") === "on",
+      studyBuddy: formData.get("aiStudyBuddy") === "on",
+      grading: formData.get("aiGrading") === "on",
+      writing: formData.get("aiWriting") === "on",
+    },
+  });
+  return { ok: "AI settings saved." };
+}
+
+export async function testAiConnection(): Promise<FormState> {
+  await requireRole("admin");
+  const problem = await pingAi();
+  return problem ? { error: problem } : { ok: "Connected: the AI provider replied." };
 }
 
 // ---------- Reminders ----------

@@ -233,7 +233,7 @@ export async function addStudentToCohort(cohortId: number, _state: FormState, fo
 export async function setEnrollmentStatus(enrollmentId: number, status: "active" | "cancelled" | "completed"): Promise<void> {
   const admin = await requireRole("admin");
   const db = await getDb();
-  const [row] = await db.update(enrollments).set({ status }).where(eq(enrollments.id, enrollmentId)).returning({ cohortId: enrollments.cohortId, userId: enrollments.userId });
+  const [row] = await db.update(enrollments).set({ status, completedAt: status === "completed" ? new Date() : null }).where(eq(enrollments.id, enrollmentId)).returning({ cohortId: enrollments.cohortId, userId: enrollments.userId });
   if (!row) return;
   if (status === "completed") {
     const eligibility = await certificateEligibility(enrollmentId);

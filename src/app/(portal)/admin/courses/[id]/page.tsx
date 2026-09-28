@@ -12,6 +12,7 @@ import { cohorts, courseModules, courses, lessons } from "@/db/schema";
 import { seatsTaken } from "@/lib/data";
 import { formatDateOnly } from "@/lib/time";
 import { idParam } from "@/lib/validation";
+import { aiAvailable } from "@/lib/ai";
 
 export const metadata: Metadata = { title: "Edit course" };
 
@@ -29,6 +30,7 @@ export default async function EditCoursePage({ params, searchParams }: { params:
   const taken = await seatsTaken(list.map((c) => c.id));
   const moduleList = [...new Map(modules.map((row) => [row.module.id, { ...row.module, lessons: modules.filter((x) => x.module.id === row.module.id && x.lessonId).length }])).values()];
 
+  const ai = await aiAvailable("writing");
   return (
     <>
       <PageHeader
@@ -75,7 +77,7 @@ export default async function EditCoursePage({ params, searchParams }: { params:
           </ul>
         ) : <p className="p-6 text-muted">No cohorts yet. <Link href={`/admin/cohorts/new?course=${id}`} className="font-semibold text-accent">Add the first one</Link>.</p>}
       </Card>
-      <Card title="Course details"><CourseForm action={updateCourse.bind(null, id)} course={course} /></Card>
+      <Card title="Course details"><CourseForm action={updateCourse.bind(null, id)} course={course} ai={ai} /></Card>
       <div className="flex justify-end"><DeleteButton action={deleteCourse.bind(null, id)} label="Delete course and its cohorts" /></div>
     </>
   );

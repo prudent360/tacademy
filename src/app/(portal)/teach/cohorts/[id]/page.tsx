@@ -16,6 +16,9 @@ import { requireTeacher } from "@/lib/auth";
 import { getCohortStudents, getCohortWithCourse, getSettings } from "@/lib/data";
 import { formatDateOnly, formatDateTime, relativeTime, toZonedInput } from "@/lib/time";
 import { idParam } from "@/lib/validation";
+import { draftAnnouncement } from "@/app/actions/ai";
+import { AiDraftButton } from "@/components/ai/draft-button";
+import { aiAvailable } from "@/lib/ai";
 
 export const metadata: Metadata = { title: "Cohort" };
 
@@ -26,6 +29,7 @@ export default async function TeachCohortPage({ params, searchParams }: { params
   const id = idParam(raw);
   if (!id) notFound();
   await requireTeacher(id);
+  const aiWriting = await aiAvailable("writing");
   const found = await getCohortWithCourse(id);
   if (!found) notFound();
   const { cohort, course } = found;
@@ -109,7 +113,8 @@ export default async function TeachCohortPage({ params, searchParams }: { params
           <Card title="Post an announcement">
             <ActionForm action={postAnnouncement.bind(null, id)} resetOnSuccess>
               <Input label="Title" name="title" required />
-              <Textarea label="Message" name="body" rows={6} hint="Markdown supported." />
+              <Textarea label="Message" name="body" rows={6} hint="Markdown supported. Jot a few notes and let AI write the message, if you like." />
+              {aiWriting && <AiDraftButton draft={draftAnnouncement.bind(null, id)} label="Write it with AI" />}
               <Checkbox label="Also email every student" name="email" defaultChecked />
               <SubmitButton pendingText="Posting…">Post</SubmitButton>
             </ActionForm>

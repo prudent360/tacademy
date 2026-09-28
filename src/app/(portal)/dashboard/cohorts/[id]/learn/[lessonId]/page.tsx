@@ -12,6 +12,9 @@ import { getDb } from "@/db";
 import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons, moduleReleases } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { idParam } from "@/lib/validation";
+import { askLessonBuddy } from "@/app/actions/ai";
+import { AiChat } from "@/components/ai/chat";
+import { aiAvailable } from "@/lib/ai";
 
 export const metadata: Metadata = { title: "Lesson" };
 
@@ -37,6 +40,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
   const next = all[index + 1]?.lesson;
   const [progress] = await db.select().from(lessonProgress).where(and(eq(lessonProgress.enrollmentId, found.enrollment.id), eq(lessonProgress.lessonId, lessonId)));
   const complete = Boolean(progress?.completedAt);
+  const buddy = await aiAvailable("studyBuddy");
   return <>
     <LessonStart cohortId={cohortId} lessonId={lessonId} />
     <PageHeader back={{ href: `/dashboard/cohorts/${cohortId}/learn`, label: "Course learning" }} title={found.lesson.title} description={<span className="flex items-center gap-2">{found.module.title}<Badge><ClockIcon className="size-3.5" /> {found.lesson.estimatedMinutes} min</Badge></span>} />
@@ -45,6 +49,16 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
         {found.lesson.summary && <p className="text-lg leading-relaxed text-muted">{found.lesson.summary}</p>}
         {found.lesson.videoUrl && <a href={found.lesson.videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 rounded-[5px] bg-navy px-5 py-4 text-white hover:bg-[#24354b]"><span><span className="block font-semibold">Watch lesson video</span><span className="text-sm text-white/65">Opens in a new tab</span></span><ExternalIcon className="size-5" /></a>}
         <Card className="min-h-80">{found.lesson.content ? <Markdown size="lg">{found.lesson.content}</Markdown> : <p className="text-muted">This lesson has no written content yet.</p>}</Card>
+        {buddy && (
+          <Card title="Study buddy">
+            <AiChat
+              send={askLessonBuddy.bind(null, cohortId, lessonId)}
+              intro={`Hi! I've read "${found.lesson.title}". Ask me to explain anything, give an example, or quiz you.`}
+              placeholder="Ask about this lesson…"
+              suggestions={["Explain this lesson simply", "Give me a real-world example", "Quiz me with 3 questions"]}
+            />
+          </Card>
+        )}
         {found.lesson.resourceUrl && <a href={found.lesson.resourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-[5px] border border-edge bg-white p-4 font-semibold text-accent hover:border-accent-muted"><LinkIcon className="size-5" /> {found.lesson.resourceLabel || "Open lesson resource"}<ExternalIcon className="ml-auto size-4" /></a>}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
           {previous ? <Link href={`/dashboard/cohorts/${cohortId}/learn/${previous.id}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page"><ArrowLeft className="size-4" /> Previous</Link> : <span />}

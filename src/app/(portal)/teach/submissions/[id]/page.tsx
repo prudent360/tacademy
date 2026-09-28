@@ -12,6 +12,8 @@ import { requireTeacher } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
 import { formatDateTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
+import { draftGrade } from "@/app/actions/ai";
+import { aiAvailable } from "@/lib/ai";
 
 export const metadata: Metadata = { title: "Review submission" };
 
@@ -27,7 +29,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ id:
     .where(eq(submissions.id, id));
   if (!row) notFound();
   await requireTeacher(row.assignment.cohortId);
-  const settings = await getSettings();
+  const [settings, aiGrading] = await Promise.all([getSettings(), aiAvailable("grading")]);
   const { submission, assignment, student } = row;
   const late = assignment.dueAt && new Date(submission.submittedAt) > new Date(assignment.dueAt);
 
@@ -48,7 +50,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ id:
           </Card>
         </div>
         <Card title="Feedback">
-          <GradeForm action={gradeSubmission.bind(null, id)} maxScore={assignment.maxScore} score={submission.score} feedback={submission.feedback} />
+          <GradeForm action={gradeSubmission.bind(null, id)} maxScore={assignment.maxScore} score={submission.score} feedback={submission.feedback} aiDraft={aiGrading ? draftGrade.bind(null, id) : undefined} />
         </Card>
       </div>
     </>

@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   payment: {},
   email: {},
   reminders: {},
+  ai: {},
   updatedAt: new Date(0),
 };
 
