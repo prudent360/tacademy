@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { announcements, assignments, attendance, ATTENDANCE_STATUSES, classSessions, enrollments, SESSION_MODES, submissions, type AttendanceStatus } from "@/db/schema";
+import { announcements, assignments, attendance, ATTENDANCE_STATUSES, classSessions, cohorts, courseModules, enrollments, lessons, SESSION_MODES, submissions, type AttendanceStatus } from "@/db/schema";
 import { requireTeacher } from "@/lib/auth";
 import { getCohortWithCourse, getSettings } from "@/lib/data";
 import { notify } from "@/lib/notify";
@@ -152,7 +152,15 @@ const assignmentSchema = z.object({
   instructions: text(20_000),
   dueAt: optionalDateTime,
   maxScore: z.coerce.number().int().min(1, "Max score must be at least 1.").max(1000),
+  lessonId: z.string().trim().refine((value) => value === "" || /^\d+$/.test(value), "Choose a valid lesson."),
 });
+
+async function linkedLesson(cohortId: number, raw: string): Promise<number | null | undefined> {
+  if (!raw) return null;
+  const lessonId = Number(raw);
+  const [valid] = await (await getDb()).select({ id: lessons.id }).from(cohorts).innerJoin(courseModules, eq(courseModules.courseId, cohorts.courseId)).innerJoin(lessons, eq(lessons.moduleId, courseModules.id)).where(and(eq(cohorts.id, cohortId), eq(lessons.id, lessonId)));
+  return valid?.id;
+}
 
 async function announceAssignment(assignmentId: number, cohortId: number, title: string, dueAt: Date | null) {
   const settings = await getSettings();
@@ -181,6 +189,8 @@ export async function createAssignment(cohortId: number, _state: FormState, form
   const user = await requireTeacher(cohortId);
   const parsed = assignmentSchema.safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
+  const lessonId = await linkedLesson(cohortId, parsed.data.lessonId);
+  if (lessonId === undefined) return { error: "That lesson does not belong to this cohort's course." };
   const settings = await getSettings();
   const attachment = await attachmentField(formData, null);
   if ("error" in attachment) return attachment;
@@ -188,7 +198,7 @@ export async function createAssignment(cohortId: number, _state: FormState, form
   const published = formData.get("published") === "on";
   const [row] = await (await getDb())
     .insert(assignments)
-    .values({ ...parsed.data, dueAt, cohortId, published, attachmentUrl: attachment.url, createdById: user.id })
+    .values({ ...parsed.data, lessonId, dueAt, cohortId, published, attachmentUrl: attachment.url, createdById: user.id })
     .returning({ id: assignments.id });
   if (published) await announceAssignment(row.id, cohortId, parsed.data.title, dueAt);
   refresh(cohortId);
@@ -202,6 +212,8 @@ export async function updateAssignment(id: number, _state: FormState, formData: 
   await requireTeacher(existing.cohortId);
   const parsed = assignmentSchema.safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
+  const lessonId = await linkedLesson(existing.cohortId, parsed.data.lessonId);
+  if (lessonId === undefined) return { error: "That lesson does not belong to this cohort's course." };
   const settings = await getSettings();
   const attachment = await attachmentField(formData, existing.attachmentUrl);
   if ("error" in attachment) return attachment;
@@ -209,7 +221,7 @@ export async function updateAssignment(id: number, _state: FormState, formData: 
   const published = formData.get("published") === "on";
   const dueChanged = (existing.dueAt?.getTime() ?? null) !== (dueAt?.getTime() ?? null);
   await db.update(assignments).set({
-    ...parsed.data, dueAt, published, attachmentUrl: attachment.url,
+    ...parsed.data, lessonId, dueAt, published, attachmentUrl: attachment.url,
     ...(dueChanged ? { reminderSentAt: null } : {}),
   }).where(eq(assignments.id, id));
   await deleteIfReplaced(existing.attachmentUrl, attachment.url);

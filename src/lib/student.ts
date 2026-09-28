@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { getDb } from "@/db";
-import { announcements, assignments, attendance, classSessions, cohorts, courses, submissions, users } from "@/db/schema";
+import { announcements, assignments, attendance, classSessions, cohorts, courseModules, courses, lessons, moduleReleases, submissions, users } from "@/db/schema";
 import { getStudentCohorts } from "./data";
 
 export async function studentCohortIds(userId: number): Promise<number[]> {
@@ -38,15 +38,19 @@ export async function assignmentsForStudent(userId: number, cohortIds: number[])
   if (!cohortIds.length) return [];
   const db = await getDb();
   const rows = await db
-    .select({ assignment: assignments, course: courses, cohort: cohorts })
+    .select({ assignment: assignments, course: courses, cohort: cohorts, modulePublished: courseModules.published, lessonPublished: lessons.published, releaseAt: moduleReleases.releaseAt })
     .from(assignments)
     .innerJoin(cohorts, eq(cohorts.id, assignments.cohortId))
     .innerJoin(courses, eq(courses.id, cohorts.courseId))
+    .leftJoin(lessons, eq(lessons.id, assignments.lessonId))
+    .leftJoin(courseModules, eq(courseModules.id, lessons.moduleId))
+    .leftJoin(moduleReleases, and(eq(moduleReleases.cohortId, assignments.cohortId), eq(moduleReleases.moduleId, courseModules.id)))
     .where(and(inArray(assignments.cohortId, cohortIds), eq(assignments.published, true)))
     .orderBy(asc(assignments.dueAt));
-  const ids = rows.map((r) => r.assignment.id);
+  const visible = rows.filter((row) => !row.assignment.lessonId || (row.modulePublished && row.lessonPublished && (!row.releaseAt || row.releaseAt <= new Date())));
+  const ids = visible.map((r) => r.assignment.id);
   const mine = ids.length ? await db.select().from(submissions).where(and(eq(submissions.userId, userId), inArray(submissions.assignmentId, ids))) : [];
-  return rows.map((r) => ({ ...r, submission: mine.find((s) => s.assignmentId === r.assignment.id) ?? null }));
+  return visible.map((r) => ({ assignment: r.assignment, course: r.course, cohort: r.cohort, submission: mine.find((s) => s.assignmentId === r.assignment.id) ?? null }));
 }
 
 export async function attendanceFor(userId: number, sessionIds: number[]) {

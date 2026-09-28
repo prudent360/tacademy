@@ -5,8 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons } from "@/db/schema";
-import { requireRole, requireUser } from "@/lib/auth";
+import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons, moduleReleases } from "@/db/schema";
+import { requireRole, requireTeacher, requireUser } from "@/lib/auth";
+import { getSettings } from "@/lib/data";
+import { fromZonedInput } from "@/lib/time";
 import { firstError, formValues, optionalUrl, required, sortValue, text, type FormState } from "@/lib/validation";
 
 const moduleSchema = z.object({
@@ -113,15 +115,50 @@ export async function setLessonComplete(cohortId: number, lessonId: number, comp
   const user = await requireUser();
   const db = await getDb();
   const [allowed] = await db
-    .select({ enrollmentId: enrollments.id })
+    .select({ enrollmentId: enrollments.id, releaseAt: moduleReleases.releaseAt })
     .from(enrollments)
     .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
     .innerJoin(courseModules, eq(courseModules.courseId, cohorts.courseId))
     .innerJoin(lessons, eq(lessons.moduleId, courseModules.id))
+    .leftJoin(moduleReleases, and(eq(moduleReleases.cohortId, cohorts.id), eq(moduleReleases.moduleId, courseModules.id)))
     .where(and(eq(enrollments.userId, user.id), eq(enrollments.cohortId, cohortId), eq(lessons.id, lessonId), eq(courseModules.published, true), eq(lessons.published, true)));
-  if (!allowed) return;
+  if (!allowed || (allowed.releaseAt && allowed.releaseAt > new Date())) return;
   await db.insert(lessonProgress).values({ enrollmentId: allowed.enrollmentId, lessonId, completedAt: complete ? new Date() : null })
     .onConflictDoUpdate({ target: [lessonProgress.enrollmentId, lessonProgress.lessonId], set: { completedAt: complete ? new Date() : null } });
   revalidatePath(`/dashboard/cohorts/${cohortId}/learn`, "layout");
   revalidatePath("/dashboard");
+}
+
+export async function startLesson(cohortId: number, lessonId: number): Promise<void> {
+  const user = await requireUser();
+  const db = await getDb();
+  const [allowed] = await db
+    .select({ enrollmentId: enrollments.id, releaseAt: moduleReleases.releaseAt })
+    .from(enrollments)
+    .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
+    .innerJoin(courseModules, eq(courseModules.courseId, cohorts.courseId))
+    .innerJoin(lessons, eq(lessons.moduleId, courseModules.id))
+    .leftJoin(moduleReleases, and(eq(moduleReleases.cohortId, cohorts.id), eq(moduleReleases.moduleId, courseModules.id)))
+    .where(and(eq(enrollments.userId, user.id), eq(enrollments.cohortId, cohortId), eq(lessons.id, lessonId), eq(courseModules.published, true), eq(lessons.published, true)));
+  if (!allowed || (allowed.releaseAt && allowed.releaseAt > new Date())) return;
+  await db.insert(lessonProgress).values({ enrollmentId: allowed.enrollmentId, lessonId }).onConflictDoNothing();
+  revalidatePath(`/dashboard/cohorts/${cohortId}/learn`);
+}
+
+export async function setModuleRelease(cohortId: number, moduleId: number, _state: FormState, formData: FormData): Promise<FormState> {
+  await requireTeacher(cohortId);
+  const db = await getDb();
+  const [valid] = await db.select({ moduleId: courseModules.id }).from(cohorts).innerJoin(courseModules, eq(courseModules.courseId, cohorts.courseId)).where(and(eq(cohorts.id, cohortId), eq(courseModules.id, moduleId)));
+  if (!valid) return { error: "That module does not belong to this cohort's course." };
+  const raw = String(formData.get("releaseAt") ?? "").trim();
+  if (!raw) {
+    await db.delete(moduleReleases).where(and(eq(moduleReleases.cohortId, cohortId), eq(moduleReleases.moduleId, moduleId)));
+  } else {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(raw)) return { error: "Choose a valid release date and time." };
+    const releaseAt = fromZonedInput(raw, (await getSettings()).timezone);
+    await db.insert(moduleReleases).values({ cohortId, moduleId, releaseAt }).onConflictDoUpdate({ target: [moduleReleases.cohortId, moduleReleases.moduleId], set: { releaseAt } });
+  }
+  revalidatePath(`/teach/cohorts/${cohortId}`);
+  revalidatePath(`/dashboard/cohorts/${cohortId}/learn`, "layout");
+  return { ok: raw ? "Release scheduled." : "Module is available immediately." };
 }

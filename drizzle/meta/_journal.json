@@ -64,6 +64,13 @@
       "when": 1790595383461,
       "tag": "0008_narrow_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790600149671,
+      "tag": "0009_chemical_ultragirl",
+      "breakpoints": true
     }
   ]
 }

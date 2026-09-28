@@ -6,9 +6,10 @@ import { setLessonComplete } from "@/app/actions/learning";
 import { ActionButton } from "@/components/forms";
 import { ArrowLeft, ArrowRight, CheckCircleIcon, ClockIcon, ExternalIcon, LinkIcon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
+import { LessonStart } from "@/components/portal/lesson-start";
 import { Badge, Card, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
-import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons } from "@/db/schema";
+import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons, moduleReleases } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { idParam } from "@/lib/validation";
 
@@ -21,20 +22,23 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
   if (!cohortId || !lessonId) notFound();
   const user = await requireUser();
   const db = await getDb();
-  const [found] = await db.select({ enrollment: enrollments, lesson: lessons, module: courseModules, course: courses }).from(enrollments)
+  const [found] = await db.select({ enrollment: enrollments, lesson: lessons, module: courseModules, course: courses, releaseAt: moduleReleases.releaseAt }).from(enrollments)
     .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
     .innerJoin(courses, eq(courses.id, cohorts.courseId))
     .innerJoin(courseModules, eq(courseModules.courseId, courses.id))
     .innerJoin(lessons, eq(lessons.moduleId, courseModules.id))
+    .leftJoin(moduleReleases, and(eq(moduleReleases.cohortId, cohorts.id), eq(moduleReleases.moduleId, courseModules.id)))
     .where(and(eq(enrollments.userId, user.id), eq(enrollments.cohortId, cohortId), inArray(enrollments.status, ["active", "completed"]), eq(lessons.id, lessonId), eq(courseModules.published, true), eq(lessons.published, true)));
-  if (!found) notFound();
-  const all = await db.select({ lesson: lessons, module: courseModules }).from(courseModules).innerJoin(lessons, eq(lessons.moduleId, courseModules.id)).where(and(eq(courseModules.courseId, found.course.id), eq(courseModules.published, true), eq(lessons.published, true))).orderBy(asc(courseModules.position), asc(courseModules.id), asc(lessons.position), asc(lessons.id));
+  if (!found || (found.releaseAt && found.releaseAt > new Date())) notFound();
+  const allRows = await db.select({ lesson: lessons, module: courseModules, releaseAt: moduleReleases.releaseAt }).from(courseModules).innerJoin(lessons, eq(lessons.moduleId, courseModules.id)).leftJoin(moduleReleases, and(eq(moduleReleases.cohortId, cohortId), eq(moduleReleases.moduleId, courseModules.id))).where(and(eq(courseModules.courseId, found.course.id), eq(courseModules.published, true), eq(lessons.published, true))).orderBy(asc(courseModules.position), asc(courseModules.id), asc(lessons.position), asc(lessons.id));
+  const all = allRows.filter((row) => !row.releaseAt || row.releaseAt <= new Date());
   const index = all.findIndex((row) => row.lesson.id === lessonId);
   const previous = all[index - 1]?.lesson;
   const next = all[index + 1]?.lesson;
   const [progress] = await db.select().from(lessonProgress).where(and(eq(lessonProgress.enrollmentId, found.enrollment.id), eq(lessonProgress.lessonId, lessonId)));
   const complete = Boolean(progress?.completedAt);
   return <>
+    <LessonStart cohortId={cohortId} lessonId={lessonId} />
     <PageHeader back={{ href: `/dashboard/cohorts/${cohortId}/learn`, label: "Course learning" }} title={found.lesson.title} description={<span className="flex items-center gap-2">{found.module.title}<Badge><ClockIcon className="size-3.5" /> {found.lesson.estimatedMinutes} min</Badge></span>} />
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
       <main className="flex min-w-0 flex-col gap-6">

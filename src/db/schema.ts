@@ -201,6 +201,13 @@ export const lessons = pgTable("lessons", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("lessons_module_idx").on(t.moduleId, t.position)]);
 
+/** Optional per-cohort release timing; no row means the published module is available immediately. */
+export const moduleReleases = pgTable("module_releases", {
+  cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
+  moduleId: integer("module_id").notNull().references(() => courseModules.id, { onDelete: "cascade" }),
+  releaseAt: timestamp("release_at", { withTimezone: true }).notNull(),
+}, (t) => [primaryKey({ columns: [t.cohortId, t.moduleId] }), index("module_releases_cohort_idx").on(t.cohortId, t.releaseAt)]);
+
 export const cohortInstructors = pgTable("cohort_instructors", {
   cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -296,6 +303,8 @@ export const attendance = pgTable("attendance", {
 export const assignments = pgTable("assignments", {
   id: serial("id").primaryKey(),
   cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
+  /** Optional placement in the reusable course sequence; the assignment itself remains cohort-specific. */
+  lessonId: integer("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   instructions: text("instructions").notNull().default(""),
   attachmentUrl: text("attachment_url"),
@@ -371,6 +380,7 @@ export type Cohort = typeof cohorts.$inferSelect;
 export type LearningModule = typeof courseModules.$inferSelect;
 export type Lesson = typeof lessons.$inferSelect;
 export type LessonProgress = typeof lessonProgress.$inferSelect;
+export type ModuleRelease = typeof moduleReleases.$inferSelect;
 export type ClassSession = typeof classSessions.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;
 export type Payment = typeof payments.$inferSelect;

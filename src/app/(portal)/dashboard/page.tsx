@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   AwardIcon, BookIcon, CalendarIcon, CardIcon, ClipboardIcon, ClockIcon, MegaphoneIcon, MessageIcon, PinIcon, UserIcon, VideoIcon,
 } from "@/components/icons";
@@ -8,7 +8,7 @@ import { Countdown } from "@/components/portal/countdown";
 import { BannerButton, DateChip, GreetingBanner, Panel, PanelEmpty, ProgressBar, QuickAction, StatTile } from "@/components/portal/dash";
 import { Badge, ModeBadge, Notice } from "@/components/ui";
 import { getDb } from "@/db";
-import { attendance, classSessions, payments } from "@/db/schema";
+import { attendance, classSessions, cohorts as cohortTable, courseModules, enrollments, lessonProgress, lessons, moduleReleases, payments } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { getSettings, getStudentCohorts } from "@/lib/data";
 import { STATE_LABEL, announcementsFor, assignmentState, assignmentsForStudent, upcomingSessionsFor } from "@/lib/student";
@@ -38,6 +38,16 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
     cohortIds.length ? db.select({ sessionId: attendance.sessionId, status: attendance.status }).from(attendance).where(eq(attendance.userId, user.id)) : [],
     db.select().from(payments).where(eq(payments.userId, user.id)),
   ]);
+  const learningRows = activeIds.length ? await db.select({ cohortId: enrollments.cohortId, lesson: lessons, courseModule: courseModules, completedAt: lessonProgress.completedAt, releaseAt: moduleReleases.releaseAt })
+    .from(enrollments)
+    .innerJoin(cohortTable, eq(cohortTable.id, enrollments.cohortId))
+    .innerJoin(courseModules, eq(courseModules.courseId, cohortTable.courseId))
+    .innerJoin(lessons, eq(lessons.moduleId, courseModules.id))
+    .leftJoin(lessonProgress, and(eq(lessonProgress.enrollmentId, enrollments.id), eq(lessonProgress.lessonId, lessons.id)))
+    .leftJoin(moduleReleases, and(eq(moduleReleases.cohortId, enrollments.cohortId), eq(moduleReleases.moduleId, courseModules.id)))
+    .where(and(eq(enrollments.userId, user.id), inArray(enrollments.cohortId, activeIds), eq(courseModules.published, true), eq(lessons.published, true)))
+    .orderBy(courseModules.position, lessons.position) : [];
+  const nextLearning = learningRows.find((row) => !row.completedAt && (!row.releaseAt || row.releaseAt <= now));
   const depositKeys = [...new Map(studentPayments.filter((payment) => payment.status === "paid" && PART_PAYMENT_PLANS.includes(payment.paymentPlan) && payment.cohortId).map((payment) => [`${payment.cohortId}:${payment.currency}`, payment])).values()];
   const outstanding = (await Promise.all(depositKeys.map(async (payment) => {
     const detail = cohorts.find((row) => row.cohort.id === payment.cohortId);
@@ -102,9 +112,9 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
         <StatTile label="Average score" value={average === null ? "–" : `${average}%`} icon={AwardIcon} tone="green" hint={`${graded.length} graded`} />
       </div>
 
-      {(due[0] || next) && (
-        <Link href={due[0] ? `/dashboard/assignments/${due[0].assignment.id}` : `/dashboard/cohorts/${next!.session.cohortId}`} className="group flex items-center justify-between gap-5 rounded-[5px] border border-accent-muted/50 bg-[linear-gradient(100deg,#f4edff,#eefcff)] p-5 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_16px_35px_-28px_rgba(113,52,217,.75)]">
-          <span className="flex min-w-0 flex-col gap-1"><span className="text-xs font-bold uppercase tracking-[1.2px] text-accent">Continue learning</span><span className="truncate font-display text-lg font-bold text-ink">{due[0]?.assignment.title ?? next!.session.title}</span><span className="truncate text-sm text-muted">{due[0] ? `${due[0].course.title} · ${STATE_LABEL[due[0].state].label}` : `${next!.course.title} · ${formatSessionRange(next!.session.startsAt, next!.session.endsAt, tz)}`}</span></span>
+      {(nextLearning || due[0] || next) && (
+        <Link href={nextLearning ? `/dashboard/cohorts/${nextLearning.cohortId}/learn/${nextLearning.lesson.id}` : due[0] ? `/dashboard/assignments/${due[0].assignment.id}` : `/dashboard/cohorts/${next!.session.cohortId}`} className="group flex items-center justify-between gap-5 rounded-[5px] border border-accent-muted/50 bg-[linear-gradient(100deg,#f4edff,#eefcff)] p-5 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_16px_35px_-28px_rgba(113,52,217,.75)]">
+          <span className="flex min-w-0 flex-col gap-1"><span className="text-xs font-bold uppercase tracking-[1.2px] text-accent">Continue learning</span><span className="truncate font-display text-lg font-bold text-ink">{nextLearning?.lesson.title ?? due[0]?.assignment.title ?? next!.session.title}</span><span className="truncate text-sm text-muted">{nextLearning ? `${nextLearning.courseModule.title} · ${nextLearning.lesson.estimatedMinutes} min` : due[0] ? `${due[0].course.title} · ${STATE_LABEL[due[0].state].label}` : `${next!.course.title} · ${formatSessionRange(next!.session.startsAt, next!.session.endsAt, tz)}`}</span></span>
           <span className="shrink-0 font-semibold text-accent transition group-hover:translate-x-1">Continue →</span>
         </Link>
       )}

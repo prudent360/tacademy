@@ -7,7 +7,7 @@ import { FileIcon, LinkIcon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
 import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
-import { assignments, submissions, users } from "@/db/schema";
+import { assignments, courseModules, lessons, moduleReleases, submissions, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { getCohortWithCourse, getSettings, isEnrolled } from "@/lib/data";
 import { STATE_LABEL, assignmentState } from "@/lib/student";
@@ -23,6 +23,10 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
   const db = await getDb();
   const [assignment] = await db.select().from(assignments).where(and(eq(assignments.id, id), eq(assignments.published, true)));
   if (!assignment || !(await isEnrolled(user.id, assignment.cohortId))) notFound();
+  if (assignment.lessonId) {
+    const [placement] = await db.select({ modulePublished: courseModules.published, lessonPublished: lessons.published, releaseAt: moduleReleases.releaseAt }).from(lessons).innerJoin(courseModules, eq(courseModules.id, lessons.moduleId)).leftJoin(moduleReleases, and(eq(moduleReleases.moduleId, courseModules.id), eq(moduleReleases.cohortId, assignment.cohortId))).where(eq(lessons.id, assignment.lessonId));
+    if (!placement?.modulePublished || !placement.lessonPublished || (placement.releaseAt && placement.releaseAt > new Date())) notFound();
+  }
   const found = await getCohortWithCourse(assignment.cohortId);
   const [submission] = await db.select().from(submissions).where(and(eq(submissions.assignmentId, id), eq(submissions.userId, user.id)));
   const [grader] = submission?.gradedById ? await db.select({ name: users.name }).from(users).where(eq(users.id, submission.gradedById)) : [];
@@ -33,7 +37,7 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
   return (
     <>
       <PageHeader
-        back={{ href: `/dashboard/cohorts/${assignment.cohortId}`, label: found?.course.title ?? "Back" }}
+        back={{ href: assignment.lessonId ? `/dashboard/cohorts/${assignment.cohortId}/learn` : `/dashboard/cohorts/${assignment.cohortId}`, label: assignment.lessonId ? "Course learning" : found?.course.title ?? "Back" }}
         title={assignment.title}
         description={<span className="flex flex-wrap items-center gap-2">{assignment.dueAt ? `Due ${formatDateTime(assignment.dueAt, tz)}` : "No deadline"} · {assignment.maxScore} points <Badge tone={STATE_LABEL[state].tone}>{STATE_LABEL[state].label}</Badge></span>}
       />
