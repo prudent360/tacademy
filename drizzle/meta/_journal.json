@@ -43,6 +43,13 @@
       "when": 1790553482653,
       "tag": "0005_enrolment_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790555410681,
+      "tag": "0006_course_hero_image",
+      "breakpoints": true
     }
   ]
 }

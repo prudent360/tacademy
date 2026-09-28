@@ -126,6 +126,8 @@ export const courses = pgTable("courses", {
   certificateMinAssignments: integer("certificate_min_assignments").notNull().default(80),
   certificateMinScore: integer("certificate_min_score").notNull().default(50),
   imageUrl: text("image_url"),
+  /** Full-width photo behind the course page hero; the hero stays white without one. */
+  heroImageUrl: text("hero_image_url"),
   /** Downloadable curriculum, given out in exchange for contact details. */
   curriculumUrl: text("curriculum_url"),
   published: boolean("published").notNull().default(false),

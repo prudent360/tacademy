@@ -23,7 +23,8 @@ export function CourseForm({ action, course }: { action: (state: FormState, form
         <Input label="Duration (weeks)" name="durationWeeks" type="number" min={1} max={200} defaultValue={course?.durationWeeks ?? ""} />
         <Input label="Sort order" name="sortOrder" type="number" defaultValue={course?.sortOrder ?? 0} hint="Lower shows first." />
       </div>
-      <FileField label="Cover image" name="image" current={course?.imageUrl} removeName="removeImage" hint="16:9 works best. Without one, generated artwork is used." />
+      <FileField label="Cover image" name="image" current={course?.imageUrl} removeName="removeImage" hint="Used on course cards and in the page hero. 16:9 works best. Without one, generated artwork is used." />
+      <FileField label="Hero background photo" name="heroImage" current={course?.heroImageUrl} removeName="removeHeroImage" hint="Optional. Fills the whole top of the course page behind the title, with a purple gradient over it. Use a wide landscape photo, at least 1600px across, with the busy part away from the left." />
       <FileField label="Curriculum document" name="curriculumFile" current={course?.curriculumUrl} accept=".pdf,.doc,.docx,application/pdf" removeName="removeCurriculum" hint="PDF recommended, up to 4 MB. Visitors get it after leaving their name, email and phone under “View curriculum”." />
       <fieldset className="flex flex-col gap-4 rounded-[5px] border border-edge bg-panel p-4">
         <legend className="px-1 text-sm font-semibold text-ink">Certificate requirements</legend>
