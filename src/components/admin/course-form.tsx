@@ -9,6 +9,7 @@ export function CourseForm({ action, course }: { action: (state: FormState, form
         <Input label="Title" name="title" defaultValue={course?.title} required />
         <Input label="Web address" name="slug" defaultValue={course?.slug} hint="Leave empty to generate from the title." />
       </div>
+      <Select label="Type" name="kind" defaultValue={course?.kind ?? "course"} options={[{ value: "course", label: "Course" }, { value: "internship", label: "Internship programme" }]} hint="Internships are listed on their own Internships page. Run them with cohorts like a course; on each cohort you can let academy graduates join free." className="max-w-[420px]" />
       <Textarea label="Summary" name="summary" defaultValue={course?.summary} rows={2} required hint="One or two sentences for course cards and search results." />
       <Textarea label="Full description" name="description" defaultValue={course?.description} rows={10} hint="Markdown: ## headings, - lists, **bold**, links. Shown on the course page." />
       <Textarea label="Learning outcomes" name="outcomes" defaultValue={course?.outcomes.join("\n")} rows={5} hint="One per line." />

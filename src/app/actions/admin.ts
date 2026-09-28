@@ -83,6 +83,7 @@ async function saveCourse(id: number | null, formData: FormData): Promise<FormSt
     portfolioProjects: parseList(formData.get("portfolioProjects"), /\n/).slice(0, 12),
     jobRoles: parseList(formData.get("jobRoles"), /\n/).slice(0, 20),
     certificateEnabled: formData.get("certificateEnabled") === "on",
+    kind: formData.get("kind") === "internship" ? "internship" as const : "course" as const,
     published: formData.get("published") === "on",
     featured: formData.get("featured") === "on",
     imageUrl: image.url,
@@ -173,6 +174,7 @@ async function saveCohort(id: number | null, courseId: number, formData: FormDat
     prices: priced.prices,
     registrationFees: fees.prices,
     registrationOnly: formData.get("registrationOnly") === "on",
+    graduatesFree: formData.get("graduatesFree") === "on",
     enrollmentOpen: formData.get("enrollmentOpen") === "on",
   };
   const db = await getDb();

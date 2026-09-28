@@ -58,7 +58,7 @@ const PATHS = ["Data Analytics", "Business Intelligence", "SQL", "Data Engineeri
 
 export default async function HomePage() {
   const [settings, courses, upcoming] = await Promise.all([getSettings(), getPublishedCourses(), getUpcomingCohorts(6)]);
-  const summaries = await withCohorts(courses);
+  const summaries = await withCohorts(courses.filter((c) => c.kind === "course"));
   const featured = (summaries.some((c) => c.featured) ? summaries.filter((c) => c.featured) : summaries).slice(0, 3);
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
   const { currencies } = await visitorCurrencies(settings);

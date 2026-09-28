@@ -17,7 +17,10 @@ export type EnrolCohort = {
   name: string;
   dates: string;
   deliveryMode: DeliveryMode;
+  /** Free for everyone, or for this signed-in graduate. */
   free: boolean;
+  /** Academy graduates join free; others pay the price. */
+  graduatesFree: boolean;
   prices: PriceMap;
   registrationFees: PriceMap;
   depositPercent: number | null;
@@ -169,6 +172,15 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
               </fieldset>
             )}
             {cohort && <input type="hidden" name="cohortId" value={cohort.id} />}
+            {cohort?.graduatesFree && (
+              <p className="rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                {cohort.free
+                  ? <><strong>Free for you</strong> as a graduate of our academy.</>
+                  : signedIn
+                    ? <>Graduates of our academy join free. Everyone else pays the fee below.</>
+                    : <>Graduates of our academy join free: <Link href={`/login?next=${encodeURIComponent(`/enroll?cohort=${cohort.id}`)}`} className="font-semibold underline">sign in</Link> to claim your place. Everyone else pays the fee below.</>}
+              </p>
+            )}
 
             {cohort && !cohort.free && currencies.length > 1 && (
               <fieldset className="flex flex-col gap-2">

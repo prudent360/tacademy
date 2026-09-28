@@ -129,6 +129,18 @@ export async function getStudentCohorts(userId: number) {
     .orderBy(desc(cohorts.startDate));
 }
 
+/** An academy graduate: completed at least one regular course (internships don't count). */
+export async function isGraduate(userId: number): Promise<boolean> {
+  const rows = await (await getDb())
+    .select({ id: enrollments.id })
+    .from(enrollments)
+    .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
+    .innerJoin(courses, eq(courses.id, cohorts.courseId))
+    .where(and(eq(enrollments.userId, userId), eq(enrollments.status, "completed"), eq(courses.kind, "course")))
+    .limit(1);
+  return rows.length > 0;
+}
+
 export async function isEnrolled(userId: number, cohortId: number): Promise<boolean> {
   const rows = await (await getDb())
     .select({ id: enrollments.id })

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import {
   AwardIcon, BellIcon, BookIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DownloadIcon, ExternalIcon, GridIcon,
-  LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon,
+  IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon,
 } from "@/components/icons";
 import type { Role } from "@/db/schema";
 
@@ -184,7 +184,24 @@ function UserMenu({ user, logout }: { user: { name: string; email: string; avata
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, notifications, today, logout, markAllRead }: {
+/** The student's ID, always in view in the top bar; tapping it copies it (handy when contacting support). */
+function StudentIdPill({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => navigator.clipboard?.writeText(id).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }, () => {})}
+      className="flex cursor-pointer items-center gap-2 rounded-full border border-accent-muted/60 bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent shadow-sm transition hover:border-accent"
+      aria-label={`Student ID ${id}. Copy`}
+    >
+      <IdCardIcon className="size-4" />
+      <span className="hidden text-accent/70 sm:inline">Student ID</span>
+      <span className="font-mono tracking-wide">{copied ? "Copied" : id}</span>
+    </button>
+  );
+}
+
+export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, notifications, today, studentId, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null };
@@ -194,6 +211,8 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   toGrade: number;
   notifications: ShellNotification[];
   today: string;
+  /** Shown instead of the date for students. */
+  studentId?: string;
   logout: () => Promise<void>;
   markAllRead: () => Promise<void>;
 }) {
@@ -300,9 +319,11 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setDrawer(true)} className="flex size-10 items-center justify-center rounded-lg text-ink hover:bg-page lg:hidden" aria-label="Open menu"><MenuIcon /></button>
             <Link href={home} className="flex items-center gap-2 lg:hidden" aria-label={`${siteName} home`}><BrandMark className="size-8" /></Link>
-            <span className="hidden items-center gap-2 rounded-full border border-edge bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink shadow-sm sm:flex">
-              <CalendarIcon className="size-3.5 text-accent" /> {today}
-            </span>
+            {studentId ? <StudentIdPill id={studentId} /> : (
+              <span className="hidden items-center gap-2 rounded-full border border-edge bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink shadow-sm sm:flex">
+                <CalendarIcon className="size-3.5 text-accent" /> {today}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {role !== "student" && toGrade > 0 && (

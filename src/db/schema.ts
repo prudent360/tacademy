@@ -3,11 +3,17 @@ import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, time
 export const ROLES = ["admin", "instructor", "student"] as const;
 export type Role = (typeof ROLES)[number];
 
+/** An internship is run like a course (cohorts, classes, assignments) but listed separately. */
+export const COURSE_KINDS = ["course", "internship"] as const;
+export type CourseKind = (typeof COURSE_KINDS)[number];
+
 export const DELIVERY_MODES = ["virtual", "physical", "hybrid"] as const;
 export type DeliveryMode = (typeof DELIVERY_MODES)[number];
 export const SESSION_MODES = ["virtual", "physical"] as const;
 export type SessionMode = (typeof SESSION_MODES)[number];
 
+/** graduate: joined free because they completed an academy course. */
+export type EnrollmentSource = "payment" | "free" | "graduate" | "manual";
 export const ENROLLMENT_STATUSES = ["pending", "active", "completed", "cancelled"] as const;
 export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 
@@ -126,6 +132,7 @@ export const settings = pgTable("settings", {
 export const courses = pgTable("courses", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
+  kind: text("kind").$type<CourseKind>().notNull().default("course"),
   title: text("title").notNull(),
   summary: text("summary").notNull().default(""),
   description: text("description").notNull().default(""),
@@ -182,6 +189,8 @@ export const cohorts = pgTable("cohorts", {
   registrationFees: jsonb("registration_fees").$type<PriceMap>().notNull().default({}),
   /** Lets students pay only the registration fee at enrolment and the tuition later. */
   registrationOnly: boolean("registration_only").notNull().default(false),
+  /** Students who completed one of the academy's courses join without paying. */
+  graduatesFree: boolean("graduates_free").notNull().default(false),
   enrollmentOpen: boolean("enrollment_open").notNull().default(true),
   createdAt: createdAt(),
 }, (t) => [index("cohorts_course_idx").on(t.courseId)]);
@@ -248,7 +257,7 @@ export const enrollments = pgTable("enrollments", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
   status: text("status").$type<EnrollmentStatus>().notNull().default("pending"),
-  source: text("source").$type<"payment" | "free" | "manual">().notNull().default("payment"),
+  source: text("source").$type<EnrollmentSource>().notNull().default("payment"),
   activatedAt: timestamp("activated_at", { withTimezone: true }),
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("enrollments_user_cohort_idx").on(t.userId, t.cohortId), index("enrollments_cohort_idx").on(t.cohortId)]);

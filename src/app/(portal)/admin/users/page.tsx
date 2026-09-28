@@ -9,6 +9,7 @@ import { Badge, DataTable, EmptyState, PageHeader, Pagination, PersonCell, Table
 import { getDb } from "@/db";
 import { enrollments, ROLES, users, type Role } from "@/db/schema";
 import { relativeTime } from "@/lib/time";
+import { parseStudentId, studentId } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "People" };
 
@@ -24,7 +25,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const page = Math.max(1, Number(params.page) || 1);
   const filters: SQL[] = [];
   if (role) filters.push(eq(users.role, role));
-  if (q) filters.push(or(ilike(users.name, `%${q}%`), ilike(users.email, `%${q}%`))!);
+  const idFromQuery = parseStudentId(q);
+  if (q) filters.push(idFromQuery ? eq(users.id, idFromQuery) : or(ilike(users.name, `%${q}%`), ilike(users.email, `%${q}%`))!);
   const where = filters.length ? and(...filters) : undefined;
   const db = await getDb();
 
@@ -74,7 +76,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       <TableToolbar
         action="/admin/users"
         q={q}
-        placeholder="Search by name or email…"
+        placeholder="Search by name, email or student ID…"
         hidden={{ role }}
         filters={[
           { label: "Everyone", href: url({ role: undefined }), active: !role },
@@ -92,7 +94,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               {rows.map((u) => (
                 <tr key={u.id}>
                   <td><PersonCell name={u.name} email={u.email} src={u.avatarUrl} href={`/admin/users/${u.id}`} /></td>
-                  <td><Badge tone={ROLE_TONE[u.role]} className="capitalize">{u.role}</Badge></td>
+                  <td><Badge tone={ROLE_TONE[u.role]} className="capitalize">{u.role}</Badge>{u.role === "student" && <span className="mt-1 block font-mono text-xs text-muted">{studentId(u)}</span>}</td>
                   <td className="text-body">{courseCounts.find((c) => c.userId === u.id)?.n ?? 0}</td>
                   <td>{!u.active ? <Badge tone="red">Deactivated</Badge> : !u.passwordHash ? <Badge tone="amber">Invitation sent</Badge> : u.emailVerifiedAt ? <Badge tone="green">Verified</Badge> : <Badge>Email unverified</Badge>}</td>
                   <td className="whitespace-nowrap text-muted">{relativeTime(u.createdAt)}</td>

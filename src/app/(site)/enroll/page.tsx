@@ -4,7 +4,7 @@ import { EnrolForm, type EnrolCohort } from "@/components/site/enrol-form";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
 import { bankTransferConfig } from "@/lib/config";
-import { getPublishedCourses, getSettings, getStudentCohorts } from "@/lib/data";
+import { getPublishedCourses, getSettings, getStudentCohorts, isGraduate } from "@/lib/data";
 import { mobileMoneyCountries } from "@/lib/money";
 import { payableMethods } from "@/lib/payments";
 import { cohortCurrencies } from "@/lib/pricing";
@@ -19,7 +19,10 @@ const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US",
 export default async function EnrolPage({ searchParams }: { searchParams: Promise<{ cohort?: string; course?: string }> }) {
   const [params, settings, user, courses, payable, bank] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableMethods(), bankTransferConfig()]);
   const visitor = await visitorCurrencies(settings);
-  const enrolledIn = new Set(user ? (await getStudentCohorts(user.id)).map((row) => row.cohort.id) : []);
+  const [enrolledIn, graduate] = await Promise.all([
+    user ? getStudentCohorts(user.id).then((rows) => new Set(rows.map((row) => row.cohort.id))) : new Set<number>(),
+    user ? isGraduate(user.id) : false,
+  ]);
 
   const cohorts: EnrolCohort[] = (await withCohorts(courses)).flatMap((course) => course.cohorts
     .filter((cohort) => cohort.enrollmentOpen && !cohort.full && !enrolledIn.has(cohort.id))
@@ -32,7 +35,8 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
         name: cohort.name,
         dates: cohort.startDate ? `${formatDateOnly(cohort.startDate)}${cohort.endDate ? ` – ${formatDateOnly(cohort.endDate)}` : ""}` : "Dates to be confirmed",
         deliveryMode: cohort.deliveryMode,
-        free: isFree(cohort),
+        free: isFree(cohort) || (cohort.graduatesFree && graduate),
+        graduatesFree: cohort.graduatesFree && !isFree(cohort),
         prices: cohort.prices,
         registrationFees: cohort.registrationFees,
         depositPercent: cohort.depositPercent,

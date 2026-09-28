@@ -7,6 +7,7 @@ import { HeaderScrollState } from "./header-scroll";
 
 const LINKS = [
   { href: "/courses", label: "Courses" },
+  { href: "/internships", label: "Internships" },
   { href: "/#formats", label: "How we teach" },
   { href: "/#how", label: "How it works" },
   { href: "/#faq", label: "FAQ" },

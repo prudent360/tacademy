@@ -8,7 +8,7 @@ import { enrollments, users, type User } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree } from "@/lib/catalog";
 import { rememberCheckout } from "@/lib/checkout-access";
-import { getCohortWithCourse, isEnrolled, seatsTaken } from "@/lib/data";
+import { getCohortWithCourse, isEnrolled, isGraduate, seatsTaken } from "@/lib/data";
 import { activateEnrollment, startBalanceCheckout, startBankTransfer, startCheckout } from "@/lib/payments";
 import { availablePlans, type EnrolPlan } from "@/lib/pricing";
 import { loginBlockedFor, recordLoginFailure } from "@/lib/rate-limit";
@@ -89,8 +89,10 @@ export async function enrol(_state: EnrolState, formData: FormData): Promise<Enr
   const { user } = applicant;
   if (await isEnrolled(user.id, cohort.id)) return { error: "You're already enrolled on this cohort.", signIn: `/dashboard/cohorts/${cohort.id}` };
 
-  if (isFree(cohort)) {
-    await activateEnrollment(user.id, cohort.id, "free");
+  // Graduates of the academy join cohorts marked "free for graduates" without paying; checked here, never trusted from the form.
+  const graduateFree = !isFree(cohort) && cohort.graduatesFree && (await isGraduate(user.id));
+  if (isFree(cohort) || graduateFree) {
+    await activateEnrollment(user.id, cohort.id, graduateFree ? "graduate" : "free");
     redirect(user.passwordHash ? `/dashboard/cohorts/${cohort.id}?welcome=1` : `/enroll/confirmed?email=${encodeURIComponent(user.email)}`);
   }
 

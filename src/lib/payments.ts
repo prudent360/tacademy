@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { getDb } from "@/db";
-import { discountCodes, enrollments, payments, users, type Cohort, type Course, type Payment, type PaymentPlan, type User } from "@/db/schema";
+import { discountCodes, enrollments, payments, users, type Cohort, type Course, type EnrollmentSource, type Payment, type PaymentPlan, type User } from "@/db/schema";
 import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
@@ -301,7 +301,7 @@ export async function verifyPayment(reference: string): Promise<Payment | null> 
 }
 
 /** Gives the student their place on the cohort, notifies them and emails confirmation. */
-export async function activateEnrollment(userId: number, cohortId: number, source: "payment" | "free" | "manual"): Promise<boolean> {
+export async function activateEnrollment(userId: number, cohortId: number, source: EnrollmentSource): Promise<boolean> {
   const db = await getDb();
   const [existing] = await db.select().from(enrollments).where(and(eq(enrollments.userId, userId), eq(enrollments.cohortId, cohortId)));
   if (existing && ["active", "completed"].includes(existing.status)) return false;

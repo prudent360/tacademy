@@ -79,7 +79,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
         )}
         <div className={`relative mx-auto grid max-w-[1200px] items-center gap-10 px-5 sm:px-8 ${photo ? "py-16 md:py-24" : "py-12 md:py-16 lg:grid-cols-[1.3fr_1fr]"}`}>
           <div className={`flex flex-col gap-5 ${photo ? "max-w-[720px]" : ""}`}>
-            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm"><Link href="/courses" className={`font-semibold transition ${photo ? "text-white/75 hover:text-white" : "text-muted hover:text-accent"}`}>Courses</Link><ChevronRight className={`size-4 shrink-0 ${photo ? "text-white/50" : "text-muted/60"}`} /><span aria-current="page" className={`truncate ${photo ? "text-white/75" : "text-muted"}`}>{course.title}</span></nav>
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm"><Link href={course.kind === "internship" ? "/internships" : "/courses"} className={`font-semibold transition ${photo ? "text-white/75 hover:text-white" : "text-muted hover:text-accent"}`}>{course.kind === "internship" ? "Internships" : "Courses"}</Link><ChevronRight className={`size-4 shrink-0 ${photo ? "text-white/50" : "text-muted/60"}`} /><span aria-current="page" className={`truncate ${photo ? "text-white/75" : "text-muted"}`}>{course.title}</span></nav>
             <div className="flex flex-wrap items-center gap-2">{cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full) && <Badge tone="green">Registration open</Badge>}{course.category && <p className={`font-mono text-xs font-medium uppercase tracking-[1.5px] md:text-[13px] ${photo ? "text-cyan-light" : "text-accent"}`}>{course.category}</p>}</div>
             <h1 className={`font-display text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl ${photo ? "text-white [text-shadow:0_2px_24px_rgba(0,0,0,.35)] lg:text-[58px]" : "text-ink"}`}>{course.title}</h1>
             <p className={`max-w-[620px] text-lg leading-relaxed ${photo ? "text-white/80" : "text-muted"}`}>{course.summary}</p>
@@ -228,6 +228,7 @@ function CohortPrice({ cohort, currencies }: { cohort: Cohort; currencies: strin
       <p className="font-display text-2xl font-bold tracking-tight text-ink">{formatMoney(cohort.prices[currency] ?? 0, currency)}</p>
       {fee > 0 && <p className="text-[13px] text-muted">+ {formatMoney(fee, currency)} registration fee</p>}
       {cohort.depositPercent && <p className="text-[13px] text-muted">or {cohort.depositPercent}% deposit to start</p>}
+      {cohort.graduatesFree && <p className="text-[13px] font-semibold text-emerald-700">Free for academy graduates</p>}
     </div>
   );
 }

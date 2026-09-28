@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
 import { latestNotifications, toGradeCount, unreadCount } from "@/lib/portal";
 import { relativeTime } from "@/lib/time";
+import { studentId } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function PortalLayout({ children }: { children: React.React
       unread={unread}
       toGrade={toGrade}
       today={today}
+      studentId={user.role === "student" ? studentId(user) : undefined}
       notifications={recent.map((n) => ({ id: n.id, title: n.title, body: n.body, href: n.href, read: Boolean(n.readAt), when: relativeTime(n.createdAt) }))}
       logout={logout}
       markAllRead={markAllRead}

@@ -37,6 +37,8 @@ export const ChevronDown: Icon = (p) => <Svg {...p}><path d="M6 9l6 6 6-6" /></S
 export const ChevronRight: Icon = (p) => <Svg {...p}><path d="M9 18l6-6-6-6" /></Svg>;
 export const FileIcon: Icon = (p) => <Svg {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></Svg>;
 export const LinkIcon: Icon = (p) => <Svg {...p}><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></Svg>;
+export const BriefcaseIcon: Icon = (p) => <Svg {...p}><rect x="2.5" y="7" width="19" height="13" rx="2" /><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2" /><path d="M2.5 12.5h19" /></Svg>;
+export const IdCardIcon: Icon = (p) => <Svg {...p}><rect x="2.5" y="4.5" width="19" height="15" rx="2" /><circle cx="8.5" cy="11" r="2.5" /><path d="M5 16.5a3.5 3.5 0 0 1 7 0" /><path d="M14.5 10h4" /><path d="M14.5 14h3" /></Svg>;
 export const AwardIcon: Icon = (p) => <Svg {...p}><circle cx="12" cy="9" r="6" /><path d="M8.5 14.2L7 22l5-3 5 3-1.5-7.8" /></Svg>;
 export const ChartIcon: Icon = (p) => <Svg {...p}><path d="M3 20h18" /><path d="M6 16l4-5 3 3 5-7" /></Svg>;
 export const MegaphoneIcon: Icon = (p) => <Svg {...p}><path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z" /><path d="M17 8a5 5 0 0 1 0 8" /></Svg>;

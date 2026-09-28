@@ -3,9 +3,11 @@ import type { Cohort, User } from "@/db/schema";
 import { CURRENCIES, toMajorInput } from "@/lib/money";
 import type { FormState } from "@/lib/validation";
 
-export function CohortForm({ action, cohort, instructors, assigned, currencies }: {
+export function CohortForm({ action, cohort, instructors, assigned, currencies, internship = false }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   cohort?: Cohort;
+  /** New internship intakes start with "free for graduates" ticked. */
+  internship?: boolean;
   instructors: Pick<User, "id" | "name" | "email" | "role">[];
   assigned: number[];
   currencies: string[];
@@ -57,6 +59,7 @@ export function CohortForm({ action, cohort, instructors, assigned, currencies }
           </div>
         ) : <p className="text-sm text-muted">No instructors yet. Invite one under People.</p>}
       </fieldset>
+      <Checkbox label="Free for academy graduates" name="graduatesFree" defaultChecked={cohort?.graduatesFree ?? internship} hint="Students who completed one of your courses join without paying (they sign in to claim it). Everyone else pays the prices above; leave the prices empty to make it free for all." />
       <Checkbox label="Enrolment open" name="enrollmentOpen" defaultChecked={cohort?.enrollmentOpen ?? true} />
       <SubmitButton>{cohort ? "Save cohort" : "Create cohort"}</SubmitButton>
     </ActionForm>

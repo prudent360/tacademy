@@ -21,7 +21,7 @@ export default async function NewCohortPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader back={{ href: `/admin/courses/${courseId}`, label: course.title }} title="New cohort" description={course.title} />
-      <Card><CohortForm action={createCohort.bind(null, courseId)} instructors={staff} assigned={[]} currencies={settings.currencies} /></Card>
+      <Card><CohortForm action={createCohort.bind(null, courseId)} instructors={staff} assigned={[]} currencies={settings.currencies} internship={course.kind === "internship"} /></Card>
     </>
   );
 }

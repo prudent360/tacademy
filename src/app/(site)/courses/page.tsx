@@ -16,7 +16,8 @@ const FILTERS: (DeliveryMode | "all")[] = ["all", "virtual", "physical", "hybrid
 export default async function CoursesPage({ searchParams }: { searchParams: Promise<{ mode?: string; category?: string; q?: string }> }) {
   const { mode = "all", category, q = "" } = await searchParams;
   const [settings, courses] = await Promise.all([getSettings(), getPublishedCourses()]);
-  const [all, { currencies }] = await Promise.all([withCohorts(courses), visitorCurrencies(settings)]);
+  // Internships have their own page.
+  const [all, { currencies }] = await Promise.all([withCohorts(courses.filter((c) => c.kind === "course")), visitorCurrencies(settings)]);
   const categories = [...new Set(all.map((c) => c.category).filter(Boolean))];
   const query = q.trim().toLowerCase();
   const shown = all.filter((c) => {
