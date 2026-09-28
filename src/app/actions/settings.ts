@@ -174,18 +174,19 @@ export async function saveEmailSettings(_state: FormState, formData: FormData): 
   await requireRole("admin");
   const parsed = z.object({ fromName: text(80), fromAddress: optionalEmail, replyTo: optionalEmail }).safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
-  const problem = checkKey(formData.get("apiKey"), ["re_"], "The Resend API key");
-  if (problem) return { error: problem };
   const current = (await getSettings()).email;
   const driver = EMAIL_DRIVERS.find((d) => d === formData.get("driver")) ?? "resend";
+  // Only the chosen driver's fields are read: the others are hidden but still submitted, and browsers may autofill them.
+  const problem = driver === "resend" ? checkKey(formData.get("apiKey"), ["re_"], "The Resend API key") : null;
+  if (problem) return { error: problem };
   const smtpPort = Number(formData.get("smtpPort") || 465);
   if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) return { error: "Enter a valid SMTP port, such as 465 or 587." };
   const smtpSecurity = (["ssl", "tls", "none"] as const).find((v) => v === formData.get("smtpSecurity")) ?? "ssl";
   const smtpHost = String(formData.get("smtpHost") ?? "").trim().slice(0, 200);
   const smtpUser = String(formData.get("smtpUser") ?? "").trim().slice(0, 200);
-  const smtpPassword = secretField(formData, "smtpPassword", current.smtpPassword);
+  const smtpPassword = driver === "smtp" ? secretField(formData, "smtpPassword", current.smtpPassword) : current.smtpPassword ?? "";
   if (driver === "smtp" && (!smtpHost || !smtpUser || !smtpPassword)) return { error: "Add the SMTP host, username and password to send with SMTP." };
-  await update({ email: { ...parsed.data, driver, apiKey: secretField(formData, "apiKey", current.apiKey), smtpHost, smtpPort, smtpSecurity, smtpUser, smtpPassword } });
+  await update({ email: { ...parsed.data, driver, apiKey: driver === "resend" ? secretField(formData, "apiKey", current.apiKey) : current.apiKey ?? "", smtpHost, smtpPort, smtpSecurity, smtpUser, smtpPassword } });
   return { ok: "Email settings saved." };
 }
 

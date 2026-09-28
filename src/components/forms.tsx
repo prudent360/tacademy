@@ -226,7 +226,7 @@ export function SecretInput({ label, name, masked, hint, placeholder }: { label:
         {label}
         {masked && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">Saved</span>}
       </label>
-      <input id={id} name={name} type="password" autoComplete="off" spellCheck={false} placeholder={masked || placeholder || "Not set"} className={`${inputClass} font-mono text-sm`} />
+      <input id={id} name={name} type="password" autoComplete="new-password" spellCheck={false} placeholder={masked || placeholder || "Not set"} className={`${inputClass} font-mono text-sm`} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[12px] text-muted">{hint ?? (masked ? "Leave blank to keep the saved key." : "Paste the key from your dashboard.")}</p>
         {masked && (
