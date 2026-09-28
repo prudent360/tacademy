@@ -4,7 +4,7 @@ import { ArrowRight, BellIcon, BuildingIcon, CalendarIcon, CardIcon, CheckIcon, 
 import { CourseCard } from "@/components/site/course-card";
 import { ModeBadge } from "@/components/ui";
 import { isFree, withCohorts } from "@/lib/catalog";
-import { getPublishedCourses, getSettings, getUpcomingCohorts, seatsTaken } from "@/lib/data";
+import { getNextIntake, getPublishedCourses, getSettings, getUpcomingCohorts, seatsTaken } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { MODE_LABEL } from "@/lib/utils";
@@ -62,9 +62,9 @@ export default async function HomePage() {
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
   const currency = settings.currencies[0] ?? "GBP";
   const heroPhoto = settings.heroImageUrl ?? "/images/home-hero-team.webp";
-  const next = upcoming.find(({ cohort }) => !cohort.capacity || (taken.get(cohort.id) ?? 0) < cohort.capacity) ?? null;
+  const next = await getNextIntake();
   const nextStart = next?.cohort.startDate ? new Date(`${next.cohort.startDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : null;
-  const nextSeats = next?.cohort.capacity ? next.cohort.capacity - (taken.get(next.cohort.id) ?? 0) : null;
+  const nextSeats = next?.seatsLeft ?? null;
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -81,23 +81,34 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-[linear-gradient(160deg,#19112e_0%,#221544_55%,#2b1a5c_100%)] text-white">
-        {/* Large screens: the photo fills the right half and melts into the background on its left edge. */}
+      <section data-dark-hero className="relative overflow-hidden bg-[linear-gradient(160deg,#19112e_0%,#221544_55%,#2b1a5c_100%)] text-white">
+        {/* Large screens: the photo starts just left of the page's centre line, so on wide monitors it stays
+            beside the text rather than sliding behind it, and fades into the background on its left and bottom. */}
         <div
           aria-hidden="true"
-          className="absolute inset-y-0 right-0 hidden w-[62%] lg:block"
-          style={{ maskImage: "linear-gradient(90deg, transparent 0%, #000 55%), linear-gradient(180deg, #000 70%, transparent 100%)", maskComposite: "intersect", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, #000 55%), linear-gradient(180deg, #000 70%, transparent 100%)", WebkitMaskComposite: "source-in" }}
+          className="absolute inset-y-0 left-[calc(50%-80px)] right-0 hidden overflow-hidden lg:block"
+          style={{ maskImage: "linear-gradient(90deg, transparent 0%, transparent 14%, #000 46%), linear-gradient(180deg, #000 70%, transparent 100%)", maskComposite: "intersect", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, transparent 14%, #000 46%), linear-gradient(180deg, #000 70%, transparent 100%)", WebkitMaskComposite: "source-in" }}
         >
           {/* Taller than the hero and anchored to the bottom, so the backdrop banner above the faces is cropped off. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={heroPhoto} alt="" fetchPriority="high" className="absolute inset-x-0 bottom-0 h-[120%] w-full object-cover object-center" />
-          {/* Tints the photo towards the brand and darkens the top so nothing competes with the headline. */}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.7)_0%,rgba(25,17,46,.25)_30%,rgba(43,26,92,.25)_100%)]" />
+          {/* Tints the photo towards the brand, and darkens the top so nothing shows through the menu. */}
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.88)_0%,rgba(25,17,46,.3)_28%,rgba(43,26,92,.25)_100%)]" />
         </div>
         <div aria-hidden="true" className="absolute -left-40 bottom-[-20%] size-96 rounded-full bg-accent/25 blur-[100px]" />
         <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-16 pt-12 sm:px-8 md:pb-20 md:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
           <div className="flex flex-col gap-6">
-            {settings.heroEyebrow && (
+            {/* The live next start date when a cohort is open, otherwise the eyebrow text from Settings. */}
+            {next ? (
+              <Link href={`/enroll?cohort=${next.cohort.id}`} className="group flex w-fit items-center gap-2.5 rounded-full border border-white/15 bg-white/5 py-1.5 pl-3.5 pr-3 text-[13px] font-medium text-white/80 transition hover:border-white/30 hover:bg-white/10">
+                <span className="relative flex size-2" aria-hidden="true">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-cyan opacity-60 motion-reduce:hidden" />
+                  <span className="relative inline-flex size-2 rounded-full bg-cyan" />
+                </span>
+                <span>Next intake <span className="font-semibold text-white">{nextStart ?? "opening soon"}</span></span>
+                <ArrowRight className="size-3.5 text-cyan-light transition group-hover:translate-x-0.5" />
+              </Link>
+            ) : settings.heroEyebrow && (
               <p className="flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs font-medium uppercase tracking-[1.2px] text-cyan-light">
                 <span className="size-2 rounded-full bg-cyan" aria-hidden="true" /> {settings.heroEyebrow}
               </p>
@@ -129,14 +140,9 @@ export default async function HomePage() {
               </dl>
             )}
           </div>
-          <div aria-hidden="true" className="relative select-none lg:min-h-[520px]">
-            {/* Phones and tablets: the photo sits below the text instead. */}
-            <div className="relative overflow-hidden rounded-[20px] lg:hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroPhoto} alt="" className="aspect-[4/3] w-full object-cover object-[center_30%]" />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(43,26,92,.8)_100%)]" />
-            </div>
-            <div className="absolute -bottom-5 left-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_40px_-16px_rgba(0,0,0,.6)] lg:bottom-6 lg:left-auto lg:right-10">
+          {/* Large screens only: space beside the text for the photo, with the feedback chip over it. Phones and tablets show no photo. */}
+          <div aria-hidden="true" className="relative hidden select-none lg:block lg:min-h-[520px]">
+            <div className="absolute bottom-6 right-10 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_40px_-16px_rgba(0,0,0,.6)]">
               <span className="flex size-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><CheckIcon className="size-5" /></span>
               <span><span className="block text-sm font-semibold text-ink">Feedback received</span><span className="block text-xs text-muted">Sales dashboard · 86/100</span></span>
             </div>

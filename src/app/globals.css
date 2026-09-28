@@ -142,3 +142,11 @@ details > summary::-webkit-details-marker {
 .policy-copy li + li {
   margin-top: 0.5rem;
 }
+
+/* Pull dark heroes up under the floating header so their colour shows around it, and pad them to clear it. */
+body:has([data-dark-hero]) #main { margin-top: -4.75rem; }
+[data-dark-hero] { padding-top: 4.75rem; }
+@media (min-width: 768px) {
+  body:has([data-dark-hero]) #main { margin-top: -5.5rem; }
+  [data-dark-hero] { padding-top: 5.5rem; }
+}

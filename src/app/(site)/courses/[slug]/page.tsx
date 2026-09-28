@@ -65,7 +65,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
-      <section className={photo ? "relative overflow-hidden bg-navy" : "border-b border-line bg-white"}>
+      <section data-dark-hero={photo ? "" : undefined} className={photo ? "relative overflow-hidden bg-navy" : "border-b border-line bg-white"}>
         {photo && (
           <div aria-hidden="true" className="absolute inset-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}

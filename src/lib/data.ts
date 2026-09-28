@@ -68,6 +68,17 @@ export async function getUpcomingCohorts(limit = 6): Promise<{ cohort: Cohort; c
     .limit(limit);
 }
 
+/** The soonest open cohort that still has seats, with the seats left (null when unlimited). */
+export const getNextIntake = cache(async (): Promise<{ cohort: Cohort; course: Course; seatsLeft: number | null } | null> => {
+  const upcoming = await getUpcomingCohorts(12);
+  const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
+  for (const { cohort, course } of upcoming) {
+    const seatsLeft = cohort.capacity ? cohort.capacity - (taken.get(cohort.id) ?? 0) : null;
+    if (seatsLeft === null || seatsLeft > 0) return { cohort, course, seatsLeft };
+  }
+  return null;
+});
+
 /** Active and completed enrolments per cohort, for capacity checks. */
 export async function seatsTaken(cohortIds: number[]): Promise<Map<number, number>> {
   if (!cohortIds.length) return new Map();
