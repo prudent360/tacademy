@@ -5,18 +5,71 @@ import { TableKit } from "@tiptap/extension-table";
 import { Placeholder } from "@tiptap/extensions";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
+
+type StoredDraft = { value: string; savedAt: number };
+
+/** Drafts live only in this browser; storage can be unavailable (private mode, blocked site data), so every access is guarded. */
+function writeDraft(key: string, value: string) {
+  try { window.localStorage.setItem(key, JSON.stringify({ value, savedAt: Date.now() })); } catch { /* storage full or blocked */ }
+}
+function removeDraft(key: string) {
+  try { window.localStorage.removeItem(key); } catch { /* storage blocked */ }
+}
+
+/** The draft each field had when its page opened, read once so later typing doesn't re-trigger the prompt. */
+const draftsAtOpen = new Map<string, string | null>();
+function draftAtOpen(key: string): string | null {
+  if (!draftsAtOpen.has(key)) {
+    let raw: string | null = null;
+    try { raw = window.localStorage.getItem(key); } catch { /* storage blocked */ }
+    draftsAtOpen.set(key, raw);
+  }
+  return draftsAtOpen.get(key) ?? null;
+}
+const noSubscription = () => () => {};
+/** The server trims saved text, so leading/trailing whitespace doesn't count as a change. */
+const sameText = (a: string, b: string) => a.trim() === b.trim();
+
+function ago(savedAt: number): string {
+  const minutes = Math.round((Date.now() - savedAt) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
 
 /**
  * A formatting-toolbar editor that reads and writes Markdown, so it's a drop-in replacement for a
  * Markdown textarea: the value is submitted under `name`, stored as before, and shown with the same
  * renderer. "Draft with AI" fills it through the hidden input (see AiDraftButton).
+ *
+ * Unsaved changes are backed up in this browser as you type (nothing reaches the server until Save),
+ * and offered back if the page is reopened before saving.
  */
 export function RichTextEditor({ label, name, defaultValue = "", hint, placeholder, minHeight = 220 }: { label: string; name: string; defaultValue?: string; hint?: React.ReactNode; placeholder?: string; minHeight?: number }) {
   const id = useId();
   const hidden = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(defaultValue);
   const [source, setSource] = useState(false);
+  /** True once the person has changed the text since it was last saved; only their own edits are backed up. */
+  const dirty = useRef(false);
+  // The draft's key is per page and field; it only exists in the browser (null while rendering on the server).
+  const draftKey = useSyncExternalStore(noSubscription, () => `rte-draft:${window.location.pathname}${window.location.search}:${name}`, () => null);
+  const rawDraft = useSyncExternalStore(noSubscription, () => (draftKey ? draftAtOpen(draftKey) : null), () => null);
+  const [dismissed, setDismissed] = useState(false);
+  const pendingWrite = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draft = useMemo(() => {
+    if (!rawDraft || dismissed) return null;
+    try {
+      const parsed = JSON.parse(rawDraft) as StoredDraft;
+      return typeof parsed.value === "string" && parsed.value.trim() && !sameText(parsed.value, defaultValue) && typeof parsed.savedAt === "number" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [rawDraft, dismissed, defaultValue]);
 
   const editor = useEditor({
     extensions: [
@@ -30,8 +83,16 @@ export function RichTextEditor({ label, name, defaultValue = "", hint, placehold
     contentType: "markdown",
     immediatelyRender: false,
     editorProps: { attributes: { class: "tiptap-content prose prose-slate max-w-none px-4 py-3 focus:outline-none", "aria-labelledby": `${id}-label` } },
-    onUpdate: ({ editor: e }) => setValue(e.getMarkdown()),
+    // Programmatic changes use emitUpdate: false, so this only runs for the person's own edits.
+    onUpdate: ({ editor: e }) => {
+      dirty.current = true;
+      setValue(e.getMarkdown());
+    },
   });
+
+  // React resets a form after its server action succeeds; the editor should then show the newly saved text.
+  const latestDefault = useRef(defaultValue);
+  useEffect(() => { latestDefault.current = defaultValue; }, [defaultValue]);
 
   // Text put into the hidden input from outside (AI drafts) or a form reset flows back into the editor.
   useEffect(() => {
@@ -39,34 +100,85 @@ export function RichTextEditor({ label, name, defaultValue = "", hint, placehold
     if (!input || !editor) return;
     const fromOutside = () => {
       if (input.value !== editor.getMarkdown()) {
-        editor.commands.setContent(input.value, { contentType: "markdown" });
+        editor.commands.setContent(input.value, { contentType: "markdown", emitUpdate: false });
+        dirty.current = true;
         setValue(input.value);
       }
     };
-    const onReset = () => {
-      editor.commands.setContent(defaultValue, { contentType: "markdown" });
-      setValue(defaultValue);
-    };
+    // Wait a tick so the refreshed page's saved text has arrived before resetting to it.
+    const onReset = () => setTimeout(() => {
+      editor.commands.setContent(latestDefault.current, { contentType: "markdown", emitUpdate: false });
+      dirty.current = false;
+      setValue(latestDefault.current);
+    }, 0);
     input.addEventListener("input", fromOutside);
     input.form?.addEventListener("reset", onReset);
     return () => {
       input.removeEventListener("input", fromOutside);
       input.form?.removeEventListener("reset", onReset);
     };
-  }, [editor, defaultValue]);
+  }, [editor]);
+
+  // Forget the page-open snapshot when leaving, so a later visit reads storage afresh.
+  useEffect(() => () => { if (draftKey) draftsAtOpen.delete(draftKey); }, [draftKey]);
+
+  // Back up edits as they happen (not while a restore is being offered); once the saved content matches, drop the backup.
+  useEffect(() => {
+    if (!draftKey || draft) return;
+    if (sameText(value, defaultValue)) return removeDraft(draftKey);
+    if (!dirty.current) return;
+    pendingWrite.current = setTimeout(() => writeDraft(draftKey, value), 600);
+    return () => { if (pendingWrite.current) clearTimeout(pendingWrite.current); };
+  }, [draftKey, value, defaultValue, draft]);
+
+  // Saving the form clears the backup.
+  useEffect(() => {
+    const form = hidden.current?.form;
+    if (!form || !draftKey) return;
+    // Cancel a backup that's about to be written too, or it would reappear right after saving.
+    const onSubmit = () => {
+      if (pendingWrite.current) clearTimeout(pendingWrite.current);
+      dirty.current = false;
+      removeDraft(draftKey);
+    };
+    form.addEventListener("submit", onSubmit);
+    return () => form.removeEventListener("submit", onSubmit);
+  }, [editor, draftKey]);
+
+  function restoreDraft() {
+    if (!draft) return;
+    editor?.commands.setContent(draft.value, { contentType: "markdown", emitUpdate: false });
+    dirty.current = true;
+    setValue(draft.value);
+    setDismissed(true);
+  }
+
+  function discardDraft() {
+    if (draftKey) removeDraft(draftKey);
+    setDismissed(true);
+  }
 
   function toggleSource() {
-    if (source && editor) editor.commands.setContent(value, { contentType: "markdown" });
+    if (source && editor) editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
     setSource(!source);
   }
 
   return (
     <div className="flex flex-col gap-1.5">
       <span id={`${id}-label`} className="text-sm font-semibold text-ink">{label}</span>
+      {draft && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <span>You have unsaved changes to this from {ago(draft.savedAt)}.</span>
+          <span className="flex gap-2">
+            <button type="button" onClick={restoreDraft} className="cursor-pointer rounded-md bg-amber-900 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-950">Restore</button>
+            <button type="button" onClick={discardDraft} className="cursor-pointer rounded-md border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-950 hover:bg-amber-100">Discard</button>
+          </span>
+        </div>
+      )}
       <div className="overflow-hidden rounded-lg border border-edge-strong bg-white transition focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/10">
         <Toolbar editor={editor} source={source} onToggleSource={toggleSource} />
         {source ? (
-          <textarea aria-labelledby={`${id}-label`} value={value} onChange={(e) => setValue(e.target.value)} spellCheck className="block w-full resize-y px-4 py-3 font-mono text-sm text-ink focus:outline-none" style={{ minHeight }} />
+          <textarea aria-labelledby={`${id}-label`} value={value} onChange={(e) => { dirty.current = true; setValue(e.target.value); }} spellCheck className="block w-full resize-y px-4 py-3 font-mono text-sm text-ink focus:outline-none" style={{ minHeight }} />
         ) : (
           <div style={{ minHeight }} onClick={() => editor?.commands.focus()}>
             <EditorContent editor={editor} />

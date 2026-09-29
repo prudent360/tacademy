@@ -64,7 +64,7 @@ Optional features powered by OpenAI or Anthropic (Claude), chosen and connected 
 
 ## Rich text editing
 
-Long text fields (course descriptions, lesson content, assignment instructions, announcements and grading feedback) use a formatting toolbar editor (`src/components/rich-text-editor.tsx`, built on Tiptap). It reads and writes Markdown, so content is stored and displayed exactly as before and AI drafts drop straight in; a "Markdown" button shows the source. Email templates stay plain text because of their `{{placeholders}}` and `[[Button|url]]` lines.
+Long text fields (course descriptions, lesson content, assignment instructions, announcements and grading feedback) use a formatting toolbar editor (`src/components/rich-text-editor.tsx`, built on Tiptap). It reads and writes Markdown, so content is stored and displayed exactly as before and AI drafts drop straight in; a "Markdown" button shows the source. Unsaved edits are backed up in the browser as you type (nothing is sent until Save), and reopening the page offers to restore them. Email templates stay plain text because of their `{{placeholders}}` and `[[Button|url]]` lines.
 
 ## SEO
 
