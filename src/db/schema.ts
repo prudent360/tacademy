@@ -206,6 +206,50 @@ export const courses = pgTable("courses", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const APPLICATION_STATUSES = ["new", "shortlisted", "accepted", "rejected"] as const;
+export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
+export type StudyMode = "remote" | "in_person" | "either";
+
+/** Applications from the "Join our internship programme" form, reviewed by admins before an enrolment link is sent. */
+export const internshipApplications = pgTable("internship_applications", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  /** ISO 3166 alpha-2. */
+  country: text("country").notNull(),
+  city: text("city").notNull().default(""),
+  /** What they said, and whether a completed academy course was found for their email. */
+  graduateClaimed: boolean("graduate_claimed").notNull().default(false),
+  graduateVerified: boolean("graduate_verified").notNull().default(false),
+  qualification: text("qualification").notNull().default(""),
+  currentStatus: text("current_status").notNull().default(""),
+  skillArea: text("skill_area").notNull().default(""),
+  experience: text("experience").notNull().default(""),
+  /** The intake they'd like; null for "not sure". */
+  preferredCohortId: integer("preferred_cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  mode: text("mode").$type<StudyMode>().notNull().default("either"),
+  hoursPerWeek: text("hours_per_week").notNull().default(""),
+  hasLaptop: boolean("has_laptop").notNull().default(false),
+  hasInternet: boolean("has_internet").notNull().default(false),
+  portfolioUrl: text("portfolio_url"),
+  linkedinUrl: text("linkedin_url"),
+  cvUrl: text("cv_url"),
+  motivation: text("motivation").notNull().default(""),
+  heardFrom: text("heard_from").notNull().default(""),
+  isAdult: boolean("is_adult").notNull().default(false),
+  consentAt: timestamp("consent_at", { withTimezone: true }).notNull(),
+  status: text("status").$type<ApplicationStatus>().notNull().default("new"),
+  adminNotes: text("admin_notes").notNull().default(""),
+  /** The intake an accepted applicant was invited to enrol on. */
+  acceptedCohortId: integer("accepted_cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  decidedById: integer("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("internship_applications_status_idx").on(t.status, t.createdAt), index("internship_applications_email_idx").on(t.email)]);
+
+export type InternshipApplication = typeof internshipApplications.$inferSelect;
+
 /** Leads from the "View curriculum" form on course pages. */
 export const curriculumRequests = pgTable("curriculum_requests", {
   id: serial("id").primaryKey(),

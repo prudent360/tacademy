@@ -35,7 +35,7 @@ const EXTENSION_FALLBACK: Record<string, string> = { ipynb: "ipynb", sql: "sql",
 
 export class UploadError extends Error {}
 
-export type UploadFolder = "images" | "courses" | "branding" | "avatars" | "assignments" | "submissions";
+export type UploadFolder = "images" | "courses" | "branding" | "avatars" | "assignments" | "submissions" | "applications";
 
 /**
  * True when a Vercel Blob store is connected. Older stores provide BLOB_READ_WRITE_TOKEN;

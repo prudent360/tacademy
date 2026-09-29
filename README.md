@@ -50,6 +50,10 @@ Vercel Cron calls it daily (`vercel.json`). The Hobby plan only allows daily cro
 
 Courses have modules and lessons that every cohort shares. Admins build them from the course page; instructors can add modules and lessons, publish modules and edit lessons for courses they teach from **Teach → cohort → Learning** (deleting stays with admins). Paste a Bunny Stream, YouTube, Vimeo or Loom link into a lesson's **Video link** and it plays inside the lesson. For Bunny Stream, add the library's token authentication key in **Settings → Video** to sign video links so they expire after six hours, then turn on embed token authentication in Bunny.
 
+## Internship applications
+
+The home page's "Join our internship programme" section and the Internships page link to `/internships/apply`, a screening form (contact details, background, area and experience, preferred intake, availability, portfolio/LinkedIn/CV, motivation, 18+ and privacy consent). Applicants get a confirmation email; admins are notified and review them under **Admin → Internship applications** (filter, search, CSV export, private notes). "I'm a graduate" is verified against completed courses for the applicant's email. **Accept** emails a link to enrol on the chosen internship intake (free for verified graduates when the intake allows it); **Decline** sends a polite email. All three emails are editable under Settings → Emails.
+
 ## Quizzes
 
 Any lesson can have an automatically marked quiz (single-choice, select-all-that-apply and true/false questions), added from the lesson's edit page by admins or the course's instructors, who can also generate questions from the lesson content with AI. Each quiz has a pass mark, optional attempt and time limits, question shuffling, and an option to require passing before the lesson counts as complete (passing then completes it). Correct answers are shown once a student passes or runs out of attempts. Courses can require a minimum average quiz score for the certificate, passing a quiz earns XP, and instructors see results per quiz on the cohort's Learning tab.

@@ -262,6 +262,51 @@ When you're ready, you can see upcoming dates and fees on the course page: {{cou
 
 Any questions? Just reply to this email.`,
   },
+  application_received: {
+    name: "Internship application received",
+    description: "Sent to an applicant straight after they apply for the internship programme.",
+    variables: { programme: "Data Analytics Internship" },
+    subject: "We've received your internship application",
+    body: `Hi {{name}},
+
+Thanks for applying to the **{{programme}}** at {{siteName}}. We've received your application and our team will review it shortly.
+
+We'll email you with the outcome, usually within a week. If anything changes in the meantime, just reply to this email.
+
+The {{siteName}} team`,
+  },
+  application_accepted: {
+    name: "Internship application accepted",
+    description: "Sent when an admin accepts an internship application. Includes the link to enrol on the intake.",
+    variables: { programme: "Data Analytics Internship", intake: "January 2027 intake", enrolUrl: "https://example.com/enroll?cohort=1" },
+    subject: "You've been accepted: {{programme}}",
+    body: `Hi {{name}},
+
+Great news: you've been accepted onto the **{{programme}}** ({{intake}}).
+
+Secure your place using the button below. If you're a graduate of {{siteName}}, sign in first and your place is free.
+
+[[Secure my place|{{enrolUrl}}]]
+
+We're looking forward to working with you.
+
+The {{siteName}} team`,
+  },
+  application_rejected: {
+    name: "Internship application not successful",
+    description: "Sent when an admin decides not to offer an internship place.",
+    variables: { programme: "Data Analytics Internship" },
+    subject: "Your internship application",
+    body: `Hi {{name}},
+
+Thank you for applying to the **{{programme}}** at {{siteName}}, and for the time you put into your application.
+
+We're not able to offer you a place on this intake. We received many strong applications and places are limited.
+
+You're very welcome to apply again for a future intake, and our courses are a great way to build the skills our internships look for: {{siteUrl}}/courses
+
+The {{siteName}} team`,
+  },
 } satisfies Record<string, TemplateDef>;
 
 export type TemplateKey = keyof typeof EMAIL_TEMPLATES;

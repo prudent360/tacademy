@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import {
   AwardIcon, BellIcon, BookIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DownloadIcon, ExternalIcon, GridIcon,
-  IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon,
+  BriefcaseIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon,
 } from "@/components/icons";
 import type { Role } from "@/db/schema";
 
@@ -42,6 +42,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number }): NavGro
       { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon },
       { href: "/admin/users", label: "People", icon: UsersIcon },
       { href: "/admin/payments", label: "Payments", icon: CardIcon },
+      { href: "/admin/applications", label: "Internship applications", icon: BriefcaseIcon },
       { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon },
       { href: "/admin/discounts", label: "Discount codes", icon: CardIcon },
       { href: "/admin/insights", label: "Insights", icon: ChartIcon },

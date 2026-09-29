@@ -109,14 +109,14 @@ export default async function HomePage() {
         <div aria-hidden="true" className="absolute -left-40 bottom-[-20%] size-96 rounded-full bg-accent/25 blur-[100px]" />
         <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-16 pt-12 sm:px-8 md:pb-20 md:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
           <div className="flex flex-col gap-6">
-            {/* The live next start date when a cohort is open, otherwise the eyebrow text from Settings. */}
+            {/* The live next cohort when enrolment is open, otherwise the eyebrow text from Settings. */}
             {next ? (
               <Link href={`/enroll?cohort=${next.cohort.id}`} className="group flex w-fit items-center gap-2.5 rounded-full border border-white/15 bg-white/5 py-1.5 pl-3.5 pr-3 text-[13px] font-medium text-white/80 transition hover:border-white/30 hover:bg-white/10">
                 <span className="relative flex size-2" aria-hidden="true">
                   <span className="absolute inline-flex size-full animate-ping rounded-full bg-cyan opacity-60 motion-reduce:hidden" />
                   <span className="relative inline-flex size-2 rounded-full bg-cyan" />
                 </span>
-                <span>Next intake <span className="font-semibold text-white">{nextStart ?? "opening soon"}</span></span>
+                <span>Enrolling now <span className="font-semibold text-white">· {next.course.title}</span></span>
                 <ArrowRight className="size-3.5 text-cyan-light transition group-hover:translate-x-0.5" />
               </Link>
             ) : settings.heroEyebrow && (
@@ -130,11 +130,19 @@ export default async function HomePage() {
             </h1>
             {settings.heroSubtitle && <p className="max-w-[560px] text-lg leading-[1.65] text-white/75 md:text-[19px]">{settings.heroSubtitle}</p>}
             <div className="mt-2 flex flex-wrap gap-3">
-              <Link href="/courses" className="flex h-13 items-center gap-2 rounded-xl bg-accent px-7 text-base font-semibold text-white shadow-[0_12px_32px_-10px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-mid">
-                Browse courses <ArrowRight className="size-[18px]" />
+              <Link href={next ? `/enroll?cohort=${next.cohort.id}` : "/courses"} className="flex h-13 items-center gap-2 rounded-xl bg-accent px-7 text-base font-semibold text-white shadow-[0_12px_32px_-10px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-mid">
+                {next ? `Join the ${nextStart ?? "next"} intake` : "Browse courses"} <ArrowRight className="size-[18px]" />
               </Link>
-              <a href="#formats" className="flex h-13 items-center rounded-xl border-[1.5px] border-white/40 px-7 text-base font-semibold text-white transition hover:border-white hover:bg-white/10">How we teach</a>
+              <Link href={next ? "/courses" : "#formats"} className="flex h-13 items-center rounded-xl border-[1.5px] border-white/40 px-7 text-base font-semibold text-white transition hover:border-white hover:bg-white/10">{next ? "Browse all courses" : "How we teach"}</Link>
             </div>
+            {next && (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/65">
+                <span className="font-semibold text-white/90">{next.cohort.name}</span>
+                <span aria-hidden="true">·</span>
+                <span>{MODE_LABEL[next.cohort.deliveryMode]}</span>
+                {nextSeats !== null && <><span aria-hidden="true">·</span><span className={nextSeats <= 5 ? "font-semibold text-amber-200" : ""}>{nextSeats === 1 ? "1 place left" : `${nextSeats} places left`}</span></>}
+              </p>
+            )}
             <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-white/85" aria-label="Course benefits">
               {["Beginner-friendly", "Live instructor support", "Portfolio projects"].map((item) => (
                 <li key={item} className="flex items-center gap-2"><span className="flex size-5 items-center justify-center rounded-full bg-cyan/15 text-cyan-light"><CheckIcon className="size-3.5" /></span>{item}</li>
@@ -151,11 +159,11 @@ export default async function HomePage() {
               </dl>
             )}
           </div>
-          {/* Large screens only: space beside the text for the photo, with the feedback chip over it. Phones and tablets show no photo. */}
+          {/* Large screens only: space beside the text for the photo, with a teaching-support cue over it. Phones and tablets show no photo. */}
           <div aria-hidden="true" className="relative hidden select-none lg:block lg:min-h-[520px]">
             <div className="absolute bottom-6 right-10 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_40px_-16px_rgba(0,0,0,.6)]">
               <span className="flex size-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><CheckIcon className="size-5" /></span>
-              <span><span className="block text-sm font-semibold text-ink">Feedback received</span><span className="block text-xs text-muted">Sales dashboard · 86/100</span></span>
+              <span><span className="block text-sm font-semibold text-ink">Learn with an instructor</span><span className="block text-xs text-muted">Live support and practical feedback</span></span>
             </div>
           </div>
         </div>
@@ -225,6 +233,36 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Internship programme */}
+      <section aria-labelledby="internship-heading" className="border-t border-line bg-white">
+        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 md:py-24">
+          <div className="relative grid items-center gap-10 overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,#2b1a5c_0%,#5a24b8_100%)] p-8 text-white md:p-12 lg:grid-cols-[1.2fr_1fr]">
+            <div aria-hidden="true" className="absolute -right-24 -top-24 size-72 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex flex-col gap-5">
+              <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-cyan-light">Internship programme</p>
+              <h2 id="internship-heading" className="font-display text-3xl font-bold leading-tight tracking-tight md:text-[44px]">Join our internship programme</h2>
+              <p className="max-w-[520px] text-lg text-white/80">Get supervised, real-world experience on practical projects, and leave with work you can show employers.</p>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Link href="/internships/apply" className="flex h-12 items-center gap-2 rounded-xl bg-white px-6 font-semibold text-accent transition hover:-translate-y-0.5 hover:bg-accent-soft">Apply now <ArrowRight className="size-4" /></Link>
+                <Link href="/internships" className="flex h-12 items-center rounded-xl border-[1.5px] border-white/40 px-6 font-semibold text-white transition hover:border-white hover:bg-white/10">See programmes</Link>
+              </div>
+            </div>
+            <ul className="relative flex flex-col gap-3">
+              {[
+                ["Real projects", "Work on practical briefs with deadlines and reviews, the way teams work."],
+                ["Supervised by practitioners", "Regular check-ins and feedback on what you build."],
+                ["Free for our graduates", "Completed one of our courses? Your place is free."],
+              ].map(([title, text]) => (
+                <li key={title} className="flex gap-3 rounded-[14px] border border-white/15 bg-white/[.07] p-4 backdrop-blur">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-cyan/20 text-cyan-light"><CheckIcon className="size-4" /></span>
+                  <span><span className="block font-semibold">{title}</span><span className="text-sm text-white/70">{text}</span></span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
 
       {/* How it works */}
       <section id="how" className="relative scroll-mt-20 overflow-hidden border-t border-line bg-navy text-white">
