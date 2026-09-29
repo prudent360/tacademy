@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS: Settings = {
   email: {},
   reminders: {},
   ai: {},
+  seo: {},
   updatedAt: new Date(0),
 };
 

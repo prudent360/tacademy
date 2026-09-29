@@ -5,18 +5,21 @@ import { CourseAdvisor } from "@/components/site/course-advisor";
 import { aiAvailable } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
+import { seoConfig } from "@/lib/seo";
 
 // Content is edited from the admin, so render on each request to always show the latest.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings();
-  const description = settings.tagline || settings.heroSubtitle;
+  const seo = await seoConfig();
+  const image = seo.shareImageUrl;
   return {
-    title: { default: settings.siteName, template: `%s | ${settings.siteName}` },
-    description,
-    openGraph: { title: settings.siteName, description, type: "website", siteName: settings.siteName, locale: "en_GB" },
-    twitter: { card: "summary_large_image", title: settings.siteName, description },
+    title: { default: seo.siteName, template: seo.titleTemplate },
+    description: seo.description,
+    openGraph: { title: seo.siteName, description: seo.description, type: "website", siteName: seo.siteName, locale: "en_GB", ...(image ? { images: [{ url: image }] } : {}) },
+    twitter: { card: image ? "summary_large_image" : "summary", title: seo.siteName, description: seo.description, ...(image ? { images: [image] } : {}), ...(seo.twitterHandle ? { site: seo.twitterHandle } : {}) },
+    ...(seo.googleVerification || seo.bingVerification ? { verification: { ...(seo.googleVerification ? { google: seo.googleVerification } : {}), ...(seo.bingVerification ? { other: { "msvalidate.01": seo.bingVerification } } : {}) } } : {}),
+    ...(seo.allowIndexing ? {} : { robots: { index: false, follow: false } }),
   };
 }
 

@@ -234,6 +234,56 @@ export async function testAiConnection(): Promise<FormState> {
   return problem ? { error: problem } : { ok: "Connected: the AI provider replied." };
 }
 
+// ---------- SEO ----------
+
+/** Accepts the bare code or the whole <meta ... content="..."> tag that Google and Bing show. */
+function verificationCode(value: FormDataEntryValue | null): string {
+  const raw = String(value ?? "").trim();
+  const fromTag = raw.match(/content=["']([^"']+)["']/i)?.[1];
+  return (fromTag ?? raw).replace(/[^A-Za-z0-9_\-.=+/]/g, "").slice(0, 200);
+}
+
+export async function saveSeo(_state: FormState, formData: FormData): Promise<FormState> {
+  await requireRole("admin");
+  const parsed = z.object({
+    titleTemplate: text(120),
+    homeTitle: text(90),
+    homeDescription: text(300),
+    defaultDescription: text(300),
+    coursesDescription: text(300),
+    internshipsDescription: text(300),
+  }).safeParse(formValues(formData));
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  if (parsed.data.titleTemplate && !parsed.data.titleTemplate.includes("%s")) return { error: "The title pattern must include %s where the page name goes, e.g. %s | Tekskillup Academy." };
+  const profiles = parseList(formData.get("socialProfiles"), /\n/).slice(0, 10);
+  const badProfile = profiles.find((url) => !/^https:\/\/[^\s]+\.[^\s]+$/.test(url));
+  if (badProfile) return { error: `Social profiles must be full links starting with https:// (check "${badProfile}").` };
+  const handle = String(formData.get("twitterHandle") ?? "").trim().replace(/^https?:\/\/(www\.)?(twitter|x)\.com\//i, "").replace(/^@/, "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 15);
+
+  const current = await getSettings();
+  let shareImageUrl: string | null;
+  try {
+    shareImageUrl = await resolveFileField(formData, { file: "shareImage", remove: "removeShareImage", current: current.seo?.shareImageUrl ?? null, folder: "branding" });
+  } catch (error) {
+    const message = uploadErrorMessage(error);
+    if (message) return { error: message };
+    throw error;
+  }
+  await update({
+    seo: {
+      ...parsed.data,
+      shareImageUrl,
+      twitterHandle: handle ? `@${handle}` : "",
+      googleVerification: verificationCode(formData.get("googleVerification")),
+      bingVerification: verificationCode(formData.get("bingVerification")),
+      allowIndexing: formData.get("allowIndexing") === "on",
+      socialProfiles: profiles,
+    },
+  });
+  await deleteIfReplaced(current.seo?.shareImageUrl ?? null, shareImageUrl);
+  return { ok: "SEO settings saved." };
+}
+
 // ---------- Reminders ----------
 
 export async function saveReminders(_state: FormState, formData: FormData): Promise<FormState> {

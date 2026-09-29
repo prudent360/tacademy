@@ -7,9 +7,13 @@ import { getPublishedCourses, getSettings } from "@/lib/data";
 import type { DeliveryMode } from "@/db/schema";
 import Link from "next/link";
 import { MODE_LABEL } from "@/lib/utils";
+import { pageMetadata, seoConfig } from "@/lib/seo";
 import { visitorCurrencies } from "@/lib/visitor";
 
-export const metadata: Metadata = { title: "Courses", description: "Browse live online, in-person and hybrid courses." };
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await seoConfig();
+  return pageMetadata(seo, { title: "Courses", description: seo.coursesDescription || "Browse live online, in-person and hybrid courses.", path: "/courses" });
+}
 
 const FILTERS: (DeliveryMode | "all")[] = ["all", "virtual", "physical", "hybrid"];
 

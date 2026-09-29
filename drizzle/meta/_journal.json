@@ -92,6 +92,13 @@
       "when": 1790616772464,
       "tag": "0012_ai_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790675055547,
+      "tag": "0013_seo",
+      "breakpoints": true
     }
   ]
 }

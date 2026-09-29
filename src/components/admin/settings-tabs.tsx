@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
-import { runRemindersNow, saveAiSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { runRemindersNow, saveAiSettings, saveSeo, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
 import { EmailDriverFields } from "@/components/admin/email-driver";
 import { ActionButton, ActionForm, FileField, Input, SecretInput, Select, SubmitButton, Switch, Textarea } from "@/components/forms";
-import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon, SparkIcon } from "@/components/icons";
+import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon, SearchIcon, SparkIcon } from "@/components/icons";
 import { Badge, DataTable, Notice, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
 import { emailLog, emailTemplates, type Settings } from "@/db/schema";
@@ -17,6 +17,7 @@ import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "@/lib/email
 import { CURRENCIES } from "@/lib/money";
 import { testPaymentsAllowed } from "@/lib/payments";
 import { maskSecret } from "@/lib/secrets";
+import { seoConfig } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
 import { relativeTime } from "@/lib/time";
 
@@ -386,6 +387,62 @@ export async function AiTab({ s }: { s: Settings }) {
           <SubmitButton pendingText="Testing…">Test connection</SubmitButton>
         </ActionForm>
       </Section>
+    </div>
+  );
+}
+
+// ---------- SEO ----------
+
+export async function SeoTab({ s }: { s: Settings }) {
+  const seo = await seoConfig(s);
+  const saved = s.seo ?? {};
+  const previewTitle = seo.homeTitle || seo.siteName;
+  const previewDescription = seo.homeDescription || seo.description;
+  return (
+    <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <ActionForm action={saveSeo} className="flex flex-col gap-6">
+        <Section title="Search appearance" description="How your pages look in Google and other search results." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><SearchIcon className="size-5" /></span>}>
+          <Input label="Home page title" name="homeTitle" defaultValue={saved.homeTitle} maxLength={90} placeholder={seo.siteName} hint="The headline for your home page in search results. Aim for under 60 characters, e.g. Tekskillup Academy | Data & Tech Training in Nigeria." />
+          <Textarea label="Home page description" name="homeDescription" defaultValue={saved.homeDescription} rows={3} maxLength={300} placeholder={seo.description} hint="The text under the headline. Aim for 120–160 characters that make someone want to click." />
+          <Input label="Title pattern for other pages" name="titleTemplate" defaultValue={saved.titleTemplate} maxLength={120} placeholder={`%s | ${seo.siteName}`} hint="%s is replaced by the page name, e.g. “Courses | Tekskillup Academy”." className="[&_input]:font-mono [&_input]:text-sm" />
+          <Textarea label="Default description" name="defaultDescription" defaultValue={saved.defaultDescription} rows={2} maxLength={300} placeholder={s.tagline || "Used for pages without their own description."} hint="Used by pages that don't have their own. Defaults to your tagline." />
+          <div className="grid gap-5 md:grid-cols-2">
+            <Textarea label="Courses page description" name="coursesDescription" defaultValue={saved.coursesDescription} rows={3} maxLength={300} placeholder="Browse live online, in-person and hybrid courses." />
+            <Textarea label="Internships page description" name="internshipsDescription" defaultValue={saved.internshipsDescription} rows={3} maxLength={300} placeholder="Hands-on internship programmes…" />
+          </div>
+          <p className="text-xs text-muted">Each course has its own search title and description on its edit page, under “Search engines”.</p>
+        </Section>
+        <Section title="Social sharing" description="What people see when your links are shared on WhatsApp, LinkedIn, Facebook or X.">
+          <FileField label="Share image" name="shareImage" current={saved.shareImageUrl} removeName="removeShareImage" hint="1200 × 630 px works everywhere. Used for pages without their own image; course pages use their cover image." />
+          <Input label="X (Twitter) handle" name="twitterHandle" defaultValue={saved.twitterHandle} maxLength={40} placeholder="@tekskillup" className="max-w-[320px]" />
+        </Section>
+        <Section title="Search engines">
+          <Switch label="Allow search engines to index this site" name="allowIndexing" defaultChecked={seo.allowIndexing} hint="Turn off only for a test copy of the site: it hides every page from Google and Bing." />
+          {!seo.allowIndexing && <Notice tone="amber"><strong>Hidden from search engines.</strong> Turn this back on for your live site.</Notice>}
+          <div className="grid gap-5 md:grid-cols-2">
+            <Input label="Google Search Console verification" name="googleVerification" defaultValue={saved.googleVerification} placeholder="Paste the code or the whole <meta> tag" hint="Search Console → Add property → URL prefix → HTML tag." className="[&_input]:font-mono [&_input]:text-sm" />
+            <Input label="Bing Webmaster verification" name="bingVerification" defaultValue={saved.bingVerification} placeholder="Paste the code or the whole <meta> tag" hint="Bing Webmaster Tools → Add site → HTML meta tag." className="[&_input]:font-mono [&_input]:text-sm" />
+          </div>
+        </Section>
+        <Section title="Organisation profile" description="Helps Google connect your social profiles to your academy.">
+          <Textarea label="Social profiles" name="socialProfiles" defaultValue={(saved.socialProfiles ?? []).join("\n")} rows={4} placeholder={"https://www.instagram.com/tekskillup\nhttps://www.linkedin.com/company/tekskillup"} hint="One full link per line (Instagram, LinkedIn, Facebook, X, YouTube…)." />
+        </Section>
+        <div><SubmitButton>Save SEO settings</SubmitButton></div>
+      </ActionForm>
+      <div className="flex flex-col gap-6">
+        <Section title="Google preview" description="Your home page as it would appear in results (from saved settings).">
+          <div className="flex flex-col gap-1 rounded-xl border border-edge bg-white p-4 font-[Arial,sans-serif]">
+            <span className="text-xs text-[#4d5156]">{absoluteUrl("/").replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
+            <span className="text-lg leading-snug text-[#1a0dab]">{previewTitle.length > 60 ? `${previewTitle.slice(0, 60)}…` : previewTitle}</span>
+            <span className="text-sm leading-relaxed text-[#4d5156]">{previewDescription ? (previewDescription.length > 160 ? `${previewDescription.slice(0, 160)}…` : previewDescription) : "Add a home page description."}</span>
+          </div>
+          {previewTitle.length > 60 && <p className="text-xs text-amber-800">The title is {previewTitle.length} characters, so Google will probably cut it off.</p>}
+        </Section>
+        <Section title="Sitemap">
+          <p className="text-sm text-muted">Submit this in Google Search Console and Bing Webmaster Tools so new courses are found quickly. It updates itself.</p>
+          <CopyField label="Sitemap" value={absoluteUrl("/sitemap.xml")} />
+        </Section>
+      </div>
     </div>
   );
 }

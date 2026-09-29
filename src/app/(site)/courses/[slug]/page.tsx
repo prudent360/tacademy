@@ -14,6 +14,7 @@ import { cohortCurrencies } from "@/lib/pricing";
 import type { Cohort } from "@/db/schema";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { formatDateOnly } from "@/lib/time";
+import { pageMetadata, seoConfig } from "@/lib/seo";
 import { visitorCurrencies } from "@/lib/visitor";
 
 /** Default country code for the curriculum form's phone field, from the academy's main currency. */
@@ -22,9 +23,9 @@ const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US",
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ cancelled?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const course = await getCourseBySlug((await params).slug);
+  const [course, seo] = await Promise.all([getCourseBySlug((await params).slug), seoConfig()]);
   if (!course) return {};
-  return { title: course.title, description: course.summary, alternates: { canonical: `/courses/${course.slug}` } };
+  return pageMetadata(seo, { title: course.seoTitle || course.title, description: course.seoDescription || course.summary, path: `/courses/${course.slug}`, image: course.imageUrl || course.heroImageUrl });
 }
 
 export default async function CoursePage({ params, searchParams }: Props) {

@@ -117,6 +117,24 @@ export type AiSettings = {
   grading: boolean;
   writing: boolean;
 };
+/** Search and social sharing settings; empty values fall back to the site name, tagline and course details. */
+export type SeoSettings = {
+  /** Page titles, e.g. "%s | Tekskillup Academy"; %s is the page name. */
+  titleTemplate: string;
+  homeTitle: string;
+  homeDescription: string;
+  defaultDescription: string;
+  coursesDescription: string;
+  internshipsDescription: string;
+  shareImageUrl: string | null;
+  twitterHandle: string;
+  googleVerification: string;
+  bingVerification: string;
+  /** Off hides the whole site from search engines (useful for a staging copy). */
+  allowIndexing: boolean;
+  /** Social profile links, listed in the organisation's structured data. */
+  socialProfiles: string[];
+};
 export type ReminderSettings = { dayBefore: boolean; hourBefore: boolean; hourLeadMinutes: number; assignmentDue: boolean; assignmentLeadHours: number };
 export type Faq = { question: string; answer: string };
 export type Testimonial = { quote: string; name: string; role: string };
@@ -144,6 +162,7 @@ export const settings = pgTable("settings", {
   email: jsonb("email").$type<Partial<EmailSettings>>().notNull().default({}),
   reminders: jsonb("reminders").$type<Partial<ReminderSettings>>().notNull().default({}),
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
+  seo: jsonb("seo").$type<Partial<SeoSettings>>().notNull().default({}),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -168,6 +187,9 @@ export const courses = pgTable("courses", {
   imageUrl: text("image_url"),
   /** Full-width photo behind the course page hero; the hero stays white without one. */
   heroImageUrl: text("hero_image_url"),
+  /** Optional search result title and description; the title and summary are used when empty. */
+  seoTitle: text("seo_title").notNull().default(""),
+  seoDescription: text("seo_description").notNull().default(""),
   /** Downloadable curriculum, given out in exchange for contact details. */
   curriculumUrl: text("curriculum_url"),
   published: boolean("published").notNull().default(false),

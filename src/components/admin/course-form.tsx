@@ -41,6 +41,11 @@ export function CourseForm({ action, course, ai = false }: { action: (state: For
           <Input label="Minimum average score %" name="certificateMinScore" type="number" min={0} max={100} defaultValue={course?.certificateMinScore ?? 50} />
         </div>
       </fieldset>
+      <fieldset className="flex flex-col gap-4 rounded-[5px] border border-edge bg-panel p-4">
+        <legend className="px-1 text-sm font-semibold text-ink">Search engines</legend>
+        <Input label="Search title" name="seoTitle" defaultValue={course?.seoTitle} maxLength={70} placeholder={course?.title ?? "e.g. Data Analytics Course in Lagos"} hint="Optional. The headline in Google results; the academy name is added after it. Aim for under 60 characters. Uses the course title when empty." />
+        <Textarea label="Meta description" name="seoDescription" defaultValue={course?.seoDescription} rows={2} maxLength={200} placeholder={course?.summary} hint="Optional. The text under the headline in Google and when the link is shared. Aim for 120–160 characters. Uses the summary when empty. The cover image is used as the share image." />
+      </fieldset>
       <div className="flex flex-col gap-3">
         <Checkbox label="Published" name="published" defaultChecked={course?.published ?? false} hint="Visible on the website and open for enrolment." />
         <Checkbox label="Featured on the home page" name="featured" defaultChecked={course?.featured ?? false} />

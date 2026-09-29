@@ -5,13 +5,13 @@ import { CourseCard } from "@/components/site/course-card";
 import { EmptyState } from "@/components/ui";
 import { withCohorts } from "@/lib/catalog";
 import { getPublishedCourses, getSettings } from "@/lib/data";
+import { pageMetadata, seoConfig } from "@/lib/seo";
 import { visitorCurrencies } from "@/lib/visitor";
 
-export const metadata: Metadata = {
-  title: "Internships",
-  description: "Hands-on internship programmes: free for graduates of our courses, and open to everyone else for a fee.",
-  alternates: { canonical: "/internships" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await seoConfig();
+  return pageMetadata(seo, { title: "Internships", description: seo.internshipsDescription || "Hands-on internship programmes: free for graduates of our courses, and open to everyone else for a fee.", path: "/internships" });
+}
 
 const POINTS = [
   { icon: BriefcaseIcon, title: "Real projects", text: "Work on practical briefs with deadlines, reviews and feedback, the way teams work." },

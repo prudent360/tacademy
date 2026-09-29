@@ -9,6 +9,13 @@ import { formatMoney } from "@/lib/money";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { MODE_LABEL } from "@/lib/utils";
 import { visitorCurrencies } from "@/lib/visitor";
+import { pageMetadata, seoConfig } from "@/lib/seo";
+import type { Metadata } from "next";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await seoConfig();
+  return pageMetadata(seo, { absoluteTitle: seo.homeTitle || seo.siteName, description: seo.homeDescription, path: "/" });
+}
 
 function SectionHeading({ eyebrow, title, subtitle, align = "center" }: { eyebrow?: string; title: string; subtitle?: string; align?: "center" | "left" }) {
   return (
@@ -72,9 +79,12 @@ export default async function HomePage() {
     "@type": "EducationalOrganization",
     name: settings.siteName,
     url: absoluteUrl("/"),
-    description: settings.tagline || undefined,
+    description: settings.seo?.homeDescription || settings.tagline || undefined,
     email: settings.supportEmail || undefined,
+    telephone: settings.phone || undefined,
     address: settings.address || undefined,
+    logo: settings.logoUrl ? absoluteUrl(settings.logoUrl) : undefined,
+    sameAs: settings.seo?.socialProfiles?.length ? settings.seo.socialProfiles : undefined,
   };
 
   return (
