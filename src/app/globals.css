@@ -143,12 +143,12 @@ details > summary::-webkit-details-marker {
   margin-top: 0.5rem;
 }
 
-/* Pull dark heroes up under the floating header so their colour shows around it, and pad them to clear it. */
-body:has([data-dark-hero]) #main { margin-top: -4.75rem; }
-[data-dark-hero] { padding-top: 4.75rem; }
+/* Pull heroes up under the floating header so their background shows around it (no strip of page colour), and pad them to clear it. */
+body:has([data-under-header]) #main { margin-top: -4.75rem; }
+[data-under-header] { padding-top: 4.75rem; }
 @media (min-width: 768px) {
-  body:has([data-dark-hero]) #main { margin-top: -5.5rem; }
-  [data-dark-hero] { padding-top: 5.5rem; }
+  body:has([data-under-header]) #main { margin-top: -5.5rem; }
+  [data-under-header] { padding-top: 5.5rem; }
 }
 
 /* Rich text editor (components/rich-text-editor.tsx). The whole editor shows the focus ring, so the typing area doesn't need its own. */
@@ -185,4 +185,13 @@ body:has([data-dark-hero]) #main { margin-top: -4.75rem; }
 .tiptap-content th p,
 .tiptap-content td p {
   margin: 0;
+}
+
+/* Home hero photo curve: tiles turn towards the viewer the further they are from the centre (--arc is -2…2, --depth its size). */
+.hero-arc-tile {
+  transform: translateZ(calc(var(--depth) * 55px)) rotateY(calc(var(--arc) * -20deg));
+  box-shadow: 0 30px 60px -40px rgba(25, 17, 46, 0.55);
+}
+@media (max-width: 767px) {
+  .hero-arc-tile { transform: translateZ(calc(var(--depth) * 30px)) rotateY(calc(var(--arc) * -16deg)); }
 }

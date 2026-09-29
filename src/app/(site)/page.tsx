@@ -70,6 +70,11 @@ export default async function HomePage() {
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
   const { currencies } = await visitorCurrencies(settings);
   const heroPhoto = settings.heroImageUrl ?? "/images/home-hero-team.webp";
+  // Five photos for the hero's curve: the Settings hero photo in the middle, then the bundled photos and course covers.
+  const pool = [...new Set([heroPhoto, "/images/how-it-works-classroom.webp", "/images/academy-instructor-support.webp", "/images/enrol-classroom.webp", "/images/home-hero-team.webp", ...summaries.flatMap((c) => (c.imageUrl ? [c.imageUrl] : []))])];
+  const pick = (n: number) => pool[n % pool.length];
+  // With only four distinct photos, the far-right slot repeats a classroom photo rather than the centre one.
+  const gallery = [pick(3), pick(1), pick(0), pick(2), pool.length > 4 ? pool[4] : pick(1)];
   const next = await getNextIntake();
   const nextStart = next?.cohort.startDate ? new Date(`${next.cohort.startDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : null;
   const nextSeats = next?.seatsLeft ?? null;
@@ -91,82 +96,68 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
 
-      {/* Hero */}
-      <section data-dark-hero className="relative overflow-hidden bg-[linear-gradient(160deg,#19112e_0%,#221544_55%,#2b1a5c_100%)] text-white">
-        {/* Large screens: the photo starts just left of the page's centre line, so on wide monitors it stays
-            beside the text rather than sliding behind it, and fades into the background on its left and bottom. */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-y-0 left-[calc(50%-80px)] right-0 hidden overflow-hidden lg:block"
-          style={{ maskImage: "linear-gradient(90deg, transparent 0%, transparent 14%, #000 46%), linear-gradient(180deg, #000 70%, transparent 100%)", maskComposite: "intersect", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, transparent 14%, #000 46%), linear-gradient(180deg, #000 70%, transparent 100%)", WebkitMaskComposite: "source-in" }}
-        >
-          {/* Taller than the hero and anchored to the bottom, so the backdrop banner above the faces is cropped off. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={heroPhoto} alt="" fetchPriority="high" className="absolute inset-x-0 bottom-0 h-[120%] w-full object-cover object-center" />
-          {/* Tints the photo towards the brand, and darkens the top so nothing shows through the menu. */}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.88)_0%,rgba(25,17,46,.3)_28%,rgba(43,26,92,.25)_100%)]" />
-        </div>
-        <div aria-hidden="true" className="absolute -left-40 bottom-[-20%] size-96 rounded-full bg-accent/25 blur-[100px]" />
-        <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-5 pb-16 pt-12 sm:px-8 md:pb-20 md:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
-          <div className="flex flex-col gap-6">
-            {/* The live next cohort when enrolment is open, otherwise the eyebrow text from Settings. */}
-            {next ? (
-              <Link href={`/enroll?cohort=${next.cohort.id}`} className="group flex w-fit items-center gap-2.5 rounded-full border border-white/15 bg-white/5 py-1.5 pl-3.5 pr-3 text-[13px] font-medium text-white/80 transition hover:border-white/30 hover:bg-white/10">
-                <span className="relative flex size-2" aria-hidden="true">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-cyan opacity-60 motion-reduce:hidden" />
-                  <span className="relative inline-flex size-2 rounded-full bg-cyan" />
-                </span>
-                <span>Enrolling now <span className="font-semibold text-white">· {next.course.title}</span></span>
-                <ArrowRight className="size-3.5 text-cyan-light transition group-hover:translate-x-0.5" />
-              </Link>
-            ) : settings.heroEyebrow && (
-              <p className="flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs font-medium uppercase tracking-[1.2px] text-cyan-light">
-                <span className="size-2 rounded-full bg-cyan" aria-hidden="true" /> {settings.heroEyebrow}
-              </p>
-            )}
-            <h1 className="max-w-[600px] font-display text-[40px] font-extrabold leading-[1.04] tracking-[-1.5px] text-white sm:text-5xl lg:text-[56px] lg:tracking-[-2px]">
-              {/* Words wrapped in *asterisks* in Settings are highlighted. */}
-              {(settings.heroTitle || settings.siteName).split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <span key={i} className="text-cyan-light">{part}</span> : part))}
-            </h1>
-            {settings.heroSubtitle && <p className="max-w-[560px] text-lg leading-[1.65] text-white/75 md:text-[19px]">{settings.heroSubtitle}</p>}
-            <div className="mt-2 flex flex-wrap gap-3">
-              <Link href={next ? `/enroll?cohort=${next.cohort.id}` : "/courses"} className="flex h-13 items-center gap-2 rounded-xl bg-accent px-7 text-base font-semibold text-white shadow-[0_12px_32px_-10px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-mid">
-                {next ? `Join the ${nextStart ?? "next"} intake` : "Browse courses"} <ArrowRight className="size-[18px]" />
-              </Link>
-              <Link href={next ? "/courses" : "#formats"} className="flex h-13 items-center rounded-xl border-[1.5px] border-white/40 px-7 text-base font-semibold text-white transition hover:border-white hover:bg-white/10">{next ? "Browse all courses" : "How we teach"}</Link>
-            </div>
-            {next && (
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/65">
-                <span className="font-semibold text-white/90">{next.cohort.name}</span>
-                <span aria-hidden="true">·</span>
-                <span>{MODE_LABEL[next.cohort.deliveryMode]}</span>
-                {nextSeats !== null && <><span aria-hidden="true">·</span><span className={nextSeats <= 5 ? "font-semibold text-amber-200" : ""}>{nextSeats === 1 ? "1 place left" : `${nextSeats} places left`}</span></>}
-              </p>
-            )}
-            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-white/85" aria-label="Course benefits">
-              {["Beginner-friendly", "Live instructor support", "Portfolio projects"].map((item) => (
-                <li key={item} className="flex items-center gap-2"><span className="flex size-5 items-center justify-center rounded-full bg-cyan/15 text-cyan-light"><CheckIcon className="size-3.5" /></span>{item}</li>
-              ))}
-            </ul>
-            {settings.stats.length > 0 && (
-              <dl className="mt-6 grid grid-cols-2 gap-x-8 gap-y-5 border-t border-white/15 pt-7 sm:grid-cols-4">
-                {settings.stats.map((s) => (
-                  <div key={s.label} className="flex flex-col-reverse justify-end gap-1">
-                    <dt className="text-sm leading-snug text-white/60">{s.label}</dt>
-                    <dd className="font-display text-3xl font-bold tracking-tight text-cyan">{s.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </div>
-          {/* Large screens only: space beside the text for the photo, with a teaching-support cue over it. Phones and tablets show no photo. */}
-          <div aria-hidden="true" className="relative hidden select-none lg:block lg:min-h-[520px]">
-            <div className="absolute bottom-6 right-10 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_40px_-16px_rgba(0,0,0,.6)]">
-              <span className="flex size-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><CheckIcon className="size-5" /></span>
-              <span><span className="block text-sm font-semibold text-ink">Learn with an instructor</span><span className="block text-xs text-muted">Live support and practical feedback</span></span>
-            </div>
+      {/* Hero: centred text above a curved row of photos. */}
+      <section data-under-header className="relative overflow-hidden bg-white">
+        <div className="mx-auto flex max-w-[1200px] flex-col items-center px-5 pt-14 text-center sm:px-8 md:pt-20">
+          {/* The live next start date when a cohort is open, otherwise the eyebrow text from Settings. */}
+          {next ? (
+            <Link href={`/enroll?cohort=${next.cohort.id}`} className="group flex items-center gap-2.5 rounded-full border border-edge bg-panel py-1.5 pl-2 pr-3.5 text-sm font-medium text-body transition hover:border-accent-muted hover:bg-white">
+              <span className="relative flex size-6 items-center justify-center rounded-full bg-white shadow-sm" aria-hidden="true">
+                <span className="absolute size-2 animate-ping rounded-full bg-accent/40 motion-reduce:hidden" />
+                <span className="relative size-2 rounded-full bg-accent" />
+              </span>
+              Next intake starts <span className="font-semibold text-ink">{nextStart ?? "soon"}</span>
+              <ArrowRight className="size-3.5 text-accent transition group-hover:translate-x-0.5" />
+            </Link>
+          ) : settings.heroEyebrow && (
+            <p className="flex items-center gap-2 rounded-full border border-edge bg-panel px-3.5 py-1.5 text-sm font-medium text-body">
+              <CheckIcon className="size-4 text-accent" /> {settings.heroEyebrow}
+            </p>
+          )}
+          <h1 className="mt-6 max-w-[920px] text-balance font-display text-[40px] font-extrabold leading-[1.05] tracking-[-1.5px] text-ink sm:text-[54px] lg:text-[68px] lg:tracking-[-2.5px]">
+            {/* Words wrapped in *asterisks* in Settings are highlighted. */}
+            {(settings.heroTitle || settings.siteName).split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <span key={i} className="text-accent">{part}</span> : part))}
+          </h1>
+          {settings.heroSubtitle && <p className="mt-5 max-w-[620px] text-pretty text-lg leading-relaxed text-muted md:text-[19px]">{settings.heroSubtitle}</p>}
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link href="/courses" className="flex h-13 items-center gap-2 rounded-full bg-ink px-7 text-base font-semibold text-white shadow-[0_14px_30px_-14px_rgba(25,17,46,.8)] transition hover:-translate-y-0.5 hover:bg-accent">
+              Browse courses <ArrowRight className="size-[18px]" />
+            </Link>
+            <a href="#formats" className="flex h-13 items-center rounded-full border-[1.5px] border-ink/80 px-7 text-base font-semibold text-ink transition hover:border-accent hover:text-accent">How we teach</a>
           </div>
         </div>
+
+        {/* The photos sit on the inside of a curve: the outer ones turn towards you and fade out at the edges. */}
+        {/* The mask also crops, so the container has room above and below for the taller outer photos (offset by negative margins). */}
+        <div aria-hidden="true" className="relative py-12 [perspective:700px] sm:py-20 md:-mb-12 md:py-28" style={{ maskImage: "linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%)", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%)" }}>
+          <div className="flex items-center justify-center gap-3 [transform-style:preserve-3d] md:gap-4">
+            {gallery.map((src, i) => {
+              const offset = i - 2;
+              return (
+                <div
+                  key={`${src}-${i}`}
+                  className={`hero-arc-tile relative aspect-[4/4.3] w-[46vw] max-w-[380px] shrink-0 overflow-hidden rounded-[18px] bg-panel sm:w-[30vw] md:w-[24vw] ${Math.abs(offset) === 2 ? "hidden md:block" : ""}`}
+                  style={{ "--arc": offset, "--depth": Math.abs(offset) } as React.CSSProperties}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" loading={offset === 0 ? "eager" : "lazy"} fetchPriority={offset === 0 ? "high" : undefined} className="size-full object-cover" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {settings.stats.length > 0 && (
+          <dl className="mx-auto grid max-w-[900px] grid-cols-2 gap-x-8 gap-y-6 px-5 pb-16 pt-4 text-center sm:grid-cols-4 sm:px-8 md:pb-20">
+            {settings.stats.map((stat) => (
+              <div key={stat.label} className="flex flex-col-reverse gap-1">
+                <dt className="text-sm text-muted">{stat.label}</dt>
+                <dd className="font-display text-3xl font-bold tracking-tight text-ink">{stat.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        {!settings.stats.length && <div className="pb-16 md:pb-20" />}
       </section>
 
       {/* Fast course discovery */}
