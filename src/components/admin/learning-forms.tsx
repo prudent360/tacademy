@@ -4,9 +4,11 @@ import type { FormState } from "@/lib/validation";
 
 type Action = (state: FormState, formData: FormData) => Promise<FormState>;
 
-export function ModuleForm({ action, module }: { action: Action; module?: LearningModule }) {
+/** `cohortId` is set when an instructor works from a cohort, so they return to its Learning tab. */
+export function ModuleForm({ action, module, cohortId }: { action: Action; module?: LearningModule; cohortId?: number }) {
   return (
     <ActionForm action={action}>
+      {cohortId && <input type="hidden" name="cohort" value={cohortId} />}
       <Input label="Module title" name="title" defaultValue={module?.title} required />
       <Textarea label="Summary" name="summary" defaultValue={module?.summary} rows={3} hint="Tell students what they will learn in this module." />
       <Input label="Position" name="position" type="number" defaultValue={module?.position ?? 0} hint="Lower numbers appear first." />
@@ -16,14 +18,15 @@ export function ModuleForm({ action, module }: { action: Action; module?: Learni
   );
 }
 
-export function LessonForm({ action, lesson }: { action: Action; lesson?: Lesson }) {
+export function LessonForm({ action, lesson, cohortId }: { action: Action; lesson?: Lesson; cohortId?: number }) {
   return (
     <ActionForm action={action}>
+      {cohortId && <input type="hidden" name="cohort" value={cohortId} />}
       <Input label="Lesson title" name="title" defaultValue={lesson?.title} required />
       <Textarea label="Summary" name="summary" defaultValue={lesson?.summary} rows={2} hint="A short description shown in the module outline." />
       <Textarea label="Lesson content" name="content" defaultValue={lesson?.content} rows={18} hint="Markdown supported: headings, lists, links, tables and code." />
       <div className="grid gap-5 md:grid-cols-2">
-        <Input label="Video link" name="videoUrl" type="url" defaultValue={lesson?.videoUrl ?? ""} placeholder="https://…" hint="YouTube, Vimeo, Loom or another hosted video." />
+        <Input label="Video link" name="videoUrl" type="url" defaultValue={lesson?.videoUrl ?? ""} placeholder="https://player.mediadelivery.net/embed/…" hint="Plays inside the lesson. Bunny Stream: open the video and copy its embed or play link. YouTube, Vimeo and Loom links work too." />
         <Input label="Resource link" name="resourceUrl" type="url" defaultValue={lesson?.resourceUrl ?? ""} placeholder="https://…" hint="A worksheet, slides, repository or further reading." />
       </div>
       <div className="grid gap-5 md:grid-cols-3">

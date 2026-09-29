@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
-import { runRemindersNow, saveAiSettings, saveSeo, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { runRemindersNow, saveAiSettings, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
@@ -443,6 +443,33 @@ export async function SeoTab({ s }: { s: Settings }) {
           <CopyField label="Sitemap" value={absoluteUrl("/sitemap.xml")} />
         </Section>
       </div>
+    </div>
+  );
+}
+
+// ---------- Video ----------
+
+export function VideoTab({ s }: { s: Settings }) {
+  const signed = Boolean(s.video?.bunnyTokenKey);
+  return (
+    <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <ActionForm action={saveVideoSettings} className="flex flex-col gap-6">
+        <Section title="Bunny Stream protection" description="Optional. Signs lesson video links so they expire after a few hours and can't be shared or embedded elsewhere."
+          badge={signed ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> Signed links on</Badge> : <Badge>Off</Badge>}>
+          <SecretInput label="Token authentication key" name="bunnyTokenKey" masked={maskSecret(s.video?.bunnyTokenKey)} placeholder="Paste the key from Bunny" hint="Bunny dashboard → Stream → your video library → Security → Embed view token authentication." />
+          <Notice tone="amber">Turn on <strong>Embed view token authentication</strong> in Bunny only after saving the key here, otherwise lesson videos will stop playing.</Notice>
+        </Section>
+        <div><SubmitButton>Save video settings</SubmitButton></div>
+      </ActionForm>
+      <Section title="How lesson videos work">
+        <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-body">
+          <li>Record the lesson and upload it to your Bunny Stream library.</li>
+          <li>Open the video in Bunny and copy its embed or play link.</li>
+          <li>Paste it into the lesson&apos;s <strong>Video link</strong> (Teach → cohort → Learning, or Courses → module → lesson).</li>
+          <li>Publish the lesson. Students watch it inside the lesson page and mark it complete.</li>
+        </ol>
+        <p className="text-xs text-muted">Also add your website under <strong>Allowed domains</strong> in Bunny&apos;s Security settings so the player only works on your site. YouTube, Vimeo and Loom links play inside lessons too.</p>
+      </Section>
     </div>
   );
 }

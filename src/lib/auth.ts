@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getDb } from "@/db";
-import { cohortInstructors, type Role, type User } from "@/db/schema";
+import { cohortInstructors, cohorts, type Role, type User } from "@/db/schema";
 import { users } from "@/db/schema";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession, verifySessionToken } from "./session";
 
@@ -62,5 +62,19 @@ export async function canTeach(user: User, cohortId: number): Promise<boolean> {
 export async function requireTeacher(cohortId: number): Promise<User> {
   const user = await requireRole("admin", "instructor");
   if (!(await canTeach(user, cohortId))) redirect("/teach?denied=1");
+  return user;
+}
+
+/** Admins, or instructors who teach at least one cohort of the course, can build its modules and lessons. */
+export async function requireCourseEditor(courseId: number): Promise<User> {
+  const user = await requireRole("admin", "instructor");
+  if (user.role === "admin") return user;
+  const rows = await (await getDb())
+    .select({ id: cohortInstructors.cohortId })
+    .from(cohortInstructors)
+    .innerJoin(cohorts, eq(cohorts.id, cohortInstructors.cohortId))
+    .where(and(eq(cohortInstructors.userId, user.id), eq(cohorts.courseId, courseId)))
+    .limit(1);
+  if (!rows.length) redirect("/teach?denied=1");
   return user;
 }

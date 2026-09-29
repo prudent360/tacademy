@@ -46,6 +46,10 @@ The student's place is confirmed by the gateway's **webhook** (and double-checke
 
 Vercel Cron calls it daily (`vercel.json`). The Hobby plan only allows daily crons, so `.github/workflows/reminders.yml` also calls it every 15 minutes for the one-hour reminders. Add the repository secrets `SITE_URL` and `CRON_SECRET` to enable it.
 
+## Self-paced video lessons
+
+Courses have modules and lessons that every cohort shares. Admins build them from the course page; instructors can add modules and lessons, publish modules and edit lessons for courses they teach from **Teach → cohort → Learning** (deleting stays with admins). Paste a Bunny Stream, YouTube, Vimeo or Loom link into a lesson's **Video link** and it plays inside the lesson. For Bunny Stream, add the library's token authentication key in **Settings → Video** to sign video links so they expire after six hours, then turn on embed token authentication in Bunny.
+
 ## XP and levels
 
 Students earn XP for what they do: 10 per lesson completed, 20 per class attended (10 if late), 25 per assignment submitted (+10 on time), up to 50 more by grade, 200 per course or internship completed and 100 per certificate. XP is calculated from those records (`src/lib/xp.ts`), so past activity counts and corrections to attendance or grades adjust it. Students see their level in the top bar, an XP panel on their dashboard and a leaderboard on each cohort page.

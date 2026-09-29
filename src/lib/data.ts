@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reminders: {},
   ai: {},
   seo: {},
+  video: {},
   updatedAt: new Date(0),
 };
 

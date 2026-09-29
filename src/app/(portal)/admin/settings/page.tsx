@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { AiTab, BrandingTab, SeoTab, EmailTab, GeneralTab, PaymentsTab, RemindersTab, TemplatesTab } from "@/components/admin/settings-tabs";
-import { CardIcon, ClockIcon, CogIcon, FileIcon, MailIcon, PaletteIcon, SearchIcon, SparkIcon } from "@/components/icons";
+import { AiTab, BrandingTab, SeoTab, VideoTab, EmailTab, GeneralTab, PaymentsTab, RemindersTab, TemplatesTab } from "@/components/admin/settings-tabs";
+import { CardIcon, ClockIcon, CogIcon, FileIcon, MailIcon, PaletteIcon, SearchIcon, SparkIcon, VideoIcon } from "@/components/icons";
 import { PageHeader, Tabs } from "@/components/ui";
 import { getSettings } from "@/lib/data";
 
@@ -14,6 +14,7 @@ const TABS = [
   { key: "templates", label: "Email templates", icon: FileIcon },
   { key: "reminders", label: "Reminders", icon: ClockIcon },
   { key: "seo", label: "SEO", icon: SearchIcon },
+  { key: "video", label: "Video", icon: VideoIcon },
   { key: "ai", label: "AI", icon: SparkIcon },
 ] as const;
 
@@ -34,6 +35,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {tab === "templates" && <TemplatesTab />}
       {tab === "reminders" && <RemindersTab />}
       {tab === "seo" && <SeoTab s={s} />}
+      {tab === "video" && <VideoTab s={s} />}
       {tab === "ai" && <AiTab s={s} />}
     </>
   );

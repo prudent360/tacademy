@@ -3,13 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { createAssignment, createSessions, deleteAnnouncement, postAnnouncement } from "@/app/actions/teach";
-import { setModuleRelease } from "@/app/actions/learning";
-import { ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton, Textarea } from "@/components/forms";
+import { createModule, setModulePublished, setModuleRelease } from "@/app/actions/learning";
+import { ModuleForm } from "@/components/admin/learning-forms";
+import { ActionButton, ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton, Textarea } from "@/components/forms";
 import { Markdown } from "@/components/markdown";
 import { SessionRow } from "@/components/portal/session-row";
 import { SessionFields } from "@/components/teach/session-fields";
 import { Badge, Card, DataTable, EmptyState, ModeBadge, PageHeader, Tabs } from "@/components/ui";
-import { BookIcon, CalendarIcon, ClipboardIcon, MegaphoneIcon, UsersIcon } from "@/components/icons";
+import { CalendarIcon, ClipboardIcon, MegaphoneIcon, UsersIcon } from "@/components/icons";
 import { getDb } from "@/db";
 import { announcements, assignments, attendance, classSessions, courseModules, enrollments, lessonProgress, lessons, moduleReleases, submissions } from "@/db/schema";
 import { requireTeacher } from "@/lib/auth";
@@ -102,7 +103,7 @@ export default async function TeachCohortPage({ params, searchParams }: { params
         </div>
       )}
 
-      {tab === "learning" && <LearningTab cohortId={id} learning={learning} students={students} />}
+      {tab === "learning" && <LearningTab cohortId={id} courseId={course.id} learning={learning} students={students} />}
 
       {tab === "assignments" && <AssignmentsTab cohortId={id} work={work} studentCount={students.length} timeZone={tz} learning={learning} />}
 
@@ -143,22 +144,59 @@ export default async function TeachCohortPage({ params, searchParams }: { params
   );
 }
 
-async function LearningTab({ cohortId, learning, students }: { cohortId: number; learning: { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect | null; releaseAt: Date | null }[]; students: Awaited<ReturnType<typeof getCohortStudents>> }) {
+async function LearningTab({ cohortId, courseId, learning, students }: { courseId: number; cohortId: number; learning: { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect | null; releaseAt: Date | null }[]; students: Awaited<ReturnType<typeof getCohortStudents>> }) {
   const published = learning.filter((row): row is { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect; releaseAt: Date | null } => Boolean(row.module.published && row.lesson?.published));
   const db = await getDb();
   const timeZone = (await getSettings()).timezone;
   const studentIds = students.map((student) => student.id);
   const lessonIds = published.map((row) => row.lesson.id);
   const completions = studentIds.length && lessonIds.length ? await db.select({ userId: enrollments.userId, lessonId: lessonProgress.lessonId }).from(lessonProgress).innerJoin(enrollments, eq(enrollments.id, lessonProgress.enrollmentId)).where(and(eq(enrollments.cohortId, cohortId), inArray(enrollments.userId, studentIds), inArray(lessonProgress.lessonId, lessonIds), sql`${lessonProgress.completedAt} is not null`)) : [];
-  if (!learning.length) return <EmptyState icon={BookIcon} title="No learning modules yet">An admin can add reusable modules and lessons from the course page.</EmptyState>;
-  return <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+  const modules = [...new Map(learning.map((row) => [row.module.id, row.module])).values()].sort((a, b) => a.position - b.position || a.id - b.id);
+  const lessonsOf = (moduleId: number) => learning.flatMap((row) => (row.module.id === moduleId && row.lesson ? [row.lesson] : [])).sort((a, b) => a.position - b.position || a.id - b.id);
+  const builder = (
+    <Card title="Modules and lessons" action={<span className="text-sm text-muted">Self-paced content for every cohort of this course</span>}>
+      <div className="flex flex-col gap-5">
+        {modules.map((module) => (
+          <div key={module.id} className="rounded-[5px] border border-edge">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-panel px-4 py-3">
+              <p className="flex items-center gap-2 font-semibold text-ink">{module.title} {!module.published && <Badge>Draft</Badge>}</p>
+              <span className="flex items-center gap-2">
+                <ActionButton action={setModulePublished.bind(null, module.id, !module.published)} pendingText="…">{module.published ? "Unpublish" : "Publish module"}</ActionButton>
+                <Link href={`/teach/lessons/new?module=${module.id}&cohort=${cohortId}`} className="inline-flex h-9 items-center rounded-lg bg-accent px-3 text-sm font-semibold text-white hover:bg-accent-dark">Add lesson</Link>
+              </span>
+            </div>
+            {lessonsOf(module.id).length ? (
+              <ul className="divide-y divide-line">
+                {lessonsOf(module.id).map((lesson) => (
+                  <li key={lesson.id}>
+                    <Link href={`/teach/lessons/${lesson.id}?cohort=${cohortId}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-panel">
+                      <span className="flex items-center gap-2 text-sm font-semibold text-ink">{lesson.title}{lesson.videoUrl && <Badge tone="cyan">Video</Badge>}{!lesson.published && <Badge>Draft</Badge>}</span>
+                      <span className="text-sm font-semibold text-accent">Edit</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="px-4 py-3 text-sm text-muted">No lessons yet.</p>}
+          </div>
+        ))}
+        {!modules.length && <p className="text-sm text-muted">Start by adding a module, such as “Week 1: Getting started”, then add video lessons to it.</p>}
+        <details className="rounded-[5px] border border-dashed border-edge-strong p-4" open={!modules.length}>
+          <summary className="cursor-pointer text-sm font-semibold text-accent">Add a module</summary>
+          <div className="mt-4"><ModuleForm action={createModule.bind(null, courseId)} cohortId={cohortId} /></div>
+        </details>
+        <p className="text-xs text-muted">Students see a module once it&apos;s published, and each lesson once it&apos;s published too. Only admins can delete modules and lessons.</p>
+      </div>
+    </Card>
+  );
+  if (!learning.length) return builder;
+  return <div className="flex flex-col gap-6">{builder}<div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
     <Card title="Published course outline">
       {published.length ? <div className="flex flex-col gap-5">{[...new Map(published.map((row) => [row.module.id, row.module])).values()].map((module) => { const releaseAt = learning.find((row) => row.module.id === module.id)?.releaseAt; return <section key={module.id} className="rounded-[5px] border border-edge p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-display font-bold text-ink">{module.title}</h3>{module.summary && <p className="mt-1 text-sm text-muted">{module.summary}</p>}</div><ActionForm action={setModuleRelease.bind(null, cohortId, module.id)} className="flex flex-wrap items-end gap-2"><Input label="Release date" name="releaseAt" type="datetime-local" defaultValue={toZonedInput(releaseAt, timeZone)} hint="Blank means immediately." /><SubmitButton>Set release</SubmitButton></ActionForm></div><ul className="mt-3 divide-y divide-line">{published.filter((row) => row.module.id === module.id).map((row) => { const n = completions.filter((item) => item.lessonId === row.lesson.id).length; return <li key={row.lesson.id} className="flex items-center justify-between gap-3 py-2.5 text-sm"><span className="font-medium text-ink">{row.lesson.title}</span><span className="text-muted">{n}/{students.length} complete</span></li>; })}</ul></section>; })}</div> : <p className="text-sm text-muted">Modules exist, but none have published lessons yet.</p>}
     </Card>
     <Card title="Student progress">
       {students.length ? <ul className="divide-y divide-line">{students.map((student) => { const done = new Set(completions.filter((item) => item.userId === student.id).map((item) => item.lessonId)).size; const pct = lessonIds.length ? Math.round((done / lessonIds.length) * 100) : 0; return <li key={student.id} className="py-3"><div className="mb-1 flex justify-between gap-3 text-sm"><span className="font-semibold text-ink">{student.name}</span><span className="text-muted">{done}/{lessonIds.length} · {pct}%</span></div><div className="h-2 overflow-hidden rounded-full bg-page"><div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} /></div></li>; })}</ul> : <p className="text-sm text-muted">No students are enrolled yet.</p>}
     </Card>
-  </div>;
+  </div></div>;
 }
 
 async function AssignmentsTab({ cohortId, work, studentCount, timeZone, learning }: { cohortId: number; work: (typeof assignments.$inferSelect)[]; studentCount: number; timeZone: string; learning: { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect | null; releaseAt: Date | null }[] }) {

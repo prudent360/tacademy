@@ -137,6 +137,8 @@ export type SeoSettings = {
   /** Social profile links, listed in the organisation's structured data. */
   socialProfiles: string[];
 };
+/** bunnyTokenKey is stored encrypted; when set, Bunny Stream lesson videos get expiring signed links. */
+export type VideoSettings = { bunnyTokenKey: string };
 export type ReminderSettings = { dayBefore: boolean; hourBefore: boolean; hourLeadMinutes: number; assignmentDue: boolean; assignmentLeadHours: number };
 export type Faq = { question: string; answer: string };
 export type Testimonial = { quote: string; name: string; role: string };
@@ -165,6 +167,7 @@ export const settings = pgTable("settings", {
   reminders: jsonb("reminders").$type<Partial<ReminderSettings>>().notNull().default({}),
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
   seo: jsonb("seo").$type<Partial<SeoSettings>>().notNull().default({}),
+  video: jsonb("video").$type<Partial<VideoSettings>>().notNull().default({}),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

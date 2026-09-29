@@ -15,6 +15,7 @@ import { idParam } from "@/lib/validation";
 import { askLessonBuddy } from "@/app/actions/ai";
 import { AiChat } from "@/components/ai/chat";
 import { aiAvailable } from "@/lib/ai";
+import { lessonVideo } from "@/lib/video";
 
 export const metadata: Metadata = { title: "Lesson" };
 
@@ -40,6 +41,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
   const next = all[index + 1]?.lesson;
   const [progress] = await db.select().from(lessonProgress).where(and(eq(lessonProgress.enrollmentId, found.enrollment.id), eq(lessonProgress.lessonId, lessonId)));
   const complete = Boolean(progress?.completedAt);
+  const video = await lessonVideo(found.lesson.videoUrl);
   const buddy = await aiAvailable("studyBuddy");
   return <>
     <LessonStart cohortId={cohortId} lessonId={lessonId} />
@@ -47,7 +49,16 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
       <main className="flex min-w-0 flex-col gap-6">
         {found.lesson.summary && <p className="text-lg leading-relaxed text-muted">{found.lesson.summary}</p>}
-        {found.lesson.videoUrl && <a href={found.lesson.videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 rounded-[5px] bg-navy px-5 py-4 text-white hover:bg-[#24354b]"><span><span className="block font-semibold">Watch lesson video</span><span className="text-sm text-white/65">Opens in a new tab</span></span><ExternalIcon className="size-5" /></a>}
+        {video ? (
+          <div className="flex flex-col gap-2">
+            <div className="relative aspect-video w-full overflow-hidden rounded-[5px] bg-navy shadow-[0_18px_40px_-28px_rgba(25,17,46,.6)]">
+              <iframe src={video.embedUrl} title={`Video: ${found.lesson.title}`} className="absolute inset-0 size-full border-0" loading="lazy" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />
+            </div>
+            {video.provider !== "bunny" && <a href={found.lesson.videoUrl!} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1.5 text-sm font-semibold text-muted hover:text-accent">Open video in a new tab <ExternalIcon className="size-3.5" /></a>}
+          </div>
+        ) : (
+          found.lesson.videoUrl && <a href={found.lesson.videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 rounded-[5px] bg-navy px-5 py-4 text-white hover:bg-[#24354b]"><span><span className="block font-semibold">Watch lesson video</span><span className="text-sm text-white/65">Opens in a new tab</span></span><ExternalIcon className="size-5" /></a>
+        )}
         <Card className="min-h-80">{found.lesson.content ? <Markdown size="lg">{found.lesson.content}</Markdown> : <p className="text-muted">This lesson has no written content yet.</p>}</Card>
         {buddy && (
           <Card title="Study buddy">

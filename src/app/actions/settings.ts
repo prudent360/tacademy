@@ -284,6 +284,17 @@ export async function saveSeo(_state: FormState, formData: FormData): Promise<Fo
   return { ok: "SEO settings saved." };
 }
 
+// ---------- Video ----------
+
+export async function saveVideoSettings(_state: FormState, formData: FormData): Promise<FormState> {
+  await requireRole("admin");
+  const value = String(formData.get("bunnyTokenKey") ?? "").trim();
+  if (value && !/^[A-Za-z0-9-]{16,100}$/.test(value)) return { error: "That doesn't look like a Bunny Stream token authentication key. Copy it from Stream → your library → Security." };
+  const current = (await getSettings()).video ?? {};
+  await update({ video: { bunnyTokenKey: secretField(formData, "bunnyTokenKey", current.bunnyTokenKey) } });
+  return { ok: "Video settings saved." };
+}
+
 // ---------- Reminders ----------
 
 export async function saveReminders(_state: FormState, formData: FormData): Promise<FormState> {
