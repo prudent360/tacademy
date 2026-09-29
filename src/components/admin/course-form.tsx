@@ -3,6 +3,7 @@ import { draftCourseText } from "@/app/actions/ai";
 import { AiDraftButton } from "@/components/ai/draft-button";
 import type { Course } from "@/db/schema";
 import type { FormState } from "@/lib/validation";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 export function CourseForm({ action, course, ai = false }: { action: (state: FormState, formData: FormData) => Promise<FormState>; course?: Course; ai?: boolean }) {
   return (
@@ -13,7 +14,7 @@ export function CourseForm({ action, course, ai = false }: { action: (state: For
       </div>
       <Select label="Type" name="kind" defaultValue={course?.kind ?? "course"} options={[{ value: "course", label: "Course" }, { value: "internship", label: "Internship programme" }]} hint="Internships are listed on their own Internships page. Run them with cohorts like a course; on each cohort you can let academy graduates join free." className="max-w-[420px]" />
       <Textarea label="Summary" name="summary" defaultValue={course?.summary} rows={2} required hint="One or two sentences for course cards and search results." />
-      <Textarea label="Full description" name="description" defaultValue={course?.description} rows={10} hint="Markdown: ## headings, - lists, **bold**, links. Shown on the course page." />
+      <RichTextEditor label="Full description" name="description" defaultValue={course?.description} minHeight={280} placeholder="Describe the course: who it's for, what they'll do and what they'll leave with." hint="Shown on the course page." />
       {ai && <AiDraftButton draft={draftCourseText.bind(null, "description")} label="Draft description with AI" />}
       <Textarea label="Learning outcomes" name="outcomes" defaultValue={course?.outcomes.join("\n")} rows={5} hint="One per line." />
       {ai && <AiDraftButton draft={draftCourseText.bind(null, "outcomes")} label="Draft outcomes with AI" />}

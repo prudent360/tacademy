@@ -62,6 +62,10 @@ Students earn XP for what they do: 10 per lesson completed, 20 per class attende
 
 Optional features powered by OpenAI or Anthropic (Claude), chosen and connected in **Settings → AI** with that provider's API key (or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`): a public course advisor, a study buddy on each lesson, a grading assistant for instructors, and "Draft with AI" for course copy, announcements and email templates. People review every draft before it is saved or sent. Requests are capped per person per hour; set a monthly spending limit in your provider's dashboard too.
 
+## Rich text editing
+
+Long text fields (course descriptions, lesson content, assignment instructions, announcements and grading feedback) use a formatting toolbar editor (`src/components/rich-text-editor.tsx`, built on Tiptap). It reads and writes Markdown, so content is stored and displayed exactly as before and AI drafts drop straight in; a "Markdown" button shows the source. Email templates stay plain text because of their `{{placeholders}}` and `[[Button|url]]` lines.
+
 ## SEO
 
 **Settings → SEO** controls the home page title and description, the title pattern for other pages, page descriptions, the social share image, the X handle, Google and Bing verification codes, social profile links (added to the organisation's structured data) and a switch that hides the whole site from search engines. Each course can override its search title and description under "Search engines"; its cover image is used when it's shared. The sitemap is at `/sitemap.xml`.

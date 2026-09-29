@@ -1,6 +1,7 @@
 import { ActionForm, Checkbox, Input, SubmitButton, Textarea } from "@/components/forms";
 import type { LearningModule, Lesson } from "@/db/schema";
 import type { FormState } from "@/lib/validation";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 type Action = (state: FormState, formData: FormData) => Promise<FormState>;
 
@@ -24,7 +25,7 @@ export function LessonForm({ action, lesson, cohortId }: { action: Action; lesso
       {cohortId && <input type="hidden" name="cohort" value={cohortId} />}
       <Input label="Lesson title" name="title" defaultValue={lesson?.title} required />
       <Textarea label="Summary" name="summary" defaultValue={lesson?.summary} rows={2} hint="A short description shown in the module outline." />
-      <Textarea label="Lesson content" name="content" defaultValue={lesson?.content} rows={18} hint="Markdown supported: headings, lists, links, tables and code." />
+      <RichTextEditor label="Lesson content" name="content" defaultValue={lesson?.content} minHeight={360} placeholder="Write the lesson: explanations, steps, examples and code." hint="Students read this under the video. Quiz questions can be generated from it with AI." />
       <div className="grid gap-5 md:grid-cols-2">
         <Input label="Video link" name="videoUrl" type="url" defaultValue={lesson?.videoUrl ?? ""} placeholder="https://player.mediadelivery.net/embed/…" hint="Plays inside the lesson. Bunny Stream: open the video and copy its embed or play link. YouTube, Vimeo and Loom links work too." />
         <Input label="Resource link" name="resourceUrl" type="url" defaultValue={lesson?.resourceUrl ?? ""} placeholder="https://…" hint="A worksheet, slides, repository or further reading." />

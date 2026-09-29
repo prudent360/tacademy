@@ -3,7 +3,7 @@ import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { deleteAssignment, updateAssignment } from "@/app/actions/teach";
-import { ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton, Textarea } from "@/components/forms";
+import { ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton } from "@/components/forms";
 import { Badge, Card, DataTable, Notice, PageHeader, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
 import { assignments, courseModules, lessons, submissions, users } from "@/db/schema";
@@ -11,6 +11,7 @@ import { requireTeacher } from "@/lib/auth";
 import { getCohortStudents, getCohortWithCourse, getSettings } from "@/lib/data";
 import { formatDateTime, toZonedInput } from "@/lib/time";
 import { idParam } from "@/lib/validation";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 export const metadata: Metadata = { title: "Assignment" };
 
@@ -69,7 +70,7 @@ export default async function TeachAssignmentPage({ params, searchParams }: { pa
         <Card title="Edit assignment">
           <ActionForm action={updateAssignment.bind(null, id)}>
             <Input label="Title" name="title" defaultValue={assignment.title} required />
-            <Textarea label="Instructions" name="instructions" rows={8} defaultValue={assignment.instructions} hint="Markdown supported." />
+            <RichTextEditor label="Instructions" name="instructions" defaultValue={assignment.instructions} minHeight={220} />
             <Select label="Place after lesson" name="lessonId" defaultValue={assignment.lessonId ?? ""} hint="Optional. Linked assignments appear in the cohort's learning sequence." options={[{ value: "", label: "Not linked to a lesson" }, ...courseLessons.map((row) => ({ value: String(row.lesson.id), label: `${row.module.title} — ${row.lesson.title}` }))]} />
             <FileField label="Brief or resources" name="attachment" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.csv,.txt,image/*" current={assignment.attachmentUrl} removeName="removeAttachment" />
             <div className="grid gap-5 sm:grid-cols-2">

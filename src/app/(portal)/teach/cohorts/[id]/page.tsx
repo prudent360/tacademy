@@ -5,7 +5,7 @@ import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { createAssignment, createSessions, deleteAnnouncement, postAnnouncement } from "@/app/actions/teach";
 import { createModule, setModulePublished, setModuleRelease } from "@/app/actions/learning";
 import { ModuleForm } from "@/components/admin/learning-forms";
-import { ActionButton, ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton, Textarea } from "@/components/forms";
+import { ActionButton, ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton } from "@/components/forms";
 import { Markdown } from "@/components/markdown";
 import { SessionRow } from "@/components/portal/session-row";
 import { SessionFields } from "@/components/teach/session-fields";
@@ -21,6 +21,7 @@ import { draftAnnouncement } from "@/app/actions/ai";
 import { AiDraftButton } from "@/components/ai/draft-button";
 import { aiAvailable } from "@/lib/ai";
 import { cohortQuizReport } from "@/lib/quiz";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 export const metadata: Metadata = { title: "Cohort" };
 
@@ -115,7 +116,7 @@ export default async function TeachCohortPage({ params, searchParams }: { params
           <Card title="Post an announcement">
             <ActionForm action={postAnnouncement.bind(null, id)} resetOnSuccess>
               <Input label="Title" name="title" required />
-              <Textarea label="Message" name="body" rows={6} hint="Markdown supported. Jot a few notes and let AI write the message, if you like." />
+              <RichTextEditor label="Message" name="body" minHeight={160} hint="Jot a few notes and let AI write the message, if you like." />
               {aiWriting && <AiDraftButton draft={draftAnnouncement.bind(null, id)} label="Write it with AI" />}
               <Checkbox label="Also email every student" name="email" defaultChecked />
               <SubmitButton pendingText="Posting…">Post</SubmitButton>
@@ -252,7 +253,7 @@ async function AssignmentsTab({ cohortId, work, studentCount, timeZone, learning
       <Card title="New assignment">
         <ActionForm action={createAssignment.bind(null, cohortId)}>
           <Input label="Title" name="title" required />
-          <Textarea label="Instructions" name="instructions" rows={7} hint="Markdown supported: headings, lists, links, code." />
+          <RichTextEditor label="Instructions" name="instructions" minHeight={200} placeholder="What should students do, and how will it be assessed?" />
           <Select label="Place after lesson" name="lessonId" defaultValue="" hint="Optional. This puts the cohort assignment into the reusable learning sequence." options={[{ value: "", label: "Not linked to a lesson" }, ...learning.filter((row) => row.lesson).map((row) => ({ value: String(row.lesson!.id), label: `${row.module.title} — ${row.lesson!.title}` }))]} />
           <FileField label="Brief or resources (optional)" name="attachment" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.csv,.txt,image/*" removeName="removeAttachment" />
           <div className="grid gap-5 sm:grid-cols-2">
