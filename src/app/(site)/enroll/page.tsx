@@ -54,7 +54,7 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
   const [phoneDial, ...phoneRest] = user?.phone.includes(" ") ? user.phone.split(" ") : [];
 
   return (
-    <div data-dark-hero className="relative bg-navy">
+    <div data-under-header className="relative bg-navy">
       <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
         <Image src="/images/enrol-classroom.webp" alt="" fill priority sizes="100vw" className="object-cover object-[center_30%]" />
         {/* Darkens the photo behind the heading, then fades into brand purple behind the form. */}
