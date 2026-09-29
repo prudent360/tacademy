@@ -135,7 +135,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-muted">Earn XP by completing lessons ({XP.lesson}), attending classes ({XP.present}), submitting assignments ({XP.submitted}+) and finishing courses ({XP.completed}).</p>}
+          ) : <p className="text-sm text-muted">Earn XP by completing lessons ({XP.lesson}), attending classes ({XP.present}), submitting assignments ({XP.submitted}+), passing quizzes ({XP.quizPassed}+) and finishing courses ({XP.completed}).</p>}
         </div>
       </Panel>
 

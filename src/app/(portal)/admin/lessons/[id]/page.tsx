@@ -8,6 +8,7 @@ import { Card, Notice, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
 import { courseModules, courses, lessons } from "@/db/schema";
 import { idParam } from "@/lib/validation";
+import { QuizEditor } from "@/components/quiz/quiz-editor";
 
 export const metadata: Metadata = { title: "Edit lesson" };
 
@@ -21,6 +22,7 @@ export default async function EditLessonPage({ params, searchParams }: { params:
     <PageHeader back={{ href: `/admin/modules/${found.module.id}`, label: found.module.title }} title={found.lesson.title} description={found.course.title} />
     {created && <Notice>Lesson created. Add the content and publish it when it is ready.</Notice>}
     <Card><LessonForm action={updateLesson.bind(null, id)} lesson={found.lesson} /></Card>
+    <QuizEditor lessonId={id} />
     <div className="flex justify-end"><DeleteButton action={deleteLesson.bind(null, id)} label="Delete lesson" /></div>
   </>;
 }

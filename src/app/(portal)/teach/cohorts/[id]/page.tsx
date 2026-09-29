@@ -20,6 +20,7 @@ import { idParam } from "@/lib/validation";
 import { draftAnnouncement } from "@/app/actions/ai";
 import { AiDraftButton } from "@/components/ai/draft-button";
 import { aiAvailable } from "@/lib/ai";
+import { cohortQuizReport } from "@/lib/quiz";
 
 export const metadata: Metadata = { title: "Cohort" };
 
@@ -189,7 +190,27 @@ async function LearningTab({ cohortId, courseId, learning, students }: { courseI
     </Card>
   );
   if (!learning.length) return builder;
-  return <div className="flex flex-col gap-6">{builder}<div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+  const quizReport = await cohortQuizReport(cohortId, courseId);
+  const quizCard = quizReport.length > 0 && (
+    <Card title="Quiz results" padded={false}>
+      <ul className="divide-y divide-line">
+        {quizReport.map((row) => (
+          <li key={row.quizId} className="flex flex-col gap-1.5 px-5 py-4 md:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Link href={`/teach/lessons/${row.lessonId}?cohort=${cohortId}`} className="font-semibold text-ink hover:text-accent">{row.lessonTitle}</Link>
+              <span className="flex flex-wrap gap-2 text-sm">
+                <span className="text-muted">{row.attempted}/{students.length} attempted</span>
+                <Badge tone={row.attempted && row.passed === row.attempted ? "green" : "accent"}>{row.passed} passed</Badge>
+                {row.averageBest !== null && <Badge>avg best {row.averageBest}%</Badge>}
+              </span>
+            </div>
+            {row.hardest && <p className="text-sm text-muted">Most missed ({row.hardest.percentCorrect}% correct): <span className="text-body">{row.hardest.prompt}</span></p>}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+  return <div className="flex flex-col gap-6">{builder}{quizCard}<div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
     <Card title="Published course outline">
       {published.length ? <div className="flex flex-col gap-5">{[...new Map(published.map((row) => [row.module.id, row.module])).values()].map((module) => { const releaseAt = learning.find((row) => row.module.id === module.id)?.releaseAt; return <section key={module.id} className="rounded-[5px] border border-edge p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-display font-bold text-ink">{module.title}</h3>{module.summary && <p className="mt-1 text-sm text-muted">{module.summary}</p>}</div><ActionForm action={setModuleRelease.bind(null, cohortId, module.id)} className="flex flex-wrap items-end gap-2"><Input label="Release date" name="releaseAt" type="datetime-local" defaultValue={toZonedInput(releaseAt, timeZone)} hint="Blank means immediately." /><SubmitButton>Set release</SubmitButton></ActionForm></div><ul className="mt-3 divide-y divide-line">{published.filter((row) => row.module.id === module.id).map((row) => { const n = completions.filter((item) => item.lessonId === row.lesson.id).length; return <li key={row.lesson.id} className="flex items-center justify-between gap-3 py-2.5 text-sm"><span className="font-medium text-ink">{row.lesson.title}</span><span className="text-muted">{n}/{students.length} complete</span></li>; })}</ul></section>; })}</div> : <p className="text-sm text-muted">Modules exist, but none have published lessons yet.</p>}
     </Card>

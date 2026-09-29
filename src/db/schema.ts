@@ -189,6 +189,8 @@ export const courses = pgTable("courses", {
   certificateMinAttendance: integer("certificate_min_attendance").notNull().default(70),
   certificateMinAssignments: integer("certificate_min_assignments").notNull().default(80),
   certificateMinScore: integer("certificate_min_score").notNull().default(50),
+  /** Average of each quiz's best score; 0 means quizzes don't count towards the certificate. */
+  certificateMinQuizScore: integer("certificate_min_quiz_score").notNull().default(0),
   imageUrl: text("image_url"),
   /** Full-width photo behind the course page hero; the hero stays white without one. */
   heroImageUrl: text("hero_image_url"),
@@ -317,6 +319,55 @@ export const lessonProgress = pgTable("lesson_progress", {
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 }, (t) => [uniqueIndex("lesson_progress_enrollment_lesson_idx").on(t.enrollmentId, t.lessonId), index("lesson_progress_enrollment_idx").on(t.enrollmentId)]);
+
+export const QUESTION_KINDS = ["single", "multiple", "truefalse"] as const;
+export type QuestionKind = (typeof QUESTION_KINDS)[number];
+
+/** An automatically marked quiz at the end of a lesson. */
+export const quizzes = pgTable("quizzes", {
+  id: serial("id").primaryKey(),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id, { onDelete: "cascade" }).unique(),
+  passPercent: integer("pass_percent").notNull().default(70),
+  /** Null means unlimited attempts. */
+  maxAttempts: integer("max_attempts"),
+  /** Null means no time limit. */
+  timeLimitMinutes: integer("time_limit_minutes"),
+  shuffle: boolean("shuffle").notNull().default(true),
+  /** Students must pass before the lesson counts as complete; passing completes it. */
+  requiredToComplete: boolean("required_to_complete").notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const quizQuestions = pgTable("quiz_questions", {
+  id: serial("id").primaryKey(),
+  quizId: integer("quiz_id").notNull().references(() => quizzes.id, { onDelete: "cascade" }),
+  kind: text("kind").$type<QuestionKind>().notNull().default("single"),
+  prompt: text("prompt").notNull(),
+  options: jsonb("options").$type<string[]>().notNull().default([]),
+  /** Indexes into options. */
+  correct: jsonb("correct").$type<number[]>().notNull().default([]),
+  explanation: text("explanation").notNull().default(""),
+  position: integer("position").notNull().default(0),
+  createdAt: createdAt(),
+}, (t) => [index("quiz_questions_quiz_idx").on(t.quizId, t.position)]);
+
+/** One try at a quiz. The question order is fixed when it starts, so shuffled quizzes mark consistently. */
+export const quizAttempts = pgTable("quiz_attempts", {
+  id: serial("id").primaryKey(),
+  quizId: integer("quiz_id").notNull().references(() => quizzes.id, { onDelete: "cascade" }),
+  enrollmentId: integer("enrollment_id").notNull().references(() => enrollments.id, { onDelete: "cascade" }),
+  questionOrder: jsonb("question_order").$type<number[]>().notNull().default([]),
+  /** Chosen option indexes, keyed by question id. */
+  answers: jsonb("answers").$type<Record<string, number[]>>().notNull().default({}),
+  correctCount: integer("correct_count").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  /** Percentage, 0–100; null until submitted. */
+  score: integer("score"),
+  passed: boolean("passed").notNull().default(false),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+}, (t) => [index("quiz_attempts_enrollment_idx").on(t.enrollmentId, t.quizId)]);
 
 /** Verifiable completion credentials. One certificate can be issued per enrolment. */
 export const certificates = pgTable("certificates", {
@@ -449,6 +500,9 @@ export type Cohort = typeof cohorts.$inferSelect;
 export type LearningModule = typeof courseModules.$inferSelect;
 export type Lesson = typeof lessons.$inferSelect;
 export type LessonProgress = typeof lessonProgress.$inferSelect;
+export type Quiz = typeof quizzes.$inferSelect;
+export type QuizQuestion = typeof quizQuestions.$inferSelect;
+export type QuizAttempt = typeof quizAttempts.$inferSelect;
 export type ModuleRelease = typeof moduleReleases.$inferSelect;
 export type ClassSession = typeof classSessions.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;

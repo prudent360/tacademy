@@ -5,9 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons, moduleReleases } from "@/db/schema";
+import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons, moduleReleases, quizzes } from "@/db/schema";
 import { requireCourseEditor, requireRole, requireTeacher, requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
+import { quizStatus } from "@/lib/quiz";
 import { fromZonedInput } from "@/lib/time";
 import { firstError, formValues, optionalUrl, required, sortValue, text, type FormState } from "@/lib/validation";
 
@@ -145,6 +146,11 @@ export async function setLessonComplete(cohortId: number, lessonId: number, comp
     .leftJoin(moduleReleases, and(eq(moduleReleases.cohortId, cohorts.id), eq(moduleReleases.moduleId, courseModules.id)))
     .where(and(eq(enrollments.userId, user.id), eq(enrollments.cohortId, cohortId), eq(lessons.id, lessonId), eq(courseModules.published, true), eq(lessons.published, true)));
   if (!allowed || (allowed.releaseAt && allowed.releaseAt > new Date())) return;
+  // A lesson with a required quiz is completed by passing the quiz, not by the button.
+  if (complete) {
+    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.lessonId, lessonId));
+    if (quiz?.requiredToComplete && !(await quizStatus(allowed.enrollmentId, quiz)).passed) return;
+  }
   await db.insert(lessonProgress).values({ enrollmentId: allowed.enrollmentId, lessonId, completedAt: complete ? new Date() : null })
     .onConflictDoUpdate({ target: [lessonProgress.enrollmentId, lessonProgress.lessonId], set: { completedAt: complete ? new Date() : null } });
   revalidatePath(`/dashboard/cohorts/${cohortId}/learn`, "layout");

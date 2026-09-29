@@ -2,13 +2,16 @@ import "server-only";
 import { and, eq, lt } from "drizzle-orm";
 import { getDb } from "@/db";
 import { assignments, attendance, classSessions, cohorts, courses, enrollments, submissions } from "@/db/schema";
+import { courseQuizAverage } from "./quiz";
 
 export type CertificateEligibility = {
   eligible: boolean;
   attendance: number;
   assignments: number;
   averageScore: number;
-  requirements: { attendance: number; assignments: number; averageScore: number };
+  /** Average of the best score on each course quiz; null when the course has no quizzes. */
+  quizScore: number | null;
+  requirements: { attendance: number; assignments: number; averageScore: number; quizScore: number };
   reasons: string[];
 };
 
@@ -37,7 +40,8 @@ export async function certificateEligibility(enrollmentId: number): Promise<Cert
     return (s.score! / max) * 100;
   });
   const averageScore = work.length ? (scored.length ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length) : 0) : 100;
-  const requirements = { attendance: course.certificateMinAttendance, assignments: course.certificateMinAssignments, averageScore: course.certificateMinScore };
-  const reasons = [attendancePct < requirements.attendance && `Attendance is ${attendancePct}% (minimum ${requirements.attendance}%).`, assignmentPct < requirements.assignments && `Assignment completion is ${assignmentPct}% (minimum ${requirements.assignments}%).`, averageScore < requirements.averageScore && `Average score is ${averageScore}% (minimum ${requirements.averageScore}%).`].filter(Boolean) as string[];
-  return { eligible: course.certificateEnabled && reasons.length === 0, attendance: attendancePct, assignments: assignmentPct, averageScore, requirements, reasons: course.certificateEnabled ? reasons : ["Certificates are disabled for this course."] };
+  const quizScore = await courseQuizAverage(enrollment.id, course.id);
+  const requirements = { attendance: course.certificateMinAttendance, assignments: course.certificateMinAssignments, averageScore: course.certificateMinScore, quizScore: course.certificateMinQuizScore };
+  const reasons = [attendancePct < requirements.attendance && `Attendance is ${attendancePct}% (minimum ${requirements.attendance}%).`, assignmentPct < requirements.assignments && `Assignment completion is ${assignmentPct}% (minimum ${requirements.assignments}%).`, averageScore < requirements.averageScore && `Average score is ${averageScore}% (minimum ${requirements.averageScore}%).`, requirements.quizScore > 0 && quizScore !== null && quizScore < requirements.quizScore && `Average quiz score is ${quizScore}% (minimum ${requirements.quizScore}%).`].filter(Boolean) as string[];
+  return { eligible: course.certificateEnabled && reasons.length === 0, attendance: attendancePct, assignments: assignmentPct, averageScore, quizScore, requirements, reasons: course.certificateEnabled ? reasons : ["Certificates are disabled for this course."] };
 }

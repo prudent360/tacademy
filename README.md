@@ -50,9 +50,13 @@ Vercel Cron calls it daily (`vercel.json`). The Hobby plan only allows daily cro
 
 Courses have modules and lessons that every cohort shares. Admins build them from the course page; instructors can add modules and lessons, publish modules and edit lessons for courses they teach from **Teach → cohort → Learning** (deleting stays with admins). Paste a Bunny Stream, YouTube, Vimeo or Loom link into a lesson's **Video link** and it plays inside the lesson. For Bunny Stream, add the library's token authentication key in **Settings → Video** to sign video links so they expire after six hours, then turn on embed token authentication in Bunny.
 
+## Quizzes
+
+Any lesson can have an automatically marked quiz (single-choice, select-all-that-apply and true/false questions), added from the lesson's edit page by admins or the course's instructors, who can also generate questions from the lesson content with AI. Each quiz has a pass mark, optional attempt and time limits, question shuffling, and an option to require passing before the lesson counts as complete (passing then completes it). Correct answers are shown once a student passes or runs out of attempts. Courses can require a minimum average quiz score for the certificate, passing a quiz earns XP, and instructors see results per quiz on the cohort's Learning tab.
+
 ## XP and levels
 
-Students earn XP for what they do: 10 per lesson completed, 20 per class attended (10 if late), 25 per assignment submitted (+10 on time), up to 50 more by grade, 200 per course or internship completed and 100 per certificate. XP is calculated from those records (`src/lib/xp.ts`), so past activity counts and corrections to attendance or grades adjust it. Students see their level in the top bar, an XP panel on their dashboard and a leaderboard on each cohort page.
+Students earn XP for what they do: 10 per lesson completed, 20 per class attended (10 if late), 25 per assignment submitted (+10 on time), up to 50 more by grade, 200 per course or internship completed, 100 per certificate, and 30 per quiz passed (50 for a perfect score). XP is calculated from those records (`src/lib/xp.ts`), so past activity counts and corrections to attendance or grades adjust it. Students see their level in the top bar, an XP panel on their dashboard and a leaderboard on each cohort page.
 
 ## AI assistant
 

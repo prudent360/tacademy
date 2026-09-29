@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, inArray, isNotNull, isNull, type SQL } from "drizzle-orm";
 import { getDb } from "@/db";
-import { assignments, attendance, certificates, classSessions, cohorts, courses, enrollments, lessonProgress, lessons, submissions, users } from "@/db/schema";
+import { assignments, attendance, certificates, classSessions, cohorts, courses, enrollments, lessonProgress, lessons, quizAttempts, quizzes, submissions, users } from "@/db/schema";
 
 /**
  * XP is worked out from what students have actually done (lessons, attendance, assignments,
@@ -18,6 +18,9 @@ export const XP = {
   graded: 50,
   completed: 200,
   certificate: 100,
+  /** Once per quiz, for the best attempt. */
+  quizPassed: 30,
+  quizPerfect: 20,
 } as const;
 
 export type XpItem = { userId: number; cohortId: number; points: number; label: string; at: Date };
@@ -33,7 +36,7 @@ function scoped(userColumn: Parameters<typeof eq>[0], cohortColumn: Parameters<t
 
 async function xpItems(scope: Scope): Promise<XpItem[]> {
   const db = await getDb();
-  const [lessonRows, attendanceRows, submissionRows, completionRows, certificateRows] = await Promise.all([
+  const [lessonRows, attendanceRows, submissionRows, completionRows, certificateRows, quizRows] = await Promise.all([
     db.select({ userId: enrollments.userId, cohortId: enrollments.cohortId, title: lessons.title, at: lessonProgress.completedAt })
       .from(lessonProgress)
       .innerJoin(enrollments, eq(enrollments.id, lessonProgress.enrollmentId))
@@ -58,6 +61,12 @@ async function xpItems(scope: Scope): Promise<XpItem[]> {
       .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
       .innerJoin(courses, eq(courses.id, cohorts.courseId))
       .where(and(isNull(certificates.revokedAt), ...scoped(enrollments.userId, enrollments.cohortId, scope))),
+    db.select({ userId: enrollments.userId, cohortId: enrollments.cohortId, quizId: quizAttempts.quizId, title: lessons.title, score: quizAttempts.score, passed: quizAttempts.passed, at: quizAttempts.submittedAt })
+      .from(quizAttempts)
+      .innerJoin(enrollments, eq(enrollments.id, quizAttempts.enrollmentId))
+      .innerJoin(quizzes, eq(quizzes.id, quizAttempts.quizId))
+      .innerJoin(lessons, eq(lessons.id, quizzes.lessonId))
+      .where(and(isNotNull(quizAttempts.submittedAt), eq(quizAttempts.passed, true), ...scoped(enrollments.userId, enrollments.cohortId, scope))),
   ]);
 
   const items: XpItem[] = [];
@@ -72,6 +81,14 @@ async function xpItems(scope: Scope): Promise<XpItem[]> {
     }
   }
   for (const r of completionRows) items.push({ userId: r.userId, cohortId: r.cohortId, points: XP.completed, label: `Completed ${r.kind === "internship" ? "internship" : "course"}: ${r.title}`, at: r.at ?? r.activatedAt ?? r.createdAt });
+  // Each passed quiz counts once, from the best attempt (the earliest one at that score).
+  const bestQuiz = new Map<string, (typeof quizRows)[number]>();
+  for (const r of quizRows) {
+    const key = `${r.userId}:${r.cohortId}:${r.quizId}`;
+    const held = bestQuiz.get(key);
+    if (!held || (r.score ?? 0) > (held.score ?? 0) || ((r.score ?? 0) === (held.score ?? 0) && r.at! < held.at!)) bestQuiz.set(key, r);
+  }
+  for (const r of bestQuiz.values()) items.push({ userId: r.userId, cohortId: r.cohortId, points: XP.quizPassed + (r.score === 100 ? XP.quizPerfect : 0), label: `${r.score === 100 ? "Aced" : "Passed"} quiz: ${r.title}`, at: r.at! });
   for (const r of certificateRows) items.push({ userId: r.userId, cohortId: r.cohortId, points: XP.certificate, label: `Earned certificate: ${r.title}`, at: r.at });
   return items.sort((a, b) => b.at.getTime() - a.at.getTime());
 }

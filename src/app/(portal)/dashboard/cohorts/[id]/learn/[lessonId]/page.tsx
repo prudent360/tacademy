@@ -9,13 +9,15 @@ import { Markdown } from "@/components/markdown";
 import { LessonStart } from "@/components/portal/lesson-start";
 import { Badge, Card, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
-import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons, moduleReleases } from "@/db/schema";
+import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons, moduleReleases, quizQuestions, quizzes } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { idParam } from "@/lib/validation";
 import { askLessonBuddy } from "@/app/actions/ai";
 import { AiChat } from "@/components/ai/chat";
 import { aiAvailable } from "@/lib/ai";
 import { lessonVideo } from "@/lib/video";
+import { startQuiz } from "@/app/actions/quiz";
+import { quizStatus } from "@/lib/quiz";
 
 export const metadata: Metadata = { title: "Lesson" };
 
@@ -43,6 +45,11 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
   const complete = Boolean(progress?.completedAt);
   const video = await lessonVideo(found.lesson.videoUrl);
   const buddy = await aiAvailable("studyBuddy");
+  const [quiz] = await db.select().from(quizzes).where(eq(quizzes.lessonId, lessonId));
+  const quizQuestionCount = quiz ? (await db.select({ id: quizQuestions.id }).from(quizQuestions).where(eq(quizQuestions.quizId, quiz.id))).length : 0;
+  const quizState = quiz && quizQuestionCount ? await quizStatus(found.enrollment.id, quiz) : null;
+  // A required quiz decides completion: passing it completes the lesson.
+  const quizBlocks = Boolean(quiz?.requiredToComplete && quizState && !quizState.passed && !complete);
   return <>
     <LessonStart cohortId={cohortId} lessonId={lessonId} />
     <PageHeader back={{ href: `/dashboard/cohorts/${cohortId}/learn`, label: "Course learning" }} title={found.lesson.title} description={<span className="flex items-center gap-2">{found.module.title}<Badge><ClockIcon className="size-3.5" /> {found.lesson.estimatedMinutes} min</Badge></span>} />
@@ -60,6 +67,19 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
           found.lesson.videoUrl && <a href={found.lesson.videoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-4 rounded-[5px] bg-navy px-5 py-4 text-white hover:bg-[#24354b]"><span><span className="block font-semibold">Watch lesson video</span><span className="text-sm text-white/65">Opens in a new tab</span></span><ExternalIcon className="size-5" /></a>
         )}
         <Card className="min-h-80">{found.lesson.content ? <Markdown size="lg">{found.lesson.content}</Markdown> : <p className="text-muted">This lesson has no written content yet.</p>}</Card>
+        {quiz && quizState && (
+          <Card title="Quiz">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <p className="text-body">{quizQuestionCount} question{quizQuestionCount === 1 ? "" : "s"} · pass mark {quiz.passPercent}%{quiz.timeLimitMinutes ? ` · ${quiz.timeLimitMinutes} min` : ""}{quiz.requiredToComplete ? " · required to complete the lesson" : ""}</p>
+                <p className="text-sm text-muted">{quizState.attemptsUsed ? <>Best score {quizState.best}% {quizState.passed ? <Badge tone="green">Passed</Badge> : <Badge tone="amber">Not passed yet</Badge>}</> : "Not attempted yet"}{quizState.attemptsLeft !== null && ` · ${quizState.attemptsLeft} attempt${quizState.attemptsLeft === 1 ? "" : "s"} left`}</p>
+              </div>
+              {quizState.attemptsLeft === 0
+                ? <Link href={`/dashboard/cohorts/${cohortId}/learn/${lessonId}/quiz`} className="inline-flex h-10 items-center rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page">View results</Link>
+                : <form action={startQuiz.bind(null, cohortId, lessonId)}><button type="submit" className={`inline-flex h-10 cursor-pointer items-center rounded-lg px-4 text-sm font-semibold ${quizState.passed ? "border border-edge-strong bg-white text-ink hover:bg-page" : "bg-accent text-white hover:bg-accent-dark"}`}>{quizState.passed ? "Retake quiz" : quizState.attemptsUsed ? "Try again" : "Start quiz"}</button></form>}
+            </div>
+          </Card>
+        )}
         {buddy && (
           <Card title="Study buddy">
             <AiChat
@@ -73,7 +93,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
         {found.lesson.resourceUrl && <a href={found.lesson.resourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-[5px] border border-edge bg-white p-4 font-semibold text-accent hover:border-accent-muted"><LinkIcon className="size-5" /> {found.lesson.resourceLabel || "Open lesson resource"}<ExternalIcon className="ml-auto size-4" /></a>}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
           {previous ? <Link href={`/dashboard/cohorts/${cohortId}/learn/${previous.id}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page"><ArrowLeft className="size-4" /> Previous</Link> : <span />}
-          {complete ? <ActionButton action={setLessonComplete.bind(null, cohortId, lessonId, false)} doneText="Marked incomplete"><CheckCircleIcon className="size-4 text-emerald-700" /> Completed</ActionButton> : <ActionButton action={setLessonComplete.bind(null, cohortId, lessonId, true)} variant="primary" doneText="Lesson completed"><CheckCircleIcon className="size-4" /> Mark complete</ActionButton>}
+          {quizBlocks ? <span className="text-sm font-semibold text-amber-800">Pass the quiz to complete this lesson</span> : complete ? <ActionButton action={setLessonComplete.bind(null, cohortId, lessonId, false)} doneText="Marked incomplete"><CheckCircleIcon className="size-4 text-emerald-700" /> Completed</ActionButton> : <ActionButton action={setLessonComplete.bind(null, cohortId, lessonId, true)} variant="primary" doneText="Lesson completed"><CheckCircleIcon className="size-4" /> Mark complete</ActionButton>}
           {next ? <Link href={`/dashboard/cohorts/${cohortId}/learn/${next.id}`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page">Next <ArrowRight className="size-4" /></Link> : <Link href={`/dashboard/cohorts/${cohortId}/learn`} className="text-sm font-semibold text-accent">Back to course</Link>}
         </div>
       </main>

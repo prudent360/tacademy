@@ -9,6 +9,7 @@ import { courseModules, courses, lessons } from "@/db/schema";
 import { requireCourseEditor } from "@/lib/auth";
 import { idParam } from "@/lib/validation";
 import { lessonVideo } from "@/lib/video";
+import { QuizEditor } from "@/components/quiz/quiz-editor";
 
 export const metadata: Metadata = { title: "Edit lesson" };
 
@@ -36,5 +37,6 @@ export default async function TeachLessonPage({ params, searchParams }: { params
         </Card>
       )}
     </div>
+    <QuizEditor lessonId={id} />
   </>;
 }

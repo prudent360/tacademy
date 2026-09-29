@@ -49,6 +49,7 @@ const courseSchema = z.object({
   certificateMinAttendance: z.coerce.number().int().min(0).max(100),
   certificateMinAssignments: z.coerce.number().int().min(0).max(100),
   certificateMinScore: z.coerce.number().int().min(0).max(100),
+  certificateMinQuizScore: z.coerce.number().int().min(0).max(100),
   seoTitle: text(70),
   seoDescription: text(200),
 });

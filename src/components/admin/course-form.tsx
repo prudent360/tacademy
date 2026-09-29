@@ -40,6 +40,7 @@ export function CourseForm({ action, course, ai = false }: { action: (state: For
           <Input label="Assignments completed %" name="certificateMinAssignments" type="number" min={0} max={100} defaultValue={course?.certificateMinAssignments ?? 80} />
           <Input label="Minimum average score %" name="certificateMinScore" type="number" min={0} max={100} defaultValue={course?.certificateMinScore ?? 50} />
         </div>
+        <Input label="Minimum average quiz score %" name="certificateMinQuizScore" type="number" min={0} max={100} defaultValue={course?.certificateMinQuizScore ?? 0} hint="Average of each lesson quiz's best score (quizzes not attempted count as 0). Use 0 if quizzes shouldn't count." className="max-w-[320px]" />
       </fieldset>
       <fieldset className="flex flex-col gap-4 rounded-[5px] border border-edge bg-panel p-4">
         <legend className="px-1 text-sm font-semibold text-ink">Search engines</legend>
