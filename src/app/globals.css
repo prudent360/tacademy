@@ -187,11 +187,39 @@ body:has([data-under-header]) #main { margin-top: -4.75rem; }
   margin: 0;
 }
 
-/* Home hero photo curve: tiles turn towards the viewer the further they are from the centre (--arc is -2…2, --depth its size). */
+/* Two oversized white ellipses cut a continuous concave curve into the gallery's top and bottom edges. */
+.hero-gallery-curve::before,
+.hero-gallery-curve::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  z-index: 20;
+  width: 118%;
+  height: 104px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: white;
+  pointer-events: none;
+}
+.hero-gallery-curve::before { top: -82px; }
+.hero-gallery-curve::after { bottom: -66px; }
+
+/* A little perspective turns the side cards inward without faking the curve itself. */
 .hero-arc-tile {
-  transform: translateZ(calc(var(--depth) * 55px)) rotateY(calc(var(--arc) * -20deg));
-  box-shadow: 0 30px 60px -40px rgba(25, 17, 46, 0.55);
+  z-index: calc(5 - var(--depth));
+  transform: rotateY(calc(var(--arc) * -4deg)) scale(calc(1 - var(--depth) * 0.015));
+  box-shadow: 0 28px 55px -32px rgba(25, 17, 46, 0.38);
+  transform-origin: center;
 }
 @media (max-width: 767px) {
-  .hero-arc-tile { transform: translateZ(calc(var(--depth) * 30px)) rotateY(calc(var(--arc) * -16deg)); }
+  .hero-gallery-curve::before,
+  .hero-gallery-curve::after {
+    width: 130%;
+    height: 68px;
+  }
+  .hero-gallery-curve::before { top: -54px; }
+  .hero-gallery-curve::after { bottom: -44px; }
+  .hero-arc-tile {
+    transform: rotateY(calc(var(--arc) * -3deg));
+  }
 }

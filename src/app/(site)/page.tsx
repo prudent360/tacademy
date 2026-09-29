@@ -127,20 +127,20 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* The photos sit on the inside of a curve: the outer ones turn towards you and fade out at the edges. */}
-        {/* The mask also crops, so the container has room above and below for the taller outer photos (offset by negative margins). */}
-        <div aria-hidden="true" className="relative py-12 [perspective:700px] sm:py-20 md:-mb-12 md:py-28" style={{ maskImage: "linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%)", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, #000 12%, #000 88%, transparent 100%)" }}>
-          <div className="flex items-center justify-center gap-3 [transform-style:preserve-3d] md:gap-4">
+        {/* The gallery is cut by two large elliptical edges, creating one continuous curve across every photo. */}
+        <div aria-hidden="true" className="hero-gallery-curve relative mb-16 mt-10 [perspective:1200px] sm:mb-20 sm:mt-12 md:mb-24 md:mt-14" style={{ maskImage: "linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%)", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%)" }}>
+          <div className="flex items-start justify-center gap-3 px-3 [transform-style:preserve-3d] sm:gap-4 md:gap-5">
             {gallery.map((src, i) => {
               const offset = i - 2;
               return (
                 <div
                   key={`${src}-${i}`}
-                  className={`hero-arc-tile relative aspect-[4/4.3] w-[46vw] max-w-[380px] shrink-0 overflow-hidden rounded-[18px] bg-panel sm:w-[30vw] md:w-[24vw] ${Math.abs(offset) === 2 ? "hidden md:block" : ""}`}
+                  className={`hero-arc-tile relative aspect-[4/3] w-[68vw] max-w-[340px] shrink-0 overflow-hidden rounded-xl border border-white/80 bg-panel shadow-sm sm:w-[38vw] md:w-[24vw] ${Math.abs(offset) === 2 ? "hidden md:block" : ""}`}
                   style={{ "--arc": offset, "--depth": Math.abs(offset) } as React.CSSProperties}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" loading={offset === 0 ? "eager" : "lazy"} fetchPriority={offset === 0 ? "high" : undefined} className="size-full object-cover" />
+                  <img src={src} alt="" loading={offset === 0 ? "eager" : "lazy"} fetchPriority={offset === 0 ? "high" : undefined} className="size-full object-cover transition-transform duration-700" />
+                  <div className="absolute inset-0 ring-1 ring-inset ring-ink/[.06]" />
                 </div>
               );
             })}
