@@ -11,6 +11,7 @@ import { formatMoney } from "@/lib/money";
 import { formatDateOnly, relativeTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
 import { studentId } from "@/lib/utils";
+import { countryByCode, flag } from "@/lib/countries";
 
 export const metadata: Metadata = { title: "Person" };
 
@@ -29,7 +30,7 @@ export default async function UserPage({ params, searchParams }: { params: Promi
 
   return (
     <>
-      <PageHeader back={{ href: "/admin/users", label: "People" }} title={user.name} description={`${user.role === "student" ? `${studentId(user)} · ` : ""}${user.email} · joined ${relativeTime(user.createdAt)}`} actions={<ActionButton action={resendInvite.bind(null, id)} pendingText="Sending…" doneText="Email sent">{user.passwordHash ? "Send password reset" : "Resend invitation"}</ActionButton>} />
+      <PageHeader back={{ href: "/admin/users", label: "People" }} title={user.name} description={`${user.role === "student" ? `${studentId(user)} · ` : ""}${user.email}${countryByCode(user.country) ? ` · ${flag(user.country!)} ${countryByCode(user.country)!.name}` : ""} · joined ${relativeTime(user.createdAt)}`} actions={<ActionButton action={resendInvite.bind(null, id)} pendingText="Sending…" doneText="Email sent">{user.passwordHash ? "Send password reset" : "Resend invitation"}</ActionButton>} />
       {invited && <Notice>Invitation sent to {user.email}.</Notice>}
       <div className="grid items-start gap-6 xl:grid-cols-[1fr_1.3fr]">
         <Card title="Account">

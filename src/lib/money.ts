@@ -29,12 +29,6 @@ export const MOBILE_MONEY_COUNTRIES: Record<string, string> = {
   SEN: "Senegal", CIV: "Côte d'Ivoire", BEN: "Benin", BFA: "Burkina Faso", CMR: "Cameroon", COG: "Republic of the Congo", GAB: "Gabon",
 };
 
-/** Phone dial code → mobile money country, to preselect where the student's wallet is. */
-export const MOBILE_MONEY_DIAL: Record<string, string> = {
-  "+234": "NGA", "+233": "GHA", "+254": "KEN", "+256": "UGA", "+255": "TZA", "+250": "RWA",
-  "+221": "SEN", "+225": "CIV", "+229": "BEN", "+226": "BFA", "+237": "CMR", "+242": "COG", "+241": "GAB",
-};
-
 /** Countries a currency can be paid from by mobile money; empty when pawaPay doesn't cover it. */
 export function mobileMoneyCountries(currency: string): string[] {
   return currencyInfo(currency)?.mobileMoney ?? [];

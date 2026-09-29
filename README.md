@@ -29,7 +29,7 @@ Without payment keys, checkout goes to a **simulated test page** (local developm
 
 ## How payments work
 
-Each cohort has a price per currency. The student picks a currency at checkout:
+Each cohort has a price per currency. Students choose the country they live in when they enrol, which sets the currency they pay in (their local one when the cohort is priced in it, otherwise USD) and the payment options shown; they can still switch currency. Currencies map to gateways:
 
 - **GBP, USD, EUR, CAD** → Stripe Checkout
 - **NGN, GHS, KES, ZAR** → Paystack

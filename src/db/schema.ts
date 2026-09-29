@@ -47,6 +47,8 @@ export const users = pgTable("users", {
   /** YYYY-MM-DD, collected at enrolment. */
   dateOfBirth: text("date_of_birth"),
   qualification: text("qualification").notNull().default(""),
+  /** ISO 3166 alpha-2, chosen at enrolment; sets the currency and payment options offered. */
+  country: text("country"),
   emailReminders: boolean("email_reminders").notNull().default(true),
   /** Bumped to sign the user out everywhere (password reset, deactivation). */
   sessionVersion: integer("session_version").notNull().default(1),

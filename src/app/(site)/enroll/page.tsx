@@ -66,8 +66,8 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
               cohorts={cohorts}
               preferred={visitor.currencies}
               initialCohortId={selected?.id ?? null}
-              signedIn={user ? { firstName: user.name.split(" ")[0], lastName: user.name.split(" ").slice(1).join(" "), email: user.email, dial: phoneDial ?? "", phone: phoneRest.join(" "), dateOfBirth: user.dateOfBirth ?? "", qualification: user.qualification } : null}
-              phoneCountry={visitor.country ?? PHONE_COUNTRY[settings.currencies[0] ?? ""]}
+              signedIn={user ? { firstName: user.name.split(" ")[0], lastName: user.name.split(" ").slice(1).join(" "), email: user.email, dial: phoneDial ?? "", phone: phoneRest.join(" "), dateOfBirth: user.dateOfBirth ?? "", qualification: user.qualification, country: user.country ?? "" } : null}
+              defaultCountry={visitor.country ?? PHONE_COUNTRY[settings.currencies[0] ?? ""]}
             />
           ) : (
             <div className="mx-auto max-w-[560px] rounded-[24px] bg-white p-8 text-center">

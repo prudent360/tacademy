@@ -4,9 +4,10 @@ import Link from "next/link";
 import { startTransition, useActionState, useId, useMemo, useRef, useState } from "react";
 import { enrol, type EnrolState } from "@/app/actions/enroll";
 import { ArrowLeft } from "@/components/icons";
-import { COUNTRIES, PhoneInput } from "@/components/phone-input";
+import { PhoneInput } from "@/components/phone-input";
 import type { DeliveryMode, PriceMap } from "@/db/schema";
-import { formatMoney, gatewayFor, MOBILE_MONEY_COUNTRIES, MOBILE_MONEY_DIAL } from "@/lib/money";
+import { COUNTRIES, countryByCode, countryInSentence, currencyForCountry, flag } from "@/lib/countries";
+import { currencyInfo, formatMoney, gatewayFor, MOBILE_MONEY_COUNTRIES } from "@/lib/money";
 import { availablePlans, PLAN_LABEL, quote, type EnrolPlan } from "@/lib/pricing";
 import { MODE_LABEL, QUALIFICATIONS } from "@/lib/utils";
 
@@ -31,7 +32,10 @@ export type EnrolCohort = {
 
 type Method = "online" | "mobile" | "bank";
 
-type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; qualification: string };
+type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; qualification: string; country: string };
+
+const METHOD_LABEL = (method: Method, currency: string) =>
+  method === "online" ? (gatewayFor(currency) === "paystack" ? "Paystack (card, bank transfer, USSD)" : "Card via Stripe") : method === "mobile" ? "Mobile money via pawaPay" : "Direct bank transfer";
 
 const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#8b8598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10 read-only:bg-panel read-only:text-muted";
 
@@ -54,12 +58,13 @@ function Choice({ name, value, checked, onChange, children }: { name: string; va
 }
 
 /** Two-step enrolment: the student's details, then course, cohort and payment, with a live summary. */
-export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phoneCountry }: {
+export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defaultCountry }: {
   cohorts: EnrolCohort[];
   preferred: string[];
   initialCohortId: number | null;
   signedIn: Prefill | null;
-  phoneCountry?: string;
+  /** From the visitor's location, when known. */
+  defaultCountry?: string;
 }) {
   const id = useId();
   const top = useRef<HTMLDivElement>(null);
@@ -72,7 +77,14 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
   const [cohortId, setCohortId] = useState<number | null>(initial?.id ?? null);
   const cohort = cohorts.find((c) => c.id === cohortId) ?? null;
 
-  const rank = (code: string) => { const i = preferred.indexOf(code); return i === -1 ? 99 : i; };
+  // The student's country sets the currency and payment options; the phone's country code follows it but can differ.
+  const phoneCountryFromProfile = signedIn?.dial ? COUNTRIES.find((c) => c.dial === signedIn.dial)?.code : undefined;
+  const [country, setCountryCode] = useState(countryByCode(signedIn?.country)?.code ?? countryByCode(defaultCountry)?.code ?? phoneCountryFromProfile ?? "");
+  const [phoneCountry, setPhoneCountry] = useState(phoneCountryFromProfile ?? (country || "GB"));
+  const [showCurrencies, setShowCurrencies] = useState(false);
+  const local = currencyForCountry(country);
+  const order = [local, "USD", ...preferred].filter(Boolean) as string[];
+  const rank = (code: string) => { const i = order.indexOf(code); return i === -1 ? 99 : i; };
   const currencies = cohort ? [...cohort.currencies].sort((a, b) => rank(a.code) - rank(b.code)) : [];
   const [currencyChoice, setCurrency] = useState("");
   const currency = currencies.find((c) => c.code === currencyChoice) ?? currencies[0];
@@ -82,11 +94,19 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
   const [methodChoice, setMethod] = useState<Method>("online");
   const methods: Method[] = currency ? (["online", "mobile", "bank"] as const).filter((m) => (m === "mobile" ? currency.mobile.length > 0 : currency[m])) : [];
   const method = methods.includes(methodChoice) ? methodChoice : methods[0] ?? "online";
-  // The wallet country defaults to the phone number's country from step 1.
-  const [dial, setDial] = useState("");
-  const [countryChoice, setCountry] = useState("");
+  // The mobile money wallet defaults to the student's country, then their phone number's.
+  const [walletChoice, setWallet] = useState("");
   const mobileCountries = currency?.mobile ?? [];
-  const mobileCountry = [countryChoice, MOBILE_MONEY_DIAL[dial]].find((c) => c && mobileCountries.includes(c)) ?? mobileCountries[0] ?? "";
+  const mobileCountry = [walletChoice, countryByCode(country)?.iso3, countryByCode(phoneCountry)?.iso3].find((c) => c && mobileCountries.includes(c)) ?? mobileCountries[0] ?? "";
+  const countryName = countryInSentence(country);
+
+  function chooseCountry(code: string) {
+    setCountryCode(code);
+    if (countryByCode(code)) setPhoneCountry(code);
+    setCurrency("");
+    setWallet("");
+    setShowCurrencies(false);
+  }
   const q = cohort && currency && !cohort.free ? quote(cohort, currency.code, plan) : null;
   const money = (minor: number) => (currency ? formatMoney(minor, currency.code) : "—");
 
@@ -100,7 +120,6 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (step === 1) {
-      setDial(String(new FormData(event.currentTarget).get("dialCode") ?? ""));
       setStep(2);
       top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -110,7 +129,6 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
   }
 
   const payLabel = !cohort ? "Choose a cohort" : cohort.free ? "Confirm my place" : method === "bank" ? `Get transfer details · ${money(q?.dueNow ?? 0)}` : method === "mobile" ? `Pay ${money(q?.dueNow ?? 0)} with mobile money` : `Pay ${money(q?.dueNow ?? 0)}`;
-  const phoneDefault = signedIn?.dial ? COUNTRIES.find((c) => c.dial === signedIn.dial)?.code : undefined;
 
   return (
     <div ref={top} className="grid scroll-mt-24 items-start gap-6 lg:grid-cols-[1.45fr_1fr]">
@@ -133,8 +151,15 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
           <Field label="Email Address" htmlFor={`${id}-email`} required>
             <input id={`${id}-email`} name="email" type="email" required maxLength={200} autoComplete="email" placeholder="Enter email address" defaultValue={signedIn?.email} readOnly={Boolean(signedIn)} className={inputClass} />
           </Field>
+          <Field label="Country you live in" htmlFor={`${id}-country`} required>
+            <select id={`${id}-country`} name="country" required value={country} onChange={(e) => chooseCountry(e.target.value)} className={`${inputClass} cursor-pointer`}>
+              <option value="">Select your country</option>
+              {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{flag(c.code)} {c.name}</option>)}
+            </select>
+            <p className="text-[13px] text-muted">We&apos;ll show your price in your local currency where we can, and the ways you can pay from there.</p>
+          </Field>
           <Field label="Phone Number (WhatsApp preferred)" htmlFor={`${id}-phone`} required>
-            <PhoneInput id={`${id}-phone`} defaultCountry={phoneDefault ?? phoneCountry} defaultValue={signedIn?.phone} />
+            <PhoneInput id={`${id}-phone`} country={phoneCountry} onCountryChange={setPhoneCountry} defaultValue={signedIn?.phone} />
           </Field>
           <Field label="Date of Birth" htmlFor={`${id}-dob`} required>
             <input id={`${id}-dob`} name="dateOfBirth" type="date" required min="1920-01-01" max={new Date().toISOString().slice(0, 10)} defaultValue={signedIn?.dateOfBirth} className={inputClass} />
@@ -182,17 +207,34 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
               </p>
             )}
 
-            {cohort && !cohort.free && currencies.length > 1 && (
-              <fieldset className="flex flex-col gap-2">
-                <legend className="mb-2 text-sm font-medium text-ink">Pay in</legend>
-                <div className="flex flex-wrap gap-2">
-                  {currencies.map((c) => (
-                    <label key={c.code} className={`flex h-10 cursor-pointer items-center rounded-[8px] border px-4 text-sm font-semibold ${currency?.code === c.code ? "border-accent bg-accent-soft text-accent" : "border-edge-strong text-body hover:border-accent"}`}>
-                      <input type="radio" name="currencyChoice" value={c.code} checked={currency?.code === c.code} onChange={() => setCurrency(c.code)} className="sr-only" />{c.code}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+            {cohort && !cohort.free && currency && (
+              <div className="flex flex-col gap-2 rounded-[8px] border border-edge bg-panel px-4 py-3.5 text-sm">
+                <p className="text-body">
+                  {countryName && <span aria-hidden="true" className="mr-1.5">{flag(country)}</span>}
+                  {currency.code === local
+                    ? <>You&apos;re paying in <strong className="text-ink">{currencyInfo(currency.code)?.name ?? currency.code} ({currency.code})</strong> because you live in {countryName}.</>
+                    : local && countryName
+                      ? <>This cohort isn&apos;t sold in {currencyInfo(local)?.name ?? local} yet, so you&apos;ll pay in <strong className="text-ink">{currencyInfo(currency.code)?.name ?? currency.code} ({currency.code})</strong>.</>
+                      : <>You&apos;ll pay in <strong className="text-ink">{currencyInfo(currency.code)?.name ?? currency.code} ({currency.code})</strong>{countryName ? <> from {countryName}</> : null}.</>}
+                </p>
+                <p className="text-muted">Ways to pay: {methods.map((m) => METHOD_LABEL(m, currency.code)).join(" · ")}</p>
+                <p className="flex flex-wrap gap-x-4 gap-y-1">
+                  <button type="button" onClick={() => setStep(1)} className="cursor-pointer font-semibold text-accent hover:text-accent-dark">Change country</button>
+                  {currencies.length > 1 && <button type="button" onClick={() => setShowCurrencies(!showCurrencies)} aria-expanded={showCurrencies} className="cursor-pointer font-semibold text-accent hover:text-accent-dark">{showCurrencies ? "Keep this currency" : "Pay in a different currency"}</button>}
+                </p>
+                {showCurrencies && (
+                  <fieldset className="flex flex-col gap-2 border-t border-line pt-3">
+                    <legend className="sr-only">Pay in</legend>
+                    <div className="flex flex-wrap gap-2">
+                      {currencies.map((c) => (
+                        <label key={c.code} className={`flex h-10 cursor-pointer items-center rounded-[8px] border bg-white px-4 text-sm font-semibold ${currency?.code === c.code ? "border-accent bg-accent-soft text-accent" : "border-edge-strong text-body hover:border-accent"}`}>
+                          <input type="radio" name="currencyChoice" value={c.code} checked={currency?.code === c.code} onChange={() => setCurrency(c.code)} className="sr-only" />{c.code}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                )}
+              </div>
             )}
             {currency && <input type="hidden" name="currency" value={currency.code} />}
 
@@ -226,7 +268,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, phone
 
             {cohort && !cohort.free && method === "mobile" && (mobileCountries.length > 1 ? (
               <Field label="Mobile money account country" htmlFor={`${id}-mm-country`} required>
-                <select id={`${id}-mm-country`} name="mobileCountry" value={mobileCountry} onChange={(e) => setCountry(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                <select id={`${id}-mm-country`} name="mobileCountry" value={mobileCountry} onChange={(e) => setWallet(e.target.value)} className={`${inputClass} cursor-pointer`}>
                   {mobileCountries.map((c) => <option key={c} value={c}>{MOBILE_MONEY_COUNTRIES[c] ?? c}</option>)}
                 </select>
               </Field>

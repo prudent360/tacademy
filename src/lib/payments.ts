@@ -7,7 +7,8 @@ import { discountCodes, enrollments, payments, users, type Cohort, type Course, 
 import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
-import { CURRENCY_CODES, formatMoney, gatewayFor, MOBILE_MONEY_DIAL, mobileMoneyCountries } from "./money";
+import { countryByCode, mobileMoneyCountryForDial } from "./countries";
+import { CURRENCY_CODES, formatMoney, gatewayFor, mobileMoneyCountries } from "./money";
 import { notify } from "./notify";
 import { PART_PAYMENT_PLANS, quote, type EnrolPlan } from "./pricing";
 import { absoluteUrl } from "./site";
@@ -223,11 +224,11 @@ export async function startBalanceCheckout(user: User, course: Course, cohort: C
   if (!balance.remaining) return { error: "This cohort has already been paid in full." };
   const db = await getDb();
   await db.update(payments).set({ status: "failed" }).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.currency, currency), eq(payments.paymentPlan, "balance"), eq(payments.status, "pending")));
-  // Card where it's available, otherwise mobile money from the country of the student's phone number.
+  // Card where it's available, otherwise mobile money from the student's country (or their phone number's).
   const method: PayMethod = (await payableMethods()).card.includes(currency) ? "card" : "mobile";
   return beginOnlinePayment(user, course, cohort, currency, {
     method,
-    country: MOBILE_MONEY_DIAL[user.phone.split(" ")[0]],
+    country: countryByCode(user.country)?.iso3 ?? mobileMoneyCountryForDial(user.phone.split(" ")[0]),
     amount: balance.remaining,
     originalAmount: balance.total,
     paymentPlan: "balance",

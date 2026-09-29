@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { enrollments, users, type User } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { countryByCode } from "@/lib/countries";
 import { isFree } from "@/lib/catalog";
 import { rememberCheckout } from "@/lib/checkout-access";
 import { getCohortWithCourse, isEnrolled, isGraduate, seatsTaken } from "@/lib/data";
@@ -24,6 +25,7 @@ const detailsSchema = z.object({
   dialCode,
   phone: phoneNumber,
   dateOfBirth: z.string().trim().refine((v) => /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= "1920-01-01" && v <= new Date().toISOString().slice(0, 10), "Enter a valid date of birth."),
+  country: z.string().trim().toUpperCase().refine((v) => Boolean(countryByCode(v)), "Choose the country you live in."),
   qualification: z.string().refine((v) => v === "" || (QUALIFICATIONS as readonly string[]).includes(v), "Choose a qualification from the list."),
   cohortId: z.coerce.number().int().positive("Choose a course and cohort."),
   currency: z.string().trim().max(3),
@@ -41,7 +43,7 @@ type Details = z.infer<typeof detailsSchema>;
  */
 async function applicantFor(details: Details, next: string): Promise<{ user: User } | { error: string; signIn?: string }> {
   const db = await getDb();
-  const profile = { phone: formatPhone(details.dialCode, details.phone), dateOfBirth: details.dateOfBirth, qualification: details.qualification };
+  const profile = { phone: formatPhone(details.dialCode, details.phone), dateOfBirth: details.dateOfBirth, qualification: details.qualification, country: details.country };
   const signedIn = await getCurrentUser();
   if (signedIn) {
     const [user] = await db.update(users).set(profile).where(eq(users.id, signedIn.id)).returning();
