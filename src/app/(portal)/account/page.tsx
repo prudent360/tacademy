@@ -4,6 +4,7 @@ import { ActionForm, Checkbox, FileField, Input, SubmitButton, Textarea } from "
 import { Card, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
+import { studentId } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -11,7 +12,7 @@ export default async function AccountPage() {
   const user = await requireUser();
   return (
     <>
-      <PageHeader title="Account" description={`Signed in as ${user.email}`} />
+      <PageHeader title="Account" description={`Signed in as ${user.email}${user.role === "student" ? ` · Student ID ${studentId(user)}` : ""}`} />
       <div className="grid items-start gap-6 xl:grid-cols-[1.3fr_1fr]">
         <Card title="Profile">
           <ActionForm action={updateProfile}>

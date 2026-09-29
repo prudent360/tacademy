@@ -215,7 +215,7 @@ function UserMenu({ user, studentId, logout }: { user: { name: string; email: st
           <div className="border-b border-line px-3 py-2.5">
             <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
             <p className="truncate text-xs text-muted">{ROLE_LABEL[user.role]} · {user.email}</p>
-            {studentId && <p className="mt-1.5 inline-flex rounded-full bg-accent-soft px-2 py-0.5 font-mono text-[11px] font-semibold text-accent">Student ID {studentId}</p>}
+            {studentId && <div className="mt-2"><StudentIdPill id={studentId} /></div>}
           </div>
           <Link href="/account" onClick={() => setOpen(false)} className="mt-1 flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-body hover:bg-page"><UserIcon className="size-4" /> Profile & security</Link>
           <Link href="/" onClick={() => setOpen(false)} className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-body hover:bg-page"><ExternalIcon className="size-4" /> View website</Link>
@@ -228,7 +228,32 @@ function UserMenu({ user, studentId, logout }: { user: { name: string; email: st
   );
 }
 
-/** The student's ID, always in view in the top bar; tapping it copies it (handy when contacting support). */
+/** The student's ID in the account menu; tapping it copies it (handy when contacting support or paying by transfer). */
+/** Level as a ring that fills towards the next level, with XP beside it (text hidden on small screens). */
+function LevelBadge({ xp }: { xp: { level: number; total: number; percent: number; toNext: number } }) {
+  const radius = 15;
+  const circumference = 2 * Math.PI * radius;
+  const filled = Math.min(100, Math.max(0, xp.percent));
+  return (
+    <Link href="/dashboard" title={`Level ${xp.level} · ${xp.total.toLocaleString("en-GB")} XP · ${xp.toNext.toLocaleString("en-GB")} XP to level ${xp.level + 1}`} className="group mr-1 flex items-center gap-2.5 rounded-full py-1 pl-1 pr-1 transition hover:bg-page sm:pr-3">
+      <span className="relative flex size-9 shrink-0 items-center justify-center">
+        <svg viewBox="0 0 36 36" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
+          <defs>
+            <linearGradient id="level-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#7134d9" /><stop offset="100%" stopColor="#22c3d6" /></linearGradient>
+          </defs>
+          <circle cx="18" cy="18" r={radius} fill="none" stroke="currentColor" strokeWidth="3" className="text-accent-soft" />
+          <circle cx="18" cy="18" r={radius} fill="none" stroke="url(#level-ring)" strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - filled / 100)} className="transition-[stroke-dashoffset] duration-700" />
+        </svg>
+        <span className="font-display text-[13px] font-extrabold text-accent">{xp.level}</span>
+      </span>
+      <span className="hidden flex-col leading-tight sm:flex">
+        <span className="text-sm font-bold text-ink">{xp.total.toLocaleString("en-GB")} <span className="font-semibold text-muted">XP</span></span>
+        <span className="text-[11px] font-medium text-muted">{xp.toNext.toLocaleString("en-GB")} to Lv {xp.level + 1}</span>
+      </span>
+    </Link>
+  );
+}
+
 function StudentIdPill({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -239,7 +264,7 @@ function StudentIdPill({ id }: { id: string }) {
       aria-label={`Student ID ${id}. Copy`}
     >
       <IdCardIcon className="size-4" />
-      <span className="hidden text-accent/70 sm:inline">Student ID</span>
+      <span className="text-accent/70">Student ID</span>
       <span className="font-mono tracking-wide">{copied ? "Copied" : id}</span>
     </button>
   );
@@ -258,8 +283,8 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   notifications: ShellNotification[];
   /** Shown instead of the date for students. */
   studentId?: string;
-  /** Students' level and XP, next to their ID. */
-  xp?: { level: number; total: number };
+  /** Students' level, XP and progress to the next level. */
+  xp?: { level: number; total: number; percent: number; toNext: number };
   logout: () => Promise<void>;
   markAllRead: () => Promise<void>;
 }) {
@@ -421,18 +446,12 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setDrawer(true)} className="flex size-10 items-center justify-center rounded-lg text-ink hover:bg-page lg:hidden" aria-label="Open menu"><MenuIcon /></button>
             <Link href={home} className="flex items-center gap-2 lg:hidden" aria-label={`${siteName} home`}><BrandMark className="size-8" /></Link>
-            {xp && (
-              <Link href="/dashboard" className="hidden items-center gap-1.5 rounded-full border border-edge bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition hover:border-accent-muted md:flex" title="Your level and XP">
-                <span className="rounded-full bg-accent px-1.5 py-px text-[10px] font-bold text-white">Lv {xp.level}</span>
-                {xp.total.toLocaleString("en-GB")} XP
-              </Link>
-            )}
-            {studentId && <StudentIdPill id={studentId} />}
           </div>
           <div className="flex items-center gap-2">
             {role !== "student" && toGrade > 0 && (
               <Link href="/teach/grading" className="hidden items-center gap-1.5 rounded-full bg-cyan-soft px-3 py-1.5 text-xs font-semibold text-cyan-ink hover:bg-cyan/20 md:flex"><ClipboardIcon className="size-3.5" /> {toGrade} to grade</Link>
             )}
+            {xp && <LevelBadge xp={xp} />}
             <NotificationMenu items={notifications} unread={unread} markAllRead={markAllRead} />
             <span className="mx-1 hidden h-6 w-px bg-edge sm:block" />
             <UserMenu user={{ ...user, role }} studentId={studentId} logout={logout} />

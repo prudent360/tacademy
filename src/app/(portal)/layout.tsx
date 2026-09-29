@@ -33,7 +33,7 @@ export default async function PortalLayout({ children }: { children: React.React
       toGrade={toGrade}
       newApplications={newApplications}
       studentId={user.role === "student" ? studentId(user) : undefined}
-      xp={xp ? { level: xp.level, total: xp.total } : undefined}
+      xp={xp ? { level: xp.level, total: xp.total, percent: xp.percent, toNext: xp.next - xp.total } : undefined}
       notifications={recent.map((n) => ({ id: n.id, title: n.title, body: n.body, href: n.href, read: Boolean(n.readAt), when: relativeTime(n.createdAt) }))}
       logout={logout}
       markAllRead={markAllRead}
