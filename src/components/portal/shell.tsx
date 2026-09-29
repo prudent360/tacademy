@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import {
   AwardIcon, BellIcon, BookIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DownloadIcon, ExternalIcon, GridIcon,
@@ -10,13 +10,19 @@ import {
 } from "@/components/icons";
 import type { Role } from "@/db/schema";
 
-type NavItem = { href: string; label: string; icon: Icon; exact?: boolean; badge?: number; also?: string[] };
+/** A link, or (with children) a dropdown whose first child is its main page. `href` may carry a ?tab= query. */
+type NavItem = { href: string; label: string; icon: Icon; exact?: boolean; badge?: number; also?: string[]; children?: NavItem[] };
 type NavGroup = { label: string; items: NavItem[] };
 export type ShellNotification = { id: number; title: string; body: string; href: string | null; read: boolean; when: string };
 
 const ROLE_LABEL: Record<Role, string> = { admin: "Administrator", instructor: "Instructor", student: "Student" };
 
-function navFor(role: Role, counts: { unread: number; toGrade: number }): NavGroup[] {
+const SETTINGS_TABS: [string, string][] = [
+  ["general", "General"], ["branding", "Branding"], ["payments", "Payments"], ["email", "Email"], ["templates", "Email templates"],
+  ["reminders", "Reminders"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
+];
+
+function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number }): NavGroup[] {
   const learning: NavGroup = {
     label: "Learning",
     items: [
@@ -35,25 +41,46 @@ function navFor(role: Role, counts: { unread: number; toGrade: number }): NavGro
       { href: "/teach/schedule", label: "Timetable", icon: CalendarIcon },
     ],
   };
-  const academy: NavGroup = {
-    label: "Academy",
+  const overview: NavGroup = {
+    label: "Overview",
     items: [
       { href: "/admin", label: "Dashboard", icon: GridIcon, exact: true },
-      { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon },
-      { href: "/admin/internships", label: "Internships", icon: BriefcaseIcon },
-      { href: "/admin/users", label: "People", icon: UsersIcon },
-      { href: "/admin/payments", label: "Payments", icon: CardIcon },
-      { href: "/admin/applications", label: "Internship applications", icon: BriefcaseIcon },
-      { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon },
-      { href: "/admin/discounts", label: "Discount codes", icon: CardIcon },
       { href: "/admin/insights", label: "Insights", icon: ChartIcon },
+    ],
+  };
+  const programmes: NavGroup = {
+    label: "Programmes",
+    items: [
+      { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon, also: ["/admin/cohorts", "/admin/modules", "/admin/lessons"] },
+      {
+        href: "/admin/internships", label: "Internships", icon: BriefcaseIcon, children: [
+          { href: "/admin/internships", label: "Programmes", icon: BriefcaseIcon },
+          { href: "/admin/applications", label: "Applications", icon: ClipboardIcon, badge: counts.newApplications },
+        ],
+      },
       { href: "/admin/certificates", label: "Certificates", icon: AwardIcon },
+    ],
+  };
+  const peopleAndSales: NavGroup = {
+    label: "People & sales",
+    items: [
+      { href: "/admin/users", label: "People", icon: UsersIcon },
+      {
+        href: "/admin/payments", label: "Payments", icon: CardIcon, children: [
+          { href: "/admin/payments", label: "All payments", icon: CardIcon },
+          { href: "/admin/discounts", label: "Discount codes", icon: CardIcon },
+        ],
+      },
+      { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon },
     ],
   };
   const system: NavGroup = {
     label: "System",
     items: [
-      { href: "/admin/settings", label: "Settings", icon: CogIcon, also: ["/admin/emails"] },
+      {
+        href: "/admin/settings", label: "Settings", icon: CogIcon,
+        children: SETTINGS_TABS.map(([tab, label]) => ({ href: tab === "general" ? "/admin/settings" : `/admin/settings?tab=${tab}`, label, icon: CogIcon, ...(tab === "templates" ? { also: ["/admin/emails"] } : {}) })),
+      },
     ],
   };
   const account: NavGroup = {
@@ -64,7 +91,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number }): NavGro
       { href: "/account", label: "Profile & security", icon: UserIcon },
     ],
   };
-  if (role === "admin") return [academy, teaching, system, account];
+  if (role === "admin") return [overview, programmes, peopleAndSales, teaching, system, account];
   if (role === "instructor") return [teaching, account];
   return [learning, account];
 }
@@ -93,8 +120,26 @@ function bottomNavFor(role: Role): NavItem[] {
   ];
 }
 
-const isActive = (pathname: string, item: NavItem) =>
-  item.exact ? pathname === item.href : [item.href, ...(item.also ?? [])].some((h) => pathname === h || pathname.startsWith(`${h}/`));
+/** Whether a link is the current page. Links with ?tab= match that tab; the bare settings link matches the default tab. */
+function isActive(pathname: string, tab: string | null, item: NavItem): boolean {
+  if (item.children) return item.children.some((child) => isActive(pathname, tab, child));
+  const [path, query] = item.href.split("?");
+  if (query !== undefined || path === "/admin/settings") {
+    const wanted = new URLSearchParams(query ?? "").get("tab");
+    if (pathname === path) return (tab ?? null) === wanted || (!wanted && (!tab || tab === "general"));
+    return (item.also ?? []).some((h) => pathname === h || pathname.startsWith(`${h}/`));
+  }
+  return item.exact ? pathname === item.href : [item.href, ...(item.also ?? [])].some((h) => pathname === h || pathname.startsWith(`${h}/`));
+}
+
+const NAV_STATE_KEY = "portal-nav-open";
+const subscribeStorage = (onChange: () => void) => {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+};
+function readNavState(): string | null {
+  try { return window.localStorage.getItem(NAV_STATE_KEY); } catch { return null; }
+}
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((n) => n[0]).join("").toUpperCase();
@@ -203,7 +248,7 @@ function StudentIdPill({ id }: { id: string }) {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, notifications, today, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, notifications, today, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null };
@@ -211,6 +256,8 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   logoUrl: string | null;
   unread: number;
   toGrade: number;
+  /** Admins: internship applications waiting for review. */
+  newApplications?: number;
   notifications: ShellNotification[];
   today: string;
   /** Shown instead of the date for students. */
@@ -221,9 +268,20 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   markAllRead: () => Promise<void>;
 }) {
   const pathname = usePathname();
+  const tab = useSearchParams().get("tab");
   const [drawer, setDrawer] = useState(false);
-  const groups = navFor(role, { unread, toGrade });
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map((group) => [group.label, true])));
+  const groups = navFor(role, { unread, toGrade, newApplications });
+  // Which groups and dropdowns are open is remembered in this browser; until changed, groups start open and
+  // dropdowns open when they hold the current page.
+  const storedNav = useSyncExternalStore(subscribeStorage, readNavState, () => null);
+  const savedNav = useMemo<Record<string, boolean>>(() => { try { return JSON.parse(storedNav ?? "{}"); } catch { return {}; } }, [storedNav]);
+  const [navOverrides, setNavOverrides] = useState<Record<string, boolean>>({});
+  const isOpen = (key: string, fallback: boolean) => navOverrides[key] ?? savedNav[key] ?? fallback;
+  function toggleNav(key: string, current: boolean) {
+    const next = { ...savedNav, ...navOverrides, [key]: !current };
+    setNavOverrides(next);
+    try { window.localStorage.setItem(NAV_STATE_KEY, JSON.stringify(next)); } catch { /* storage blocked */ }
+  }
   const bottom = bottomNavFor(role);
   const home = role === "admin" ? "/admin" : role === "instructor" ? "/teach" : "/dashboard";
   const [first, ...rest] = siteName.split(" ");
@@ -246,16 +304,16 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
       </div>
       <nav aria-label="Portal" className="portal-nav-scroll flex grow flex-col gap-2 overflow-y-auto px-3 py-5">
         {groups.map((group) => {
-          const containsActive = group.items.some((item) => isActive(pathname, item));
-          const open = openGroups[group.label] ?? containsActive;
-          const groupCount = group.items.reduce((total, item) => total + (item.badge ?? 0), 0);
+          const containsActive = group.items.some((item) => isActive(pathname, tab, item));
+          const open = isOpen(`group:${group.label}`, true);
+          const groupCount = group.items.reduce((total, item) => total + (item.badge ?? 0) + (item.children ?? []).reduce((sum, child) => sum + (child.badge ?? 0), 0), 0);
           return (
           <section key={group.label} className="border-b border-white/[.06] pb-2 last:border-0">
             <button
               type="button"
               aria-expanded={open}
               aria-controls={`portal-group-${group.label.toLowerCase().replace(/\s+/g, "-")}`}
-              onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !open }))}
+              onClick={() => toggleNav(`group:${group.label}`, open)}
               className={`group flex w-full cursor-pointer items-center gap-2 rounded-[5px] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[1.6px] transition hover:bg-white/[.05] hover:text-white ${containsActive ? "text-cyan-light" : "text-white/45"}`}
             >
               <span className="grow">{group.label}</span>
@@ -266,8 +324,52 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
               <div className="min-h-0">
                 <div className="flex flex-col gap-0.5 pb-1 pt-0.5">
             {group.items.map((item) => {
-              const active = isActive(pathname, item);
+              const active = isActive(pathname, tab, item);
               const IconComponent = item.icon;
+              if (item.children) {
+                const itemKey = `item:${item.label}`;
+                const expanded = isOpen(itemKey, active);
+                const listId = `portal-sub-${item.label.toLowerCase().replace(/\s+/g, "-")}`;
+                const childBadges = item.children.reduce((sum, child) => sum + (child.badge ?? 0), 0);
+                return (
+                  <div key={item.label}>
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={listId}
+                      onClick={() => toggleNav(itemKey, expanded)}
+                      className={`group relative flex h-10 w-full cursor-pointer items-center gap-3 rounded-[5px] px-3 text-left text-sm font-medium transition duration-200 ${active ? "text-white" : "text-white/65 hover:bg-white/[0.07] hover:text-white"}`}
+                    >
+                      <IconComponent className={`size-[18px] ${active ? "text-cyan" : ""}`} />
+                      <span className="grow">{item.label}</span>
+                      {!expanded && childBadges > 0 && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-white">{childBadges > 99 ? "99+" : childBadges}</span>}
+                      <ChevronDown className={`size-4 text-white/50 transition-transform duration-200 ${expanded ? "rotate-0" : "-rotate-90"}`} />
+                    </button>
+                    <div id={listId} className={`sidebar-group-grid ${expanded ? "is-open" : ""}`}>
+                      <div className="min-h-0">
+                        <div className="ml-[21px] flex flex-col gap-0.5 border-l border-white/10 py-0.5 pl-3">
+                          {item.children.map((child) => {
+                            const childActive = isActive(pathname, tab, child);
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                onClick={() => setDrawer(false)}
+                                aria-current={childActive ? "page" : undefined}
+                                className={`flex h-9 items-center gap-2 rounded-[5px] px-3 text-[13px] font-medium transition ${childActive ? "bg-white/[0.12] text-white" : "text-white/60 hover:bg-white/[0.07] hover:text-white"}`}
+                              >
+                                <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${childActive ? "bg-cyan" : "bg-white/25"}`} />
+                                {child.label}
+                                {Boolean(child.badge) && <span className="ml-auto rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-white">{child.badge! > 99 ? "99+" : child.badge}</span>}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={item.href}
@@ -351,7 +453,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
       {/* Mobile bottom tab bar */}
       <nav aria-label="Quick" className="fixed inset-x-0 bottom-0 z-40 flex border-t border-edge bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(25,17,46,0.08)] backdrop-blur-xl lg:hidden">
         {bottom.map((item) => {
-          const active = isActive(pathname, item);
+          const active = isActive(pathname, tab, item);
           const IconComponent = item.icon;
           return (
             <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold transition ${active ? "text-accent" : "text-muted active:scale-95"}`}>
