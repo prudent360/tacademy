@@ -9,7 +9,7 @@ import { cohorts, courses, internshipApplications, users } from "@/db/schema";
 import { CURRENT_STATUSES, EXPERIENCE_LEVELS, HEARD_FROM, HOURS_PER_WEEK, MOTIVATION_MAX } from "@/lib/applications";
 import { requireRole } from "@/lib/auth";
 import { countryByCode } from "@/lib/countries";
-import { getAdmins, getCohortWithCourse, isGraduate } from "@/lib/data";
+import { getAdmins, getCohortWithCourse, graduateFor, isGraduate } from "@/lib/data";
 import { sendEmail } from "@/lib/email";
 import { notify } from "@/lib/notify";
 import { loginBlockedFor, recordLoginFailure } from "@/lib/rate-limit";
@@ -82,9 +82,11 @@ export async function submitApplication(_state: ApplicationState, formData: Form
     const [row] = await db.select({ id: cohorts.id }).from(cohorts).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(and(eq(cohorts.id, Number(data.preferredCohortId)), eq(courses.kind, "internship")));
     preferredCohortId = row?.id ?? null;
   }
-  // "I'm a graduate" is checked against the academy's own records for that email.
+  // "I'm a graduate" is checked against the academy's own records for that email: the chosen
+  // internship's linked courses, or any course when they're not sure which internship.
   const [account] = await db.select({ id: users.id }).from(users).where(eq(users.email, data.email));
-  const graduateVerified = data.graduateClaimed === "yes" && account ? await isGraduate(account.id) : false;
+  const [programme] = await db.select({ id: courses.id }).from(courses).where(and(eq(courses.kind, "internship"), eq(courses.title, data.skillArea)));
+  const graduateVerified = data.graduateClaimed === "yes" && account ? await (programme ? graduateFor(account.id, programme.id) : isGraduate(account.id)) : false;
 
   const [application] = await db.insert(internshipApplications).values({
     name: data.name,

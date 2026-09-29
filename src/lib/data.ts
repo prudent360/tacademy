@@ -1,8 +1,9 @@
 import "server-only";
 import { and, asc, count, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import { cache } from "react";
+import { alias } from "drizzle-orm/pg-core";
 import { getDb } from "@/db";
-import { cohortInstructors, cohorts, courses, enrollments, settings, users, type Cohort, type Course, type Settings, type User } from "@/db/schema";
+import { cohortInstructors, cohorts, courses, enrollments, internshipCourses, settings, users, type Cohort, type Course, type Settings, type User } from "@/db/schema";
 
 export const DEFAULT_SETTINGS: Settings = {
   id: 1,
@@ -140,6 +141,38 @@ export async function isGraduate(userId: number): Promise<boolean> {
     .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
     .innerJoin(courses, eq(courses.id, cohorts.courseId))
     .where(and(eq(enrollments.userId, userId), eq(enrollments.status, "completed"), eq(courses.kind, "course")))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** Courses linked to an internship programme. */
+export async function linkedCourseIds(internshipId: number): Promise<number[]> {
+  return (await (await getDb()).select({ courseId: internshipCourses.courseId }).from(internshipCourses).where(eq(internshipCourses.internshipId, internshipId))).map((r) => r.courseId);
+}
+
+/** Titles of the courses linked to each internship, for public wording ("free for graduates of …"). */
+export async function linkedCourseTitles(internshipIds: number[]): Promise<Map<number, string[]>> {
+  const out = new Map<number, string[]>();
+  if (!internshipIds.length) return out;
+  const linkedCourse = alias(courses, "linked_course");
+  const rows = await (await getDb()).select({ internshipId: internshipCourses.internshipId, title: linkedCourse.title }).from(internshipCourses)
+    .innerJoin(linkedCourse, eq(linkedCourse.id, internshipCourses.courseId)).where(inArray(internshipCourses.internshipId, internshipIds));
+  for (const row of rows) out.set(row.internshipId, [...(out.get(row.internshipId) ?? []), row.title]);
+  return out;
+}
+
+/**
+ * Whether someone joins an internship's "free for graduates" intakes free: they completed one of the
+ * internship's linked courses, or, when none are linked, any course.
+ */
+export async function graduateFor(userId: number, internshipId: number): Promise<boolean> {
+  const linked = await linkedCourseIds(internshipId);
+  if (!linked.length) return isGraduate(userId);
+  const rows = await (await getDb())
+    .select({ id: enrollments.id })
+    .from(enrollments)
+    .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
+    .where(and(eq(enrollments.userId, userId), eq(enrollments.status, "completed"), inArray(cohorts.courseId, linked)))
     .limit(1);
   return rows.length > 0;
 }

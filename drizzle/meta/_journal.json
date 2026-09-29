@@ -127,6 +127,13 @@
       "when": 1790701660805,
       "tag": "0017_internship_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790702972865,
+      "tag": "0018_internship_courses",
+      "breakpoints": true
     }
   ]
 }

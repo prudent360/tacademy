@@ -4,7 +4,7 @@ import { EnrolForm, type EnrolCohort } from "@/components/site/enrol-form";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
 import { bankTransferConfig } from "@/lib/config";
-import { getPublishedCourses, getSettings, getStudentCohorts, isGraduate } from "@/lib/data";
+import { getPublishedCourses, getSettings, getStudentCohorts, graduateFor, linkedCourseTitles } from "@/lib/data";
 import { mobileMoneyCountries } from "@/lib/money";
 import { payableMethods } from "@/lib/payments";
 import { cohortCurrencies } from "@/lib/pricing";
@@ -19,12 +19,14 @@ const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US",
 export default async function EnrolPage({ searchParams }: { searchParams: Promise<{ cohort?: string; course?: string }> }) {
   const [params, settings, user, courses, payable, bank] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableMethods(), bankTransferConfig()]);
   const visitor = await visitorCurrencies(settings);
-  const [enrolledIn, graduate] = await Promise.all([
-    user ? getStudentCohorts(user.id).then((rows) => new Set(rows.map((row) => row.cohort.id))) : new Set<number>(),
-    user ? isGraduate(user.id) : false,
-  ]);
+  const enrolledIn = user ? new Set((await getStudentCohorts(user.id)).map((row) => row.cohort.id)) : new Set<number>();
+  // Graduate status depends on each programme's linked courses, so it's worked out per course that offers free graduate places.
+  const graduateOf = new Map<number, boolean>();
+  const summaries = await withCohorts(courses);
+  const linkedTitles = await linkedCourseTitles(summaries.filter((c) => c.kind === "internship").map((c) => c.id));
+  if (user) for (const course of summaries) if (course.cohorts.some((c) => c.graduatesFree)) graduateOf.set(course.id, await graduateFor(user.id, course.id));
 
-  const cohorts: EnrolCohort[] = (await withCohorts(courses)).flatMap((course) => course.cohorts
+  const cohorts: EnrolCohort[] = summaries.flatMap((course) => course.cohorts
     .filter((cohort) => cohort.enrollmentOpen && !cohort.full && !enrolledIn.has(cohort.id))
     .map((cohort) => {
       const currencies = cohortCurrencies(cohort).filter((c) => payable.card.includes(c) || payable.mobile.includes(c) || (bank.enabled && c === bank.currency));
@@ -35,8 +37,9 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
         name: cohort.name,
         dates: cohort.startDate ? `${formatDateOnly(cohort.startDate)}${cohort.endDate ? ` – ${formatDateOnly(cohort.endDate)}` : ""}` : "Dates to be confirmed",
         deliveryMode: cohort.deliveryMode,
-        free: isFree(cohort) || (cohort.graduatesFree && graduate),
+        free: isFree(cohort) || (cohort.graduatesFree && (graduateOf.get(course.id) ?? false)),
         graduatesFree: cohort.graduatesFree && !isFree(cohort),
+        graduatesOf: linkedTitles.get(course.id) ?? [],
         prices: cohort.prices,
         registrationFees: cohort.registrationFees,
         depositPercent: cohort.depositPercent,

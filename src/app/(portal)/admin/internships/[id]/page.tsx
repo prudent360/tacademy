@@ -6,14 +6,14 @@ import { getDb } from "@/db";
 import { courses } from "@/db/schema";
 import { idParam } from "@/lib/validation";
 
-export const metadata: Metadata = { title: "Edit course" };
+export const metadata: Metadata = { title: "Edit internship" };
 
-export default async function EditCoursePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
+export default async function EditInternshipPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
   const [{ id: raw }, { created }] = await Promise.all([params, searchParams]);
   const id = idParam(raw);
   if (!id) notFound();
   const [course] = await (await getDb()).select().from(courses).where(eq(courses.id, id));
   if (!course) notFound();
-  if (course.kind === "internship") redirect(`/admin/internships/${id}`);
+  if (course.kind !== "internship") redirect(`/admin/courses/${id}`);
   return <ProgrammeAdmin course={course} created={Boolean(created)} />;
 }

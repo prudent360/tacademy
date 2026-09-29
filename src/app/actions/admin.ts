@@ -1,13 +1,13 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
 import {
-  certificates, cohortInstructors, cohorts, courses, DELIVERY_MODES, discountCodes, emailTemplates, enrollments, payments, ROLES, users,
+  certificates, cohortInstructors, cohorts, courses, DELIVERY_MODES, discountCodes, emailTemplates, enrollments, internshipCourses, payments, ROLES, users,
   type PriceMap, type Role,
 } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
@@ -95,34 +95,45 @@ async function saveCourse(id: number | null, formData: FormData): Promise<FormSt
     updatedAt: new Date(),
   };
   revalidatePath("/", "layout");
+  let savedId = id;
   if (id) {
     await db.update(courses).set(values).where(eq(courses.id, id));
     await deleteIfReplaced(existing?.imageUrl, image.url);
     await deleteIfReplaced(existing?.heroImageUrl, hero.url);
     await deleteIfReplaced(existing?.curriculumUrl, curriculumUrl);
-    return id;
+  } else {
+    [{ id: savedId }] = await db.insert(courses).values(values).returning({ id: courses.id }) as [{ id: number }];
   }
-  const [row] = await db.insert(courses).values(values).returning({ id: courses.id });
-  return row.id;
+  if (values.kind === "internship") await setLinkedCourses(savedId!, formData);
+  return savedId!;
+}
+
+/** Saves which courses' graduates join an internship free (only real courses, not other internships). */
+async function setLinkedCourses(internshipId: number, formData: FormData) {
+  const db = await getDb();
+  const wanted = formData.getAll("linkedCourseIds").map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  const valid = wanted.length ? (await db.select({ id: courses.id }).from(courses).where(and(inArray(courses.id, wanted), eq(courses.kind, "course")))).map((c) => c.id) : [];
+  await db.delete(internshipCourses).where(eq(internshipCourses.internshipId, internshipId));
+  if (valid.length) await db.insert(internshipCourses).values(valid.map((courseId) => ({ internshipId, courseId })));
 }
 
 export async function createCourse(_state: FormState, formData: FormData): Promise<FormState> {
   const result = await saveCourse(null, formData);
   if (typeof result !== "number") return result;
-  redirect(`/admin/courses/${result}?created=1`);
+  redirect(formData.get("kind") === "internship" ? `/admin/internships/${result}?created=1` : `/admin/courses/${result}?created=1`);
 }
 
 export async function updateCourse(id: number, _state: FormState, formData: FormData): Promise<FormState> {
   const result = await saveCourse(id, formData);
-  return typeof result === "number" ? { ok: "Course saved." } : result;
+  return typeof result === "number" ? { ok: formData.get("kind") === "internship" ? "Internship saved." : "Course saved." } : result;
 }
 
 export async function deleteCourse(id: number): Promise<void> {
   await requireRole("admin");
-  const [removed] = await (await getDb()).delete(courses).where(eq(courses.id, id)).returning({ imageUrl: courses.imageUrl, heroImageUrl: courses.heroImageUrl, curriculumUrl: courses.curriculumUrl });
+  const [removed] = await (await getDb()).delete(courses).where(eq(courses.id, id)).returning({ kind: courses.kind, imageUrl: courses.imageUrl, heroImageUrl: courses.heroImageUrl, curriculumUrl: courses.curriculumUrl });
   await Promise.all([deleteUpload(removed?.imageUrl), deleteUpload(removed?.heroImageUrl), deleteUpload(removed?.curriculumUrl)]);
   revalidatePath("/", "layout");
-  redirect("/admin/courses");
+  redirect(removed?.kind === "internship" ? "/admin/internships" : "/admin/courses");
 }
 
 // ---------- Cohorts ----------

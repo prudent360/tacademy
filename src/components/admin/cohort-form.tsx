@@ -6,7 +6,7 @@ import type { FormState } from "@/lib/validation";
 export function CohortForm({ action, cohort, instructors, assigned, currencies, internship = false }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   cohort?: Cohort;
-  /** New internship intakes start with "free for graduates" ticked. */
+  /** Internship intakes use internship wording, and new ones start with "free for graduates" ticked. */
   internship?: boolean;
   instructors: Pick<User, "id" | "name" | "email" | "role">[];
   assigned: number[];
@@ -59,7 +59,7 @@ export function CohortForm({ action, cohort, instructors, assigned, currencies, 
           </div>
         ) : <p className="text-sm text-muted">No instructors yet. Invite one under People.</p>}
       </fieldset>
-      <Checkbox label="Free for academy graduates" name="graduatesFree" defaultChecked={cohort?.graduatesFree ?? internship} hint="Students who completed one of your courses join without paying (they sign in to claim it). Everyone else pays the prices above; leave the prices empty to make it free for all." />
+      <Checkbox label={internship ? "Free for graduates of the linked courses" : "Free for academy graduates"} name="graduatesFree" defaultChecked={cohort?.graduatesFree ?? internship} hint={internship ? "Graduates of the courses linked to this internship join without paying (they sign in to claim it; with no courses linked, any course graduate qualifies). Everyone else pays the fees above." : "Students who completed one of your courses join without paying (they sign in to claim it). Everyone else pays the prices above; leave the prices empty to make it free for all."} />
       <Checkbox label="Enrolment open" name="enrollmentOpen" defaultChecked={cohort?.enrollmentOpen ?? true} />
       <SubmitButton>{cohort ? "Save cohort" : "Create cohort"}</SubmitButton>
     </ActionForm>

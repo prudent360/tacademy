@@ -22,6 +22,8 @@ export type EnrolCohort = {
   free: boolean;
   /** Academy graduates join free; others pay the price. */
   graduatesFree: boolean;
+  /** Courses whose graduates join free; empty means any course. */
+  graduatesOf: string[];
   prices: PriceMap;
   registrationFees: PriceMap;
   depositPercent: number | null;
@@ -202,8 +204,8 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
                 {cohort.free
                   ? <><strong>Free for you</strong> as a graduate of our academy.</>
                   : signedIn
-                    ? <>Graduates of our academy join free. Everyone else pays the fee below.</>
-                    : <>Graduates of our academy join free: <Link href={`/login?next=${encodeURIComponent(`/enroll?cohort=${cohort.id}`)}`} className="font-semibold underline">sign in</Link> to claim your place. Everyone else pays the fee below.</>}
+                    ? <>{cohort.graduatesOf.length ? `Graduates of ${cohort.graduatesOf.join(" or ")} join free.` : "Graduates of our academy join free."} Everyone else pays the fee below.</>
+                    : <>{cohort.graduatesOf.length ? `Graduates of ${cohort.graduatesOf.join(" or ")}` : "Graduates of our academy"} join free: <Link href={`/login?next=${encodeURIComponent(`/enroll?cohort=${cohort.id}`)}`} className="font-semibold underline">sign in</Link> to claim your place. Everyone else pays the fee below.</>}
               </p>
             )}
 

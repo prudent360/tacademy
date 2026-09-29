@@ -8,7 +8,7 @@ import { CurriculumRequest } from "@/components/site/curriculum-request";
 import { Avatar, Badge, ModeBadge, Notice } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
-import { getCourseBySlug, getInstructorsByCohort, getSettings, getStudentCohorts } from "@/lib/data";
+import { getCourseBySlug, getInstructorsByCohort, getSettings, getStudentCohorts, linkedCourseTitles } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { cohortCurrencies } from "@/lib/pricing";
 import type { Cohort } from "@/db/schema";
@@ -37,7 +37,8 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const instructorsByCohort = await getInstructorsByCohort(cohorts.map((c) => c.id));
   const instructors = [...new Map([...instructorsByCohort.values()].flat().map((i) => [i.id, i])).values()];
   const myCohortIds = new Set(user ? (await getStudentCohorts(user.id)).map((r) => r.cohort.id) : []);
-  const visitor = await visitorCurrencies(settings);
+  const [visitor, linkedTitles] = await Promise.all([visitorCurrencies(settings), course.kind === "internship" ? linkedCourseTitles([course.id]) : Promise.resolve(new Map<number, string[]>())]);
+  const graduatesOf = linkedTitles.get(course.id) ?? [];
   const preferredCurrency = visitor.currencies.find((currency) => cohorts.some((cohort) => (cohort.prices[currency] ?? 0) > 0));
   const preferredPrices = preferredCurrency ? cohorts.map((cohort) => cohort.prices[preferredCurrency] ?? 0).filter((price) => price > 0) : [];
   const startingPrice = preferredCurrency && preferredPrices.length ? formatMoney(Math.min(...preferredPrices), preferredCurrency) : cohorts.some(isFree) ? "Free" : null;
@@ -205,7 +206,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
                     <p className="text-[15px] font-semibold text-muted">Enrolment is closed.</p>
                   ) : (
                     <div className="flex flex-wrap items-end justify-between gap-3">
-                      <CohortPrice cohort={cohort} currencies={visitor.currencies} />
+                      <CohortPrice cohort={cohort} currencies={visitor.currencies} graduatesOf={graduatesOf} />
                       <Link href={`/enroll?cohort=${cohort.id}`} className="inline-flex h-11 items-center gap-2 rounded-[5px] bg-accent px-5 text-[15px] font-semibold text-white hover:bg-accent-dark">Enrol now <ArrowRight className="size-4" /></Link>
                     </div>
                   )}
@@ -219,7 +220,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
   );
 }
 
-function CohortPrice({ cohort, currencies }: { cohort: Cohort; currencies: string[] }) {
+function CohortPrice({ cohort, currencies, graduatesOf }: { cohort: Cohort; currencies: string[]; graduatesOf: string[] }) {
   if (isFree(cohort)) return <p className="font-display text-2xl font-bold text-emerald-700">Free</p>;
   const currency = [...currencies, ...cohortCurrencies(cohort)].find((c) => (cohort.prices[c] ?? 0) > 0 || (cohort.registrationFees[c] ?? 0) > 0);
   if (!currency) return null;
@@ -229,7 +230,7 @@ function CohortPrice({ cohort, currencies }: { cohort: Cohort; currencies: strin
       <p className="font-display text-2xl font-bold tracking-tight text-ink">{formatMoney(cohort.prices[currency] ?? 0, currency)}</p>
       {fee > 0 && <p className="text-[13px] text-muted">+ {formatMoney(fee, currency)} registration fee</p>}
       {cohort.depositPercent && <p className="text-[13px] text-muted">or {cohort.depositPercent}% deposit to start</p>}
-      {cohort.graduatesFree && <p className="text-[13px] font-semibold text-emerald-700">Free for academy graduates</p>}
+      {cohort.graduatesFree && <p className="text-[13px] font-semibold text-emerald-700">{graduatesOf.length ? `Free for graduates of ${graduatesOf.join(" or ")}` : "Free for academy graduates"}</p>}
     </div>
   );
 }

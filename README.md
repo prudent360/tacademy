@@ -50,6 +50,10 @@ Vercel Cron calls it daily (`vercel.json`). The Hobby plan only allows daily cro
 
 Courses have modules and lessons that every cohort shares. Admins build them from the course page; instructors can add modules and lessons, publish modules and edit lessons for courses they teach from **Teach → cohort → Learning** (deleting stays with admins). Paste a Bunny Stream, YouTube, Vimeo or Loom link into a lesson's **Video link** and it plays inside the lesson. For Bunny Stream, add the library's token authentication key in **Settings → Video** to sign video links so they expire after six hours, then turn on embed token authentication in Bunny.
 
+## Internships
+
+Internship programmes are managed separately under **Admin → Internships** (their own list, create/edit pages and "intake" wording) and no longer appear under Courses. Underneath, an internship is a course with `kind = "internship"` and its intakes are cohorts, so payments, classes, assignments, video lessons, quizzes, attendance and certificates all work the same way. Each internship can be linked to courses (`internship_courses`): graduates of a linked course join intakes marked "free for graduates of the linked courses" without paying, and everyone else pays the intake's fee; with no courses linked, any course graduate qualifies.
+
 ## Internship applications
 
 The home page's "Join our internship programme" section and the Internships page link to `/internships/apply`, a screening form (contact details, background, area and experience, preferred intake, availability, portfolio/LinkedIn/CV, motivation, 18+ and privacy consent). Applicants get a confirmation email; admins are notified and review them under **Admin → Internship applications** (filter, search, CSV export, private notes). "I'm a graduate" is verified against completed courses for the applicant's email. **Accept** emails a link to enrol on the chosen internship intake (free for verified graduates when the intake allows it); **Decline** sends a polite email. All three emails are editable under Settings → Emails.

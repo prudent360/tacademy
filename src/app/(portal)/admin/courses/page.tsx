@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { asc, count } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { BookIcon } from "@/components/icons";
 import { Badge, DataTable, EmptyState, PageHeader, buttonClass } from "@/components/ui";
 import { getDb } from "@/db";
@@ -11,7 +11,8 @@ export const metadata: Metadata = { title: "Courses" };
 export default async function AdminCoursesPage() {
   const db = await getDb();
   const [rows, counts] = await Promise.all([
-    db.select().from(courses).orderBy(asc(courses.sortOrder), asc(courses.title)),
+    // Internships have their own section.
+    db.select().from(courses).where(eq(courses.kind, "course")).orderBy(asc(courses.sortOrder), asc(courses.title)),
     db.select({ courseId: cohorts.courseId, n: count() }).from(cohorts).groupBy(cohorts.courseId),
   ]);
   return (

@@ -39,14 +39,14 @@ export default async function AdminCohortPage({ params, searchParams }: { params
   return (
     <>
       <PageHeader
-        back={{ href: `/admin/courses/${course.id}`, label: course.title }}
+        back={{ href: `/admin/${course.kind === "internship" ? "internships" : "courses"}/${course.id}`, label: course.title }}
         title={`${course.title}: ${cohort.name}`}
         actions={<Link href={`/teach/cohorts/${id}`} className={buttonClass.primary}>Classes & assignments</Link>}
       />
-      {created && <Notice>Cohort created. Add its classes from &ldquo;Classes & assignments&rdquo;{course.published ? "." : ", and publish the course so students can enrol."}</Notice>}
+      {created && <Notice>{course.kind === "internship" ? "Intake" : "Cohort"} created. Add its classes from &ldquo;Classes & assignments&rdquo;{course.published ? "." : ", and publish the course so students can enrol."}</Notice>}
       <div className="grid items-start gap-6 2xl:grid-cols-[1.2fr_1fr]">
-        <Card title="Cohort settings">
-          <CohortForm action={updateCohort.bind(null, id, course.id)} cohort={cohort} instructors={staff} assigned={assigned.map((a) => a.userId)} currencies={settings.currencies} />
+        <Card title={course.kind === "internship" ? "Intake settings" : "Cohort settings"}>
+          <CohortForm action={updateCohort.bind(null, id, course.id)} cohort={cohort} instructors={staff} assigned={assigned.map((a) => a.userId)} currencies={settings.currencies} internship={course.kind === "internship"} />
         </Card>
         <div className="flex flex-col gap-6">
           <Card title={`Students (${activeCount}${cohort.capacity ? ` of ${cohort.capacity}` : ""})`}>

@@ -250,6 +250,15 @@ export const internshipApplications = pgTable("internship_applications", {
 
 export type InternshipApplication = typeof internshipApplications.$inferSelect;
 
+/**
+ * Courses linked to an internship programme: graduates of any of them join the internship's
+ * "free for graduates" intakes without paying. With none linked, any course graduate qualifies.
+ */
+export const internshipCourses = pgTable("internship_courses", {
+  internshipId: integer("internship_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+}, (t) => [primaryKey({ columns: [t.internshipId, t.courseId] })]);
+
 /** Leads from the "View curriculum" form on course pages. */
 export const curriculumRequests = pgTable("curriculum_requests", {
   id: serial("id").primaryKey(),

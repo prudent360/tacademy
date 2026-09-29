@@ -40,6 +40,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number }): NavGro
     items: [
       { href: "/admin", label: "Dashboard", icon: GridIcon, exact: true },
       { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon },
+      { href: "/admin/internships", label: "Internships", icon: BriefcaseIcon },
       { href: "/admin/users", label: "People", icon: UsersIcon },
       { href: "/admin/payments", label: "Payments", icon: CardIcon },
       { href: "/admin/applications", label: "Internship applications", icon: BriefcaseIcon },

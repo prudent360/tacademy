@@ -20,7 +20,7 @@ export default async function NewCohortPage({ searchParams }: { searchParams: Pr
   const [settings, staff] = await Promise.all([getSettings(), db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users).where(inArray(users.role, ["instructor", "admin"]))]);
   return (
     <>
-      <PageHeader back={{ href: `/admin/courses/${courseId}`, label: course.title }} title="New cohort" description={course.title} />
+      <PageHeader back={{ href: `/admin/${course.kind === "internship" ? "internships" : "courses"}/${courseId}`, label: course.title }} title={course.kind === "internship" ? "New intake" : "New cohort"} description={course.title} />
       <Card><CohortForm action={createCohort.bind(null, courseId)} instructors={staff} assigned={[]} currencies={settings.currencies} internship={course.kind === "internship"} /></Card>
     </>
   );
