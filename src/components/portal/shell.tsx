@@ -201,24 +201,21 @@ function NotificationMenu({ items, unread, markAllRead }: { items: ShellNotifica
   );
 }
 
-function UserMenu({ user, logout }: { user: { name: string; email: string; avatarUrl: string | null; role: Role }; logout: () => Promise<void> }) {
+/** Just the person's photo in the top bar; the menu holds their details and account links. */
+function UserMenu({ user, studentId, logout }: { user: { name: string; email: string; avatarUrl: string | null; role: Role }; studentId?: string; logout: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const ref = useDismiss<HTMLDivElement>(open, () => setOpen(false));
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex cursor-pointer items-center gap-2.5 rounded-full border border-edge bg-panel py-1 pl-1 pr-3 hover:bg-page">
-        <Avatar name={user.name} src={user.avatarUrl} className="size-8" />
-        <span className="hidden text-left sm:block">
-          <span className="block text-sm font-semibold leading-tight text-ink">{user.name}</span>
-          <span className="block text-[11px] leading-tight text-muted">{ROLE_LABEL[user.role]}</span>
-        </span>
-        <ChevronDown className="size-4 text-muted" />
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu" aria-label={`Account menu for ${user.name}`} title={user.name} className="flex cursor-pointer rounded-full ring-2 ring-transparent ring-offset-2 transition hover:ring-accent-muted aria-expanded:ring-accent">
+        <Avatar name={user.name} src={user.avatarUrl} className="size-9" />
       </button>
       {open && (
         <div className="absolute right-0 top-12 z-50 w-60 overflow-hidden rounded-[14px] border border-edge bg-white p-1.5 shadow-[0_24px_48px_-16px_rgba(25,17,46,0.3)]">
           <div className="border-b border-line px-3 py-2.5">
             <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
-            <p className="truncate text-xs text-muted">{user.email}</p>
+            <p className="truncate text-xs text-muted">{ROLE_LABEL[user.role]} · {user.email}</p>
+            {studentId && <p className="mt-1.5 inline-flex rounded-full bg-accent-soft px-2 py-0.5 font-mono text-[11px] font-semibold text-accent">Student ID {studentId}</p>}
           </div>
           <Link href="/account" onClick={() => setOpen(false)} className="mt-1 flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-body hover:bg-page"><UserIcon className="size-4" /> Profile & security</Link>
           <Link href="/" onClick={() => setOpen(false)} className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-body hover:bg-page"><ExternalIcon className="size-4" /> View website</Link>
@@ -248,7 +245,7 @@ function StudentIdPill({ id }: { id: string }) {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, notifications, today, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null };
@@ -259,7 +256,6 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   /** Admins: internship applications waiting for review. */
   newApplications?: number;
   notifications: ShellNotification[];
-  today: string;
   /** Shown instead of the date for students. */
   studentId?: string;
   /** Students' level and XP, next to their ID. */
@@ -431,11 +427,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
                 {xp.total.toLocaleString("en-GB")} XP
               </Link>
             )}
-            {studentId ? <StudentIdPill id={studentId} /> : (
-              <span className="hidden items-center gap-2 rounded-full border border-edge bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink shadow-sm sm:flex">
-                <CalendarIcon className="size-3.5 text-accent" /> {today}
-              </span>
-            )}
+            {studentId && <StudentIdPill id={studentId} />}
           </div>
           <div className="flex items-center gap-2">
             {role !== "student" && toGrade > 0 && (
@@ -443,7 +435,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
             )}
             <NotificationMenu items={notifications} unread={unread} markAllRead={markAllRead} />
             <span className="mx-1 hidden h-6 w-px bg-edge sm:block" />
-            <UserMenu user={{ ...user, role }} logout={logout} />
+            <UserMenu user={{ ...user, role }} studentId={studentId} logout={logout} />
           </div>
         </header>
 
