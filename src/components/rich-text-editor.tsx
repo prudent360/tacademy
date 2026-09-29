@@ -82,7 +82,8 @@ export function RichTextEditor({ label, name, defaultValue = "", hint, placehold
     content: defaultValue,
     contentType: "markdown",
     immediatelyRender: false,
-    editorProps: { attributes: { class: "tiptap-content prose prose-slate max-w-none px-4 py-3 focus:outline-none", "aria-labelledby": `${id}-label` } },
+    // The typing area fills the editor's height, so clicking anywhere in the box starts typing.
+    editorProps: { attributes: { class: "tiptap-content prose prose-slate max-w-none px-4 py-3 focus:outline-none", style: `min-height: ${minHeight}px`, "aria-labelledby": `${id}-label` } },
     // Programmatic changes use emitUpdate: false, so this only runs for the person's own edits.
     onUpdate: ({ editor: e }) => {
       dirty.current = true;
@@ -180,9 +181,7 @@ export function RichTextEditor({ label, name, defaultValue = "", hint, placehold
         {source ? (
           <textarea aria-labelledby={`${id}-label`} value={value} onChange={(e) => { dirty.current = true; setValue(e.target.value); }} spellCheck className="block w-full resize-y px-4 py-3 font-mono text-sm text-ink focus:outline-none" style={{ minHeight }} />
         ) : (
-          <div style={{ minHeight }} onClick={() => editor?.commands.focus()}>
-            <EditorContent editor={editor} />
-          </div>
+          <div style={{ minHeight }}><EditorContent editor={editor} /></div>
         )}
       </div>
       <input ref={hidden} type="hidden" name={name} value={value} />

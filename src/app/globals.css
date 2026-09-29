@@ -151,7 +151,10 @@ body:has([data-dark-hero]) #main { margin-top: -4.75rem; }
   [data-dark-hero] { padding-top: 5.5rem; }
 }
 
-/* Rich text editor (components/rich-text-editor.tsx) */
+/* Rich text editor (components/rich-text-editor.tsx). The whole editor shows the focus ring, so the typing area doesn't need its own. */
+.tiptap-content:focus-visible {
+  outline: none;
+}
 .tiptap-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
