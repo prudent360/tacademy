@@ -10,7 +10,7 @@ import { countryByCode } from "@/lib/countries";
 import { isFree } from "@/lib/catalog";
 import { rememberCheckout } from "@/lib/checkout-access";
 import { getCohortWithCourse, graduateFor, isEnrolled, seatsTaken } from "@/lib/data";
-import { activateEnrollment, startBalanceCheckout, startBankTransfer, startCheckout } from "@/lib/payments";
+import { activateEnrollment, findDiscount, startBalanceCheckout, startBankTransfer, startCheckout } from "@/lib/payments";
 import { availablePlans, type EnrolPlan } from "@/lib/pricing";
 import { loginBlockedFor, recordLoginFailure } from "@/lib/rate-limit";
 import { QUALIFICATIONS } from "@/lib/utils";
@@ -100,7 +100,7 @@ export async function enrol(_state: EnrolState, formData: FormData): Promise<Enr
 
   const plan: EnrolPlan = availablePlans(cohort, details.currency).includes(details.plan) ? details.plan : "full";
   const result = details.method === "bank"
-    ? await startBankTransfer(user, course, cohort, plan)
+    ? await startBankTransfer(user, course, cohort, plan, details.discountCode)
     : await startCheckout(user, course, cohort, details.currency, { plan, discountCode: details.discountCode, method: details.method === "mobile" ? "mobile" : "card", country: details.mobileCountry });
   if ("error" in result) return { error: result.error };
   await rememberCheckout(result.reference);
@@ -117,4 +117,16 @@ export async function payBalance(cohortId: number, currency: string, state: Form
   const result = await startBalanceCheckout(user, found.course, found.cohort, currency);
   if ("error" in result) return { error: result.error };
   redirect(result.url);
+}
+
+/** Checks a discount code for the enrol form, so the saving shows before paying. Wrong guesses are rate limited. */
+export async function checkDiscountCode(code: string): Promise<{ code: string; percentOff: number } | { error: string }> {
+  const wait = await loginBlockedFor("discount-code", "discount");
+  if (wait) return { error: `Too many codes tried. Please try again in ${wait} minute${wait === 1 ? "" : "s"}.` };
+  const found = await findDiscount(String(code).slice(0, 40));
+  if ("error" in found) {
+    await recordLoginFailure("discount-code", "discount");
+    return found;
+  }
+  return { code: found.code, percentOff: found.percentOff };
 }

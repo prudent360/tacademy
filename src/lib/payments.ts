@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { getDb } from "@/db";
-import { discountCodes, enrollments, payments, users, type Cohort, type Course, type EnrollmentSource, type Payment, type PaymentPlan, type User } from "@/db/schema";
+import { discountCodes, enrollments, payments, users, type Cohort, type Course, type DiscountCode, type EnrollmentSource, type Payment, type PaymentPlan, type User } from "@/db/schema";
 import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
@@ -185,14 +185,21 @@ function planNote(plan: EnrolPlan, cohort: Cohort, registrationFee: number): str
  * Creates a pending payment and returns the URL to send the student to:
  * Stripe Checkout, Paystack's or pawaPay's payment page, or the local test checkout.
  */
+/** A discount code that can be used right now: active, not expired and not used up. */
+export async function findDiscount(code: string): Promise<DiscountCode | { error: string }> {
+  const requested = code.trim().toUpperCase();
+  const [discount] = requested ? await (await getDb()).select().from(discountCodes).where(and(eq(discountCodes.code, requested), eq(discountCodes.active, true), or(isNull(discountCodes.expiresAt), sql`${discountCodes.expiresAt} > now()`))) : [];
+  if (!discount || (discount.maxUses !== null && discount.usedCount >= discount.maxUses)) return { error: "That discount code is invalid or has expired." };
+  return discount;
+}
+
 export async function startCheckout(user: User, course: Course, cohort: Cohort, currency: string, options: { plan?: EnrolPlan; discountCode?: string; method?: PayMethod; country?: string } = {}): Promise<{ url: string; reference: string } | { error: string }> {
   const plan = options.plan ?? "full";
   const base = quote(cohort, currency, plan);
   if (!base.dueNow) return { error: "This cohort isn't sold in that currency." };
-  const db = await getDb();
-  const requestedCode = options.discountCode?.trim().toUpperCase();
-  const [discount] = requestedCode ? await db.select().from(discountCodes).where(and(eq(discountCodes.code, requestedCode), eq(discountCodes.active, true), or(isNull(discountCodes.expiresAt), sql`${discountCodes.expiresAt} > now()`))) : [];
-  if (requestedCode && (!discount || (discount.maxUses !== null && discount.usedCount >= discount.maxUses))) return { error: "That discount code is invalid or has expired." };
+  const found = options.discountCode?.trim() ? await findDiscount(options.discountCode) : null;
+  if (found && "error" in found) return found;
+  const discount = found ?? undefined;
   const q = quote(cohort, currency, plan, discount?.percentOff ?? 0);
   const paymentPlan = q.later > 0 ? plan : "full";
   const description = `${describePurchase(course, cohort)}${planNote(paymentPlan, cohort, q.registrationFee)}${discount ? ` · ${discount.code}` : ""}`;
@@ -240,10 +247,13 @@ export async function startBalanceCheckout(user: User, course: Course, cohort: C
  * Creates a pending bank-transfer payment. The student sees the account details and a reference;
  * an admin confirms it under Payments once the money arrives.
  */
-export async function startBankTransfer(user: User, course: Course, cohort: Cohort, plan: EnrolPlan = "full"): Promise<{ url: string; reference: string } | { error: string }> {
+export async function startBankTransfer(user: User, course: Course, cohort: Cohort, plan: EnrolPlan = "full", discountCode = ""): Promise<{ url: string; reference: string } | { error: string }> {
   const bank = await bankTransferConfig();
   if (!bank.enabled) return { error: "Bank transfer isn't available." };
-  const q = quote(cohort, bank.currency, plan);
+  const found = discountCode.trim() ? await findDiscount(discountCode) : null;
+  if (found && "error" in found) return found;
+  const discount = found ?? undefined;
+  const q = quote(cohort, bank.currency, plan, discount?.percentOff ?? 0);
   if (!q.dueNow) return { error: `This cohort has no ${bank.currency} price for bank transfer.` };
   const paymentPlan = q.later > 0 ? plan : "full";
   const db = await getDb();
@@ -253,8 +263,8 @@ export async function startBankTransfer(user: User, course: Course, cohort: Coho
   if (same) return { url: `/checkout/transfer?ref=${same.reference}`, reference: same.reference };
   if (open.length) await db.update(payments).set({ status: "failed" }).where(inArray(payments.id, open.map((p) => p.id)));
   const reference = newReference();
-  const description = `${describePurchase(course, cohort)}${planNote(paymentPlan, cohort, q.registrationFee)}`;
-  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: "manual", amount: q.dueNow, currency: bank.currency, description, originalAmount: q.tuitionPrice, paymentPlan, registrationFee: q.registrationFee });
+  const description = `${describePurchase(course, cohort)}${planNote(paymentPlan, cohort, q.registrationFee)}${discount ? ` · ${discount.code}` : ""}`;
+  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: "manual", amount: q.dueNow, currency: bank.currency, description, originalAmount: q.tuitionPrice, paymentPlan, registrationFee: q.registrationFee, discountCodeId: discount?.id });
   await notify((await getAdmins()).map((a) => a.id), {
     kind: "payment",
     title: `Bank transfer expected: ${formatMoney(q.dueNow, bank.currency)}`,

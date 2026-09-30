@@ -470,6 +470,7 @@ export const discountCodes = pgTable("discount_codes", {
 });
 
 export type Certificate = typeof certificates.$inferSelect;
+export type DiscountCode = typeof discountCodes.$inferSelect;
 
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),

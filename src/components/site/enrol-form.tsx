@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { startTransition, useActionState, useId, useMemo, useRef, useState } from "react";
-import { enrol, type EnrolState } from "@/app/actions/enroll";
+import { checkDiscountCode, enrol, type EnrolState } from "@/app/actions/enroll";
 import { ArrowLeft } from "@/components/icons";
 import { PhoneInput } from "@/components/phone-input";
 import type { DeliveryMode, PriceMap } from "@/db/schema";
@@ -109,7 +109,34 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
     setWallet("");
     setShowCurrencies(false);
   }
-  const q = cohort && currency && !cohort.free ? quote(cohort, currency.code, plan) : null;
+  // A discount code is checked when "Apply" is pressed, so the saving shows before paying. It's checked again at payment.
+  const [codeInput, setCodeInput] = useState("");
+  const [discount, setDiscount] = useState<{ code: string; percentOff: number } | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
+  const codeRequest = useRef(0);
+  async function applyCode() {
+    if (!codeInput.trim()) { setCodeError("Enter a code first."); return; }
+    // Only the latest check counts, if someone applies twice quickly.
+    const request = ++codeRequest.current;
+    setCheckingCode(true);
+    setCodeError(null);
+    const result = await checkDiscountCode(codeInput);
+    if (request !== codeRequest.current) return;
+    setCheckingCode(false);
+    if ("error" in result) { setDiscount(null); setCodeError(result.error); return; }
+    setCodeError(null);
+    setDiscount(result);
+    setCodeInput(result.code);
+  }
+  function removeCode() {
+    codeRequest.current++;
+    setDiscount(null);
+    setCodeInput("");
+    setCodeError(null);
+  }
+  const q = cohort && currency && !cohort.free ? quote(cohort, currency.code, plan, discount?.percentOff ?? 0) : null;
+  const saving = q ? q.tuitionPrice - q.tuition : 0;
   const money = (minor: number) => (currency ? formatMoney(minor, currency.code) : "—");
 
   function chooseCourse(value: string) {
@@ -276,9 +303,28 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
               </Field>
             ) : <input type="hidden" name="mobileCountry" value={mobileCountry} />)}
 
-            {cohort && !cohort.free && method !== "bank" && (
+            {cohort && !cohort.free && (
               <Field label="Discount code" htmlFor={`${id}-discount`}>
-                <input id={`${id}-discount`} name="discountCode" maxLength={40} placeholder="Optional" className={`${inputClass} uppercase placeholder:normal-case`} />
+                {discount ? (
+                  <div className="flex h-12 items-center justify-between gap-3 rounded-[5px] border border-emerald-300 bg-emerald-50 px-3.5">
+                    <span className="text-[15px] text-emerald-900"><strong className="font-mono">{discount.code}</strong> applied · {discount.percentOff}% off tuition</span>
+                    <button type="button" onClick={removeCode} className="cursor-pointer text-sm font-semibold text-emerald-900 underline-offset-2 hover:underline">Remove</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      id={`${id}-discount`} value={codeInput} maxLength={40} placeholder="Optional" autoComplete="off"
+                      onChange={(e) => { setCodeInput(e.target.value); setCodeError(null); }}
+                      // Enter applies the code rather than submitting the whole form.
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCode(); } }}
+                      aria-invalid={Boolean(codeError)} aria-describedby={codeError ? `${id}-discount-error` : undefined}
+                      className={`${inputClass} uppercase placeholder:normal-case`}
+                    />
+                    <button type="button" onClick={applyCode} disabled={checkingCode} className="h-12 shrink-0 cursor-pointer rounded-[5px] border-[1.5px] border-accent px-5 text-[15px] font-semibold text-accent transition hover:bg-accent-soft disabled:cursor-wait disabled:opacity-60">{checkingCode ? "Checking…" : "Apply"}</button>
+                  </div>
+                )}
+                {codeError && <p id={`${id}-discount-error`} role="alert" className="text-[13px] text-red-700">{codeError}</p>}
+                <input type="hidden" name="discountCode" value={discount?.code ?? codeInput} />
               </Field>
             )}
 
@@ -316,17 +362,17 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
             <div className="flex flex-col gap-2.5">
               <p className="text-xs font-semibold uppercase tracking-[1.2px] text-white/55">Total course cost</p>
               <div className="flex flex-col gap-2 rounded-[12px] bg-white/[.06] p-4">
-                <div className="flex items-baseline justify-between gap-4"><span className="font-semibold">Total program fee</span><span className="font-display text-xl font-bold">{money(q.total)}</span></div>
+                <div className="flex items-baseline justify-between gap-4"><span className="font-semibold">Total program fee</span><span className="flex items-baseline gap-2">{saving > 0 && <span className="text-sm text-white/45 line-through">{money(q.total + saving)}</span>}<span className="font-display text-xl font-bold">{money(q.total)}</span></span></div>
                 {q.registrationFee > 0 && <p className="text-xs text-white/55">{money(q.tuition)} tuition + {money(q.registrationFee)} registration fee</p>}
               </div>
             </div>
             <div className="flex flex-col gap-2.5 rounded-[12px] border border-emerald-400/30 bg-emerald-400/[.04] p-4">
               <p className="text-xs font-semibold uppercase tracking-[1.2px] text-white/55">Amount due now</p>
+              {saving > 0 && <div className="flex justify-between gap-4 text-sm"><span className="text-emerald-300">Discount ({discount?.code}, {discount?.percentOff}% off)</span><span className="text-emerald-300">−{money(saving)}</span></div>}
               <div className="flex justify-between gap-4 text-sm"><span className="text-white/65">Tuition</span><span>{money(q.tuitionNow)}</span></div>
               {q.registrationFee > 0 && <div className="flex justify-between gap-4 text-sm"><span className="text-white/65">+ Registration fee</span><span>{money(q.registrationFee)}</span></div>}
               <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-white/10 pt-3"><span className="font-semibold">Total</span><span className="font-display text-3xl font-bold text-emerald-400">{money(q.dueNow)}</span></div>
               {q.later > 0 && <p className="text-xs text-white/55">{money(q.later)} tuition balance due later.</p>}
-              {method !== "bank" && <p className="text-xs text-white/55">Discount codes are applied at checkout.</p>}
               {method === "mobile" && <p className="text-xs text-white/55">You&apos;ll confirm the payment on your phone.</p>}
             </div>
           </>
