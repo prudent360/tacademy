@@ -227,32 +227,25 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Internship programme */}
+      {/* Internship programme: a compact banner. */}
       <section aria-labelledby="internship-heading" className="border-t border-line bg-white">
-        <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 md:py-24">
-          <div className="relative grid items-center gap-10 overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,#2b1a5c_0%,#5a24b8_100%)] p-8 text-white md:p-12 lg:grid-cols-[1.2fr_1fr]">
-            <div aria-hidden="true" className="absolute -right-24 -top-24 size-72 rounded-full bg-white/10 blur-2xl" />
-            <div className="relative flex flex-col gap-5">
+        <div className="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 md:py-20">
+          <div className="relative flex flex-col gap-7 overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#2b1a5c_0%,#5a24b8_100%)] px-7 py-9 text-white md:px-12 md:py-10 lg:flex-row lg:items-center lg:justify-between">
+            <div aria-hidden="true" className="absolute -right-20 -top-24 size-72 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex flex-col gap-3">
               <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-cyan-light">Internship programme</p>
-              <h2 id="internship-heading" className="font-display text-3xl font-bold leading-tight tracking-tight md:text-[44px]">Join our internship programme</h2>
-              <p className="max-w-[520px] text-lg text-white/80">Get supervised, real-world experience on practical projects, and leave with work you can show employers.</p>
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Link href="/internships/apply" className="flex h-12 items-center gap-2 rounded-xl bg-white px-6 font-semibold text-accent transition hover:-translate-y-0.5 hover:bg-accent-soft">Apply now <ArrowRight className="size-4" /></Link>
-                <Link href="/internships" className="flex h-12 items-center rounded-xl border-[1.5px] border-white/40 px-6 font-semibold text-white transition hover:border-white hover:bg-white/10">See programmes</Link>
-              </div>
+              <h2 id="internship-heading" className="font-display text-[28px] font-bold leading-tight tracking-tight md:text-[34px]">Get real-world experience</h2>
+              <p className="max-w-[560px] text-white/75">Supervised, practical projects you can show employers.</p>
+              <ul className="flex flex-wrap gap-2 pt-1">
+                {["Real projects", "Supervised by practitioners", "Free for our graduates"].map((item) => (
+                  <li key={item} className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[.08] px-3 py-1.5 text-[13px] font-medium text-white/90"><CheckIcon className="size-3.5 text-cyan-light" />{item}</li>
+                ))}
+              </ul>
             </div>
-            <ul className="relative flex flex-col gap-3">
-              {[
-                ["Real projects", "Work on practical briefs with deadlines and reviews, the way teams work."],
-                ["Supervised by practitioners", "Regular check-ins and feedback on what you build."],
-                ["Free for our graduates", "Completed one of our courses? Your place is free."],
-              ].map(([title, text]) => (
-                <li key={title} className="flex gap-3 rounded-[14px] border border-white/15 bg-white/[.07] p-4 backdrop-blur">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-cyan/20 text-cyan-light"><CheckIcon className="size-4" /></span>
-                  <span><span className="block font-semibold">{title}</span><span className="text-sm text-white/70">{text}</span></span>
-                </li>
-              ))}
-            </ul>
+            <div className="relative flex shrink-0 flex-wrap gap-3">
+              <Link href="/internships/apply" className="flex h-12 items-center gap-2 rounded-xl bg-white px-6 font-semibold text-accent transition hover:-translate-y-0.5 hover:bg-accent-soft">Apply now <ArrowRight className="size-4" /></Link>
+              <Link href="/internships" className="flex h-12 items-center rounded-xl border-[1.5px] border-white/40 px-6 font-semibold text-white transition hover:border-white hover:bg-white/10">See programmes</Link>
+            </div>
           </div>
         </div>
       </section>
