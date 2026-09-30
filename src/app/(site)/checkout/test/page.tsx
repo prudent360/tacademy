@@ -18,7 +18,7 @@ export default async function TestCheckoutPage({ searchParams }: { searchParams:
   const [payment] = await (await getDb()).select().from(payments).where(eq(payments.reference, ref));
   if (!payment || !(await canViewPayment(payment)).allowed) notFound();
   const simulatedGateway = payment.providerId?.startsWith("simulated:") ? payment.providerId.slice("simulated:".length) : gatewayFor(payment.currency);
-  const gateway = { stripe: "Stripe", paystack: "Paystack", pawapay: "pawaPay" }[simulatedGateway as "stripe" | "paystack" | "pawapay"] ?? "payment";
+  const gateway = { stripe: "Stripe", paystack: "Paystack", pawapay: "pawaPay", transactpay: "TransactPay" }[simulatedGateway as "stripe" | "paystack" | "pawapay" | "transactpay"] ?? "payment";
 
   return (
     <div className="mx-auto flex max-w-[480px] flex-col gap-6 px-5 py-16">

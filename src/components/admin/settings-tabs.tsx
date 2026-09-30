@@ -131,16 +131,21 @@ export function BrandingTab({ s }: { s: Settings }) {
 // ---------- Payments ----------
 
 export async function PaymentsTab({ s }: { s: Settings }) {
-  const [stripe, paystack, pawapay, bank] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("pawapay"), bankTransferConfig()]);
+  const [stripe, paystack, pawapay, transactpay, bank] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("pawapay"), gatewayConfig("transactpay"), bankTransferConfig()]);
+  // TransactPay needs three keys; until all are there, naira stays with Paystack.
+  const transactpayBadge = (compact = false) => transactpay.enabled && transactpay.secretKey && (!transactpay.publicKey || !transactpay.encryptionKey)
+    ? <Badge tone="red"><AlertIcon className="size-3.5" /> {compact ? "Keys missing" : "Add the public and encryption keys"}</Badge>
+    : gatewayBadge(transactpay, compact);
   const saved = s.payment;
   const envNote = (cfg: ResolvedGateway, envName: string) => cfg.source === "environment" ? <Notice tone="accent">Currently using the <code className="font-mono">{envName}</code> environment variable. Keys saved here take priority.</Notice> : null;
 
   return (
     <ActionForm action={savePayments} className="flex flex-col gap-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
           { name: "Stripe", logo: <Logo text="S" color="#635BFF" />, badge: gatewayBadge(stripe, true), text: "GBP · USD · EUR · CAD" },
           { name: "Paystack", logo: <Logo text="P" color="#0BA4DB" />, badge: gatewayBadge(paystack, true), text: "NGN · GHS · KES · ZAR" },
+          { name: "TransactPay", logo: <Logo text="T" color="#1F4ED8" />, badge: transactpayBadge(true), text: "NGN · card, transfer, OPay" },
           { name: "pawaPay", logo: <Logo text="M" color="#12A150" />, badge: gatewayBadge(pawapay, true), text: "Mobile money · 8 currencies" },
           { name: "Bank transfer", logo: <span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>, badge: bank.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : <Badge>Off</Badge>, text: bank.enabled ? `${bank.currency}, confirmed by admins` : "Manual confirmation" },
         ].map((g) => (
@@ -194,6 +199,28 @@ export async function PaymentsTab({ s }: { s: Settings }) {
           </div>
         </div>
         <CopyField label="Webhook URL" value={absoluteUrl("/api/webhooks/paystack")} />
+      </Section>
+
+      <Section title="TransactPay" description="Card, bank transfer and OPay for naira (NGN). When switched on, naira payments go through TransactPay instead of Paystack." icon={<Logo text="T" color="#1F4ED8" />} badge={transactpayBadge()}
+        footer={<>Find all three keys in the <a href="https://app.transactpay.ai/sign-in" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">TransactPay Dashboard → Settings → API Keys &amp; Webhooks</a> (switch between Test and Live at the top right; each has its own keys). Paste the webhook URL there too.</>}>
+        <Switch label="Take naira payments with TransactPay" name="transactpayEnabled" defaultChecked={transactpay.enabled} hint="Students paying in NGN get TransactPay's checkout (card, bank transfer or OPay). Paystack still handles GHS, KES and ZAR. Turn this off to send naira back to Paystack." />
+        {envNote(transactpay, "TRANSACTPAY_SECRET_KEY")}
+        <ModePicker name="transactpayMode" value={transactpay.mode} />
+        {transactpay.mode === "live" && <Notice tone="amber"><strong>Live mode:</strong> real payments will be taken.</Notice>}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {(["Test", "Live"] as const).map((m) => {
+            const own = saved.transactpay;
+            return (
+              <div key={m} className="flex flex-col gap-4 rounded-xl border border-edge p-4">
+                <p className="text-xs font-semibold uppercase tracking-[1px] text-muted">{m} keys</p>
+                <Input label="Public key" name={`transactpay${m}PublicKey`} defaultValue={m === "Test" ? own?.testPublicKey : own?.livePublicKey} placeholder={`PGW-PUBLICKEY-${m.toUpperCase()}-…`} className="[&_input]:font-mono [&_input]:text-sm" />
+                <SecretInput label="Secret key" name={`transactpay${m}SecretKey`} masked={maskSecret(m === "Test" ? own?.testSecretKey : own?.liveSecretKey)} placeholder={`PGW-SECRETKEY-${m.toUpperCase()}-…`} />
+                <Textarea label="Encryption key" name={`transactpay${m}EncryptionKey`} defaultValue={(m === "Test" ? own?.testEncryptionKey : own?.liveEncryptionKey) ?? ""} rows={3} placeholder="NDA5NiE8UlNBS2V5VmFsdWU+…" hint="A long block of letters and numbers. Used to encrypt checkout requests." className="[&_textarea]:font-mono [&_textarea]:text-xs" />
+              </div>
+            );
+          })}
+        </div>
+        <CopyField label="Webhook URL" value={absoluteUrl("/api/webhooks/transactpay")} />
       </Section>
 
       <Section title="pawaPay" description="Mobile money (MTN, Airtel, Orange, M-Pesa, Wave and more) in NGN, GHS, KES, UGX, TZS, RWF, XOF and XAF." icon={<Logo text="M" color="#12A150" />} badge={gatewayBadge(pawapay)}

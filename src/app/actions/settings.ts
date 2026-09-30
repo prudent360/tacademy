@@ -110,7 +110,15 @@ function checkKey(value: FormDataEntryValue | null, prefixes: string[], label: s
   return prefixes.some((p) => v.startsWith(p)) ? null : `${label} should start with ${prefixes.join(" or ")}.`;
 }
 
-function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "pawapay", existing: Partial<GatewaySettings> | undefined): GatewaySettings {
+/** A TransactPay encryption key is base64 of an RSA key in XML ("4096!<RSAKeyValue>…"). */
+function checkTransactpayKey(value: FormDataEntryValue | null, label: string): string | null {
+  const v = String(value ?? "").trim();
+  if (!v) return null;
+  const decoded = Buffer.from(v, "base64").toString("utf8");
+  return decoded.includes("<Modulus>") && decoded.includes("<Exponent>") ? null : `${label} doesn't look right. Copy the whole Encryption Key from TransactPay → Settings → API Keys & Webhooks.`;
+}
+
+function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "pawapay" | "transactpay", existing: Partial<GatewaySettings> | undefined): GatewaySettings {
   return {
     enabled: formData.get(`${prefix}Enabled`) === "on",
     mode: formData.get(`${prefix}Mode`) === "live" ? "live" : "test",
@@ -122,6 +130,12 @@ function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "pawapa
       ? {
           testWebhookSecret: secretField(formData, "stripeTestWebhookSecret", existing?.testWebhookSecret),
           liveWebhookSecret: secretField(formData, "stripeLiveWebhookSecret", existing?.liveWebhookSecret),
+        }
+      : {}),
+    ...(prefix === "transactpay"
+      ? {
+          testEncryptionKey: String(formData.get("transactpayTestEncryptionKey") ?? "").trim() || existing?.testEncryptionKey || "",
+          liveEncryptionKey: String(formData.get("transactpayLiveEncryptionKey") ?? "").trim() || existing?.liveEncryptionKey || "",
         }
       : {}),
   };
@@ -142,6 +156,8 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
     checkKey(formData.get("paystackLivePublicKey"), ["pk_live_"], "Paystack live public key"),
     checkKey(formData.get("pawapayTestSecretKey"), ["eyJ"], "The pawaPay sandbox API token"),
     checkKey(formData.get("pawapayLiveSecretKey"), ["eyJ"], "The pawaPay live API token"),
+    checkTransactpayKey(formData.get("transactpayTestEncryptionKey"), "The TransactPay test encryption key"),
+    checkTransactpayKey(formData.get("transactpayLiveEncryptionKey"), "The TransactPay live encryption key"),
   ].filter(Boolean);
   if (problems.length) return { error: problems[0]! };
 
@@ -163,7 +179,8 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
   const stripe = gatewayFrom(formData, "stripe", current.stripe);
   const paystack = gatewayFrom(formData, "paystack", current.paystack);
   const pawapay = gatewayFrom(formData, "pawapay", current.pawapay);
-  await update({ payment: { stripe, paystack, pawapay, bank } });
+  const transactpay = gatewayFrom(formData, "transactpay", current.transactpay);
+  await update({ payment: { stripe, paystack, pawapay, transactpay, bank } });
   return { ok: "Payment settings saved." };
 }
 

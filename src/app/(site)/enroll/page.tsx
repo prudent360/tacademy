@@ -6,7 +6,7 @@ import { isFree, withCohorts } from "@/lib/catalog";
 import { bankTransferConfig } from "@/lib/config";
 import { getPublishedCourses, getSettings, getStudentCohorts, graduateFor, linkedCourseTitles } from "@/lib/data";
 import { mobileMoneyCountries } from "@/lib/money";
-import { payableMethods } from "@/lib/payments";
+import { onlineProviders, payableMethods } from "@/lib/payments";
 import { cohortCurrencies } from "@/lib/pricing";
 import { formatDateOnly } from "@/lib/time";
 import { visitorCurrencies } from "@/lib/visitor";
@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Enrol", description: "Choose a cours
 const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA", UGX: "UG", TZS: "TZ", RWF: "RW", XOF: "SN", XAF: "CM" };
 
 export default async function EnrolPage({ searchParams }: { searchParams: Promise<{ cohort?: string; course?: string }> }) {
-  const [params, settings, user, courses, payable, bank] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableMethods(), bankTransferConfig()]);
+  const [params, settings, user, courses, payable, bank, providers] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableMethods(), bankTransferConfig(), onlineProviders()]);
   const visitor = await visitorCurrencies(settings);
   const enrolledIn = user ? new Set((await getStudentCohorts(user.id)).map((row) => row.cohort.id)) : new Set<number>();
   // Graduate status depends on each programme's linked courses, so it's worked out per course that offers free graduate places.
@@ -44,7 +44,7 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
         registrationFees: cohort.registrationFees,
         depositPercent: cohort.depositPercent,
         registrationOnly: cohort.registrationOnly,
-        currencies: currencies.map((code) => ({ code, online: payable.card.includes(code), mobile: payable.mobile.includes(code) ? mobileMoneyCountries(code) : [], bank: bank.enabled && code === bank.currency })),
+        currencies: currencies.map((code) => ({ code, online: payable.card.includes(code), provider: providers[code], mobile: payable.mobile.includes(code) ? mobileMoneyCountries(code) : [], bank: bank.enabled && code === bank.currency })),
       };
     })
     .filter((cohort) => cohort.free || cohort.currencies.length > 0));

@@ -21,6 +21,7 @@ const PAGE_SIZE = 25;
 const GATEWAY = {
   stripe: { label: "Stripe", color: "#635BFF", short: "S" },
   paystack: { label: "Paystack", color: "#0BA4DB", short: "P" },
+  transactpay: { label: "TransactPay", color: "#1F4ED8", short: "T" },
   pawapay: { label: "pawaPay", color: "#12A150", short: "M" },
   manual: { label: "Bank / offline", color: "#19112E", short: "B" },
   test: { label: "Test", color: "#8b8598", short: "T" },
@@ -57,7 +58,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
     <>
       <PageHeader
         title="Payments"
-        description="Card and mobile money payments confirm automatically through Stripe, Paystack and pawaPay. Confirm bank transfers here once the money arrives."
+        description="Card and mobile money payments confirm automatically through Stripe, Paystack, TransactPay and pawaPay. Confirm bank transfers here once the money arrives."
         actions={<>
           <a href={`/api/admin/payments/export${exportQs ? `?${exportQs}` : ""}`} className={buttonClass.secondary}><DownloadIcon className="size-4" /> Export CSV</a>
           <ModalButton label="Record payment" title="Record an offline payment" icon={<PlusIcon className="size-4" />}>

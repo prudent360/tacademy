@@ -3,13 +3,15 @@ import type { BankTransferSettings, EmailDriver, EmailSettings, GatewaySettings,
 import { getSettings } from "./data";
 import { decryptSecret } from "./secrets";
 
-export type Gateway = "stripe" | "paystack" | "pawapay";
+export type Gateway = "stripe" | "paystack" | "pawapay" | "transactpay";
 export type ResolvedGateway = {
   enabled: boolean;
   mode: "test" | "live";
   secretKey: string;
   publicKey: string;
   webhookSecret: string;
+  /** TransactPay only: the RSA key its requests are encrypted with. */
+  encryptionKey: string;
   /** Where the active secret key comes from, for the settings page. */
   source: "settings" | "environment" | "none";
 };
@@ -18,6 +20,7 @@ const ENV_SECRET: Record<Gateway, string | undefined> = {
   stripe: process.env.STRIPE_SECRET_KEY,
   paystack: process.env.PAYSTACK_SECRET_KEY,
   pawapay: process.env.PAWAPAY_API_TOKEN,
+  transactpay: process.env.TRANSACTPAY_SECRET_KEY,
 };
 
 const DEFAULT_GATEWAY: GatewaySettings = { enabled: true, mode: "test", testPublicKey: "", testSecretKey: "", livePublicKey: "", liveSecretKey: "" };
@@ -27,7 +30,9 @@ export const DEFAULT_REMINDERS: ReminderSettings = { dayBefore: true, hourBefore
 
 /** Keys saved in Settings > Payments win; otherwise the environment variables are used. */
 export async function gatewayConfig(gateway: Gateway): Promise<ResolvedGateway> {
-  const saved = { ...DEFAULT_GATEWAY, ...((await getSettings()).payment[gateway] ?? {}) };
+  // TransactPay is opt-in: until it's switched on, naira payments stay with Paystack.
+  const defaults = gateway === "transactpay" ? { ...DEFAULT_GATEWAY, enabled: false } : DEFAULT_GATEWAY;
+  const saved = { ...defaults, ...((await getSettings()).payment[gateway] ?? {}) };
   const live = saved.mode === "live";
   const savedSecret = decryptSecret(live ? saved.liveSecretKey : saved.testSecretKey);
   const secretKey = savedSecret || ENV_SECRET[gateway] || "";
@@ -39,6 +44,7 @@ export async function gatewayConfig(gateway: Gateway): Promise<ResolvedGateway> 
     secretKey,
     publicKey: live ? saved.livePublicKey : saved.testPublicKey,
     webhookSecret,
+    encryptionKey: (live ? saved.liveEncryptionKey : saved.testEncryptionKey) ?? "",
     source: savedSecret ? "settings" : ENV_SECRET[gateway] ? "environment" : "none",
   };
 }

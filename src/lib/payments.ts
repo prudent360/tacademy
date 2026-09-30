@@ -1,5 +1,5 @@
 import "server-only";
-import { randomBytes, randomUUID } from "node:crypto";
+import { constants, createPublicKey, publicEncrypt, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { getDb } from "@/db";
@@ -16,10 +16,15 @@ import { issueToken } from "./tokens";
 import { formatDateOnly } from "./time";
 import { firstName, MODE_LABEL } from "./utils";
 
-/** True when the gateway is switched on in Settings and has a secret key. */
+/** Whether a gateway has every key it needs: a secret key, and for TransactPay its public and encryption keys too. */
+function hasKeys(gateway: Gateway, cfg: { secretKey: string; publicKey: string; encryptionKey: string }): boolean {
+  return Boolean(cfg.secretKey) && (gateway !== "transactpay" || (Boolean(cfg.publicKey) && Boolean(cfg.encryptionKey)));
+}
+
+/** True when the gateway is switched on in Settings and has its keys. */
 export async function gatewayConfigured(gateway: Gateway): Promise<boolean> {
   const cfg = await gatewayConfig(gateway);
-  return cfg.enabled && Boolean(cfg.secretKey);
+  return cfg.enabled && hasKeys(gateway, cfg);
 }
 
 /** Local development can complete purchases on a simulated checkout page when a gateway has no keys. */
@@ -34,12 +39,29 @@ export type PayMethod = "card" | "mobile";
  * card: Stripe or Paystack · mobile: pawaPay mobile money.
  */
 export async function payableMethods(): Promise<Record<PayMethod, string[]>> {
-  const [stripeCfg, paystackCfg, pawapayCfg] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("pawapay")]);
+  const [stripeCfg, paystackCfg, pawapayCfg, providers] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("pawapay"), onlineProviders()]);
   const ok = (cfg: typeof stripeCfg) => cfg.enabled && (Boolean(cfg.secretKey) || testPaymentsAllowed());
   return {
-    card: CURRENCY_CODES.filter((code) => { const g = gatewayFor(code); return g !== "pawapay" && ok(g === "stripe" ? stripeCfg : paystackCfg); }),
+    card: CURRENCY_CODES.filter((code) => {
+      const g = providers[code];
+      // TransactPay only takes over when it's ready, so it counts as available whenever it's chosen.
+      return g === "transactpay" || (g !== "pawapay" && ok(g === "stripe" ? stripeCfg : paystackCfg));
+    }),
     mobile: ok(pawapayCfg) ? CURRENCY_CODES.filter((code) => mobileMoneyCountries(code).length > 0) : [],
   };
+}
+
+/** Currencies TransactPay can take in place of Paystack. */
+const TRANSACTPAY_CURRENCIES = ["NGN"];
+
+/**
+ * Who handles "Pay online" in each currency. Normally Stripe, Paystack or pawaPay (lib/money.ts); when
+ * TransactPay is switched on and has its keys (or local test payments are allowed), it takes naira from Paystack.
+ */
+export async function onlineProviders(): Promise<Record<string, "stripe" | "paystack" | "pawapay" | "transactpay">> {
+  const tp = await gatewayConfig("transactpay");
+  const transactpayReady = tp.enabled && (hasKeys("transactpay", tp) || testPaymentsAllowed());
+  return Object.fromEntries(CURRENCY_CODES.map((code) => [code, transactpayReady && TRANSACTPAY_CURRENCIES.includes(code) ? "transactpay" : gatewayFor(code)]));
 }
 
 /** Currencies students can pay in online by any method. */
@@ -78,6 +100,37 @@ async function pawapay<T>(cfg: { secretKey: string; mode: "test" | "live" }, pat
   return data;
 }
 
+const TRANSACTPAY_API = "https://payment-api-service.transactpay.ai";
+
+/**
+ * Encrypts a request body the way TransactPay requires: RSA PKCS#1 v1.5 with the account's encryption key,
+ * which is base64 of "4096!<RSAKeyValue><Modulus>…</Modulus><Exponent>…</Exponent></RSAKeyValue>".
+ */
+function transactpayEncrypt(payload: unknown, encryptionKey: string): string {
+  const decoded = Buffer.from(encryptionKey.trim(), "base64").toString("utf8");
+  const xml = decoded.slice(decoded.indexOf("!") + 1);
+  const modulus = xml.match(/<Modulus>([^<]+)<\/Modulus>/)?.[1];
+  const exponent = xml.match(/<Exponent>([^<]+)<\/Exponent>/)?.[1];
+  if (!modulus || !exponent) throw new Error("TransactPay: the encryption key isn't in the expected format");
+  const toUrl = (b64: string) => b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const key = createPublicKey({ key: { kty: "RSA", n: toUrl(modulus), e: toUrl(exponent) }, format: "jwk" });
+  return publicEncrypt({ key, padding: constants.RSA_PKCS1_PADDING }, Buffer.from(JSON.stringify(payload))).toString("base64");
+}
+
+/** Calls TransactPay. Requests that need encryption use the public key; the others use the secret key. */
+async function transactpay<T>(path: string, apiKey: string, body: unknown): Promise<T> {
+  const response = await fetch(`${TRANSACTPAY_API}${path}`, {
+    method: "POST",
+    headers: { "api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    signal: AbortSignal.timeout(20_000),
+  });
+  const data = (await response.json().catch(() => ({}))) as T & { status?: string | boolean; message?: string };
+  if (!response.ok || data.status === "failed" || data.status === false) throw new Error(`TransactPay: ${data.message ?? response.status}`);
+  return data;
+}
+
 /** Francophone markets get pawaPay's payment page in French. */
 const FRENCH_COUNTRIES = ["SEN", "CIV", "BEN", "BFA", "CMR", "COG", "GAB"];
 
@@ -109,7 +162,8 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
   country?: string;
 }): Promise<{ url: string; reference: string } | { error: string }> {
   const { originalAmount, paymentPlan, registrationFee = 0, discountCodeId, description } = details;
-  const gateway = details.method === "mobile" || gatewayFor(currency) === "pawapay" ? "pawapay" : gatewayFor(currency);
+  const provider = (await onlineProviders())[currency] ?? gatewayFor(currency);
+  const gateway = details.method === "mobile" || provider === "pawapay" ? "pawapay" : provider;
   const countries = mobileMoneyCountries(currency);
   const country = gateway !== "pawapay" ? undefined : details.country && countries.includes(details.country) ? details.country : countries.length === 1 ? countries[0] : undefined;
   if (gateway === "pawapay" && !countries.length) return { error: `Mobile money isn't available in ${currency}. Please choose another option.` };
@@ -117,7 +171,7 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
   const amount = gateway === "pawapay" ? wholeUnits(details.amount) : details.amount;
   const cfg = await gatewayConfig(gateway);
   if (!cfg.enabled) return { error: `${gateway === "pawapay" ? "Mobile money payments are" : `Payments in ${currency} are`} currently switched off. Please choose another option.` };
-  const configured = Boolean(cfg.secretKey);
+  const configured = hasKeys(gateway, cfg);
   if (!configured && !testPaymentsAllowed()) return { error: `Online payments in ${currency} aren't set up yet. Please contact us to enrol.` };
 
   const reference = newReference();
@@ -160,6 +214,23 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
         }),
       });
       await db.update(payments).set({ providerId: depositId }).where(eq(payments.reference, reference));
+      return { url: redirectUrl, reference };
+    }
+
+    if (gateway === "transactpay") {
+      // A hosted checkout (card, bank transfer, OPay). Amounts are in naira, not kobo. RSA can only encrypt a
+      // few hundred bytes, so names and the description are kept short.
+      const [first, ...rest] = user.name.trim().split(/\s+/);
+      const order = (limit: number) => ({
+        customer: { firstname: (first || "Student").slice(0, limit), lastname: (rest.join(" ") || first || "Student").slice(0, limit), mobile: user.phone.replace(/\s+/g, "").slice(0, 20), country: countryByCode(user.country)?.code ?? "NG", email: user.email },
+        order: { amount: amount / 100, reference, description: description.slice(0, limit + 20), currency },
+        payment: { RedirectUrl: returnUrl },
+      });
+      const fits = (payload: unknown) => Buffer.byteLength(JSON.stringify(payload)) <= 490;
+      const payload = [40, 20, 8].map(order).find(fits) ?? order(4);
+      const { redirectUrl } = await transactpay<{ redirectUrl: string; orderId: number }>("/payment/create", cfg.publicKey, { data: transactpayEncrypt(payload, cfg.encryptionKey) });
+      if (!redirectUrl) throw new Error("TransactPay: no checkout URL returned");
+      await db.update(payments).set({ providerId: reference }).where(eq(payments.reference, reference));
       return { url: redirectUrl, reference };
     }
 
@@ -281,7 +352,7 @@ export async function verifyPayment(reference: string): Promise<Payment | null> 
   if (!payment || payment.status === "paid") return payment ?? null;
 
   try {
-    const cfg = payment.gateway === "stripe" || payment.gateway === "paystack" || payment.gateway === "pawapay" ? await gatewayConfig(payment.gateway) : null;
+    const cfg = payment.gateway === "stripe" || payment.gateway === "paystack" || payment.gateway === "pawapay" || payment.gateway === "transactpay" ? await gatewayConfig(payment.gateway) : null;
     if (payment.gateway === "stripe" && payment.providerId && cfg?.secretKey) {
       const session = await stripe(cfg.secretKey).checkout.sessions.retrieve(payment.providerId);
       if (session.payment_status === "paid" && session.amount_total === payment.amount && session.currency?.toUpperCase() === payment.currency) {
@@ -294,6 +365,15 @@ export async function verifyPayment(reference: string): Promise<Payment | null> 
         await fulfilPayment(reference);
       } else if (deposit?.status === "FAILED" || (!deposit && Date.now() - new Date(payment.createdAt).getTime() > 20 * 60_000)) {
         // A deposit pawaPay never saw means the payment page expired (after 15 minutes) unused.
+        await db.update(payments).set({ status: "failed" }).where(and(eq(payments.reference, reference), eq(payments.status, "pending")));
+      }
+    } else if (payment.gateway === "transactpay" && cfg?.secretKey) {
+      // Our reference is TransactPay's order reference. Verifying uses the secret key and needs no encryption.
+      const found = await transactpay<{ data?: { status?: string; statusId?: number; orderAmount?: number; currencyName?: string } }>("/payment/order/verify", cfg.secretKey, { reference });
+      const order = found.data;
+      if ((order?.statusId === 5 || order?.status === "Successful") && Math.round(Number(order.orderAmount) * 100) === payment.amount && order.currencyName === payment.currency) {
+        await fulfilPayment(reference);
+      } else if (order?.statusId === 4 || order?.status === "Failed") {
         await db.update(payments).set({ status: "failed" }).where(and(eq(payments.reference, reference), eq(payments.status, "pending")));
       }
     } else if (payment.gateway === "paystack" && cfg?.secretKey) {
@@ -379,7 +459,7 @@ export async function fulfilPayment(reference: string): Promise<void> {
       reference: payment.reference,
       description: payment.description,
       paidAt: new Intl.DateTimeFormat("en-GB", { timeZone: settings.timezone, day: "numeric", month: "short", year: "numeric" }).format(payment.paidAt ?? new Date()),
-      gateway: { stripe: "Card (Stripe)", paystack: "Paystack", pawapay: "Mobile money (pawaPay)", manual: "Recorded by the academy", test: "Test payment" }[payment.gateway],
+      gateway: { stripe: "Card (Stripe)", paystack: "Paystack", transactpay: "TransactPay", pawapay: "Mobile money (pawaPay)", manual: "Recorded by the academy", test: "Test payment" }[payment.gateway],
       paymentsUrl: absoluteUrl("/dashboard/payments"),
     },
   }]);

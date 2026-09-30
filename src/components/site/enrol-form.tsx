@@ -7,7 +7,7 @@ import { ArrowLeft } from "@/components/icons";
 import { PhoneInput } from "@/components/phone-input";
 import type { DeliveryMode, PriceMap } from "@/db/schema";
 import { COUNTRIES, countryByCode, countryInSentence, currencyForCountry, flag } from "@/lib/countries";
-import { currencyInfo, formatMoney, gatewayFor, MOBILE_MONEY_COUNTRIES } from "@/lib/money";
+import { currencyInfo, formatMoney, MOBILE_MONEY_COUNTRIES } from "@/lib/money";
 import { availablePlans, PLAN_LABEL, quote, type EnrolPlan } from "@/lib/pricing";
 import { MODE_LABEL, QUALIFICATIONS } from "@/lib/utils";
 
@@ -28,16 +28,25 @@ export type EnrolCohort = {
   registrationFees: PriceMap;
   depositPercent: number | null;
   registrationOnly: boolean;
-  /** Currencies this cohort can be paid in, and how. online: card via Stripe/Paystack · mobile: pawaPay countries. */
-  currencies: { code: string; online: boolean; mobile: string[]; bank: boolean }[];
+  /** Currencies this cohort can be paid in, and how. online: card via `provider` · mobile: pawaPay countries. */
+  currencies: { code: string; online: boolean; provider: OnlineProvider; mobile: string[]; bank: boolean }[];
 };
 
 type Method = "online" | "mobile" | "bank";
+export type OnlineProvider = "stripe" | "paystack" | "pawapay" | "transactpay";
+
+/** How "Pay online" is described for each provider. */
+const ONLINE_LABEL: Record<OnlineProvider, { short: string; long: string }> = {
+  stripe: { short: "Card via Stripe", long: "Secure card payment via Stripe" },
+  paystack: { short: "Paystack (card, bank transfer, USSD)", long: "Card, bank transfer or USSD via Paystack" },
+  transactpay: { short: "TransactPay (card, bank transfer, OPay)", long: "Card, bank transfer or OPay via TransactPay" },
+  pawapay: { short: "Mobile money via pawaPay", long: "Mobile money via pawaPay" },
+};
 
 type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; qualification: string; country: string };
 
-const METHOD_LABEL = (method: Method, currency: string) =>
-  method === "online" ? (gatewayFor(currency) === "paystack" ? "Paystack (card, bank transfer, USSD)" : "Card via Stripe") : method === "mobile" ? "Mobile money via pawaPay" : "Direct bank transfer";
+const METHOD_LABEL = (method: Method, provider: OnlineProvider) =>
+  method === "online" ? ONLINE_LABEL[provider].short : method === "mobile" ? "Mobile money via pawaPay" : "Direct bank transfer";
 
 const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#8b8598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10 read-only:bg-panel read-only:text-muted";
 
@@ -246,7 +255,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
                       ? <>This cohort isn&apos;t sold in {currencyInfo(local)?.name ?? local} yet, so you&apos;ll pay in <strong className="text-ink">{currencyInfo(currency.code)?.name ?? currency.code} ({currency.code})</strong>.</>
                       : <>You&apos;ll pay in <strong className="text-ink">{currencyInfo(currency.code)?.name ?? currency.code} ({currency.code})</strong>{countryName ? <> from {countryName}</> : null}.</>}
                 </p>
-                <p className="text-muted">Ways to pay: {methods.map((m) => METHOD_LABEL(m, currency.code)).join(" · ")}</p>
+                <p className="text-muted">Ways to pay: {methods.map((m) => METHOD_LABEL(m, currency.provider)).join(" · ")}</p>
                 <p className="flex flex-wrap gap-x-4 gap-y-1">
                   <button type="button" onClick={() => setStep(1)} className="cursor-pointer font-semibold text-accent hover:text-accent-dark">Change country</button>
                   {currencies.length > 1 && <button type="button" onClick={() => setShowCurrencies(!showCurrencies)} aria-expanded={showCurrencies} className="cursor-pointer font-semibold text-accent hover:text-accent-dark">{showCurrencies ? "Keep this currency" : "Pay in a different currency"}</button>}
@@ -287,7 +296,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
               <fieldset className="flex flex-col gap-2.5">
                 <legend className="mb-2 text-sm font-medium text-ink">Payment method</legend>
                 <div className={`grid gap-2.5 ${methods.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-                  {currency.online && <Choice name="methodChoice" value="online" checked={method === "online"} onChange={() => setMethod("online")}><span className="font-semibold text-ink">Pay online</span><span className="text-sm text-muted">{gatewayFor(currency.code) === "paystack" ? "Card, bank transfer or USSD via Paystack" : "Secure card payment via Stripe"}</span></Choice>}
+                  {currency.online && <Choice name="methodChoice" value="online" checked={method === "online"} onChange={() => setMethod("online")}><span className="font-semibold text-ink">Pay online</span><span className="text-sm text-muted">{ONLINE_LABEL[currency.provider].long}</span></Choice>}
                   {currency.mobile.length > 0 && <Choice name="methodChoice" value="mobile" checked={method === "mobile"} onChange={() => setMethod("mobile")}><span className="font-semibold text-ink">Mobile money</span><span className="text-sm text-muted">MTN, Airtel, Orange, M-Pesa and more via pawaPay</span></Choice>}
                   {currency.bank && <Choice name="methodChoice" value="bank" checked={method === "bank"} onChange={() => setMethod("bank")}><span className="font-semibold text-ink">Direct bank transfer</span><span className="text-sm text-muted">Confirmed once we receive it</span></Choice>}
                 </div>
