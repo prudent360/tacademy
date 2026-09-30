@@ -27,7 +27,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
           </ul>
         </div>
       ) : (
-        <EmptyState icon={CalendarIcon} title={showPast ? "No past classes yet" : "No upcoming classes"} action={ids.length ? undefined : <Link href="/courses" className={buttonClass.primary}>Browse courses</Link>}>
+        <EmptyState icon={CalendarIcon} title={showPast ? "No past classes yet" : "No upcoming classes"} action={ids.length ? undefined : <Link href="/dashboard/courses" className={buttonClass.primary}>Find a course</Link>}>
           {ids.length ? "When your instructors schedule classes, they'll show up here." : "Enrol on a cohort to see your timetable."}
         </EmptyState>
       )}

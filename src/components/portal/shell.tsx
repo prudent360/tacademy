@@ -30,7 +30,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
       { href: "/dashboard/schedule", label: "Timetable", icon: CalendarIcon },
       { href: "/dashboard/assignments", label: "Assignments", icon: ClipboardIcon },
       { href: "/dashboard/certificates", label: "Certificates", icon: AwardIcon },
-      { href: "/courses", label: "Browse courses", icon: BookIcon },
+      { href: "/dashboard/courses", label: "My courses", icon: BookIcon, also: ["/dashboard/cohorts"] },
     ],
   };
   const teaching: NavGroup = {

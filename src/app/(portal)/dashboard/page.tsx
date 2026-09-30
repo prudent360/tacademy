@@ -98,13 +98,13 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
           </div>
         ) : undefined}
       >
-        {cohorts.length === 0 ? <BannerButton href="/courses">Browse courses</BannerButton> : <>
+        {cohorts.length === 0 ? <BannerButton href="/dashboard/courses">Find a course</BannerButton> : <>
           <BannerButton href="/dashboard/schedule"><CalendarIcon className="size-4" /> My timetable</BannerButton>
           <BannerButton href="/dashboard/assignments" variant="ghost"><ClipboardIcon className="size-4" /> Assignments</BannerButton>
         </>}
       </GreetingBanner>
 
-      {welcome && <Notice>Welcome aboard! Your account is ready.{cohorts.length ? " Your classes are below." : " Browse courses to join your first cohort."}</Notice>}
+      {welcome && <Notice>Welcome aboard! Your account is ready.{cohorts.length ? " Your classes are below." : " Pick a course under My courses to get started."}</Notice>}
       {outstanding.length > 0 && <Link href="/dashboard/payments" className="flex flex-wrap items-center justify-between gap-3 rounded-[5px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 transition hover:border-amber-400 hover:bg-amber-100"><span><strong>Payment balance due.</strong> {outstanding.map((row) => `${row.course.title}: ${formatMoney(row.balance.remaining, row.balance.currency)}`).join(" · ")}</span><span className="font-semibold text-amber-900">View and pay →</span></Link>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -194,7 +194,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
                 );
               })}
             </ul>
-          ) : <PanelEmpty icon={CalendarIcon} action={cohorts.length ? undefined : <Link href="/courses" className="text-sm font-semibold text-accent">Browse courses →</Link>}>{cohorts.length ? "No upcoming classes yet." : "Enrol on a cohort to see your classes here."}</PanelEmpty>}
+          ) : <PanelEmpty icon={CalendarIcon} action={cohorts.length ? undefined : <Link href="/dashboard/courses" className="text-sm font-semibold text-accent">Find a course →</Link>}>{cohorts.length ? "No upcoming classes yet." : "Enrol on a cohort to see your classes here."}</PanelEmpty>}
         </Panel>
 
         <div className="flex flex-col gap-6">
@@ -258,7 +258,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
         </Panel>
         <Panel title="Quick actions">
           <div className="grid gap-3">
-            <QuickAction href="/courses" icon={BookIcon} title="Browse courses" text="Find your next cohort" tone="purple" />
+            <QuickAction href="/dashboard/courses" icon={BookIcon} title="More courses" text="Find your next cohort" tone="purple" />
             <QuickAction href="/dashboard/schedule" icon={CalendarIcon} title="Full timetable" text="Every class, link and venue" tone="cyan" />
             <QuickAction href="/dashboard/payments" icon={CardIcon} title="Payments & receipts" text="Your payment history" tone="green" />
             <QuickAction href="/account" icon={UserIcon} title="Profile & reminders" text="Photo, phone and email settings" tone="navy" />
