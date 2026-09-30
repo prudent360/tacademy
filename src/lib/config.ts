@@ -12,6 +12,9 @@ export type ResolvedGateway = {
   webhookSecret: string;
   /** TransactPay only: the RSA key its requests are encrypted with. */
   encryptionKey: string;
+  /** TransactPay only: currencies found on the account for this mode (null until checked), and when. */
+  currencies: string[] | null;
+  checkedAt: string | null;
   /** Where the active secret key comes from, for the settings page. */
   source: "settings" | "environment" | "none";
 };
@@ -45,6 +48,8 @@ export async function gatewayConfig(gateway: Gateway): Promise<ResolvedGateway> 
     publicKey: live ? saved.livePublicKey : saved.testPublicKey,
     webhookSecret,
     encryptionKey: (live ? saved.liveEncryptionKey : saved.testEncryptionKey) ?? "",
+    currencies: (live ? saved.liveCurrencies : saved.testCurrencies) ?? null,
+    checkedAt: (live ? saved.liveCheckedAt : saved.testCheckedAt) ?? null,
     source: savedSecret ? "settings" : ENV_SECRET[gateway] ? "environment" : "none",
   };
 }

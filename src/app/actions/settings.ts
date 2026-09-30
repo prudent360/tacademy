@@ -8,6 +8,7 @@ import { settings, type GatewaySettings, type Settings } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { AI_MODELS, AI_PROVIDERS, DEFAULT_AI, DEFAULT_MODEL, pingAi } from "@/lib/ai";
 import { DEFAULT_BANK, DEFAULT_REMINDERS } from "@/lib/config";
+import { detectTransactpayCurrencies } from "@/lib/payments";
 import { getSettings } from "@/lib/data";
 import { sendEmail } from "@/lib/email";
 import { CURRENCY_CODES } from "@/lib/money";
@@ -118,6 +119,8 @@ function checkTransactpayKey(value: FormDataEntryValue | null, label: string): s
   return decoded.includes("<Modulus>") && decoded.includes("<Exponent>") ? null : `${label} doesn't look right. Copy the whole Encryption Key from TransactPay → Settings → API Keys & Webhooks.`;
 }
 
+const DEFAULT_GATEWAY_FOR_TRANSACTPAY: GatewaySettings = { enabled: false, mode: "test", testPublicKey: "", testSecretKey: "", livePublicKey: "", liveSecretKey: "" };
+
 function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "pawapay" | "transactpay", existing: Partial<GatewaySettings> | undefined): GatewaySettings {
   return {
     enabled: formData.get(`${prefix}Enabled`) === "on",
@@ -134,8 +137,9 @@ function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "pawapa
       : {}),
     ...(prefix === "transactpay"
       ? {
-          testEncryptionKey: String(formData.get("transactpayTestEncryptionKey") ?? "").trim() || existing?.testEncryptionKey || "",
-          liveEncryptionKey: String(formData.get("transactpayLiveEncryptionKey") ?? "").trim() || existing?.liveEncryptionKey || "",
+          // The box shows the saved key, so what's submitted is the key (emptying it removes it).
+          testEncryptionKey: formData.has("transactpayTestEncryptionKey") ? String(formData.get("transactpayTestEncryptionKey")).trim() : existing?.testEncryptionKey ?? "",
+          liveEncryptionKey: formData.has("transactpayLiveEncryptionKey") ? String(formData.get("transactpayLiveEncryptionKey")).trim() : existing?.liveEncryptionKey ?? "",
         }
       : {}),
   };
@@ -180,8 +184,38 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
   const paystack = gatewayFrom(formData, "paystack", current.paystack);
   const pawapay = gatewayFrom(formData, "pawapay", current.pawapay);
   const transactpay = gatewayFrom(formData, "transactpay", current.transactpay);
+  // Keep what was found on the account, unless the keys for that mode changed.
+  const before = current.transactpay;
+  for (const m of ["test", "live"] as const) {
+    const cap = m === "test" ? "Test" : "Live";
+    const changed = String(formData.get(`transactpay${cap}SecretKey`) ?? "").trim() !== "" || transactpay[`${m}PublicKey`] !== (before?.[`${m}PublicKey`] ?? "") || transactpay[`${m}EncryptionKey`] !== (before?.[`${m}EncryptionKey`] ?? "");
+    if (!changed && before?.[`${m}Currencies`]) Object.assign(transactpay, { [`${m}Currencies`]: before[`${m}Currencies`], [`${m}CheckedAt`]: before[`${m}CheckedAt`] });
+  }
+  // New keys (or none checked yet): ask TransactPay which currencies the account takes, for the selected mode.
+  const m = transactpay.mode;
+  const keys = { publicKey: transactpay[`${m}PublicKey`], encryptionKey: transactpay[`${m}EncryptionKey`] ?? "" };
+  let note = "";
+  if (transactpay.enabled && keys.publicKey && keys.encryptionKey && (transactpay[`${m}SecretKey`] || process.env.TRANSACTPAY_SECRET_KEY) && !transactpay[`${m}Currencies`]) {
+    const checked = await detectTransactpayCurrencies(keys);
+    if ("error" in checked) note = ` But ${checked.error}`;
+    else {
+      Object.assign(transactpay, { [`${m}Currencies`]: checked.currencies, [`${m}CheckedAt`]: new Date().toISOString() });
+      note = ` TransactPay takes: ${checked.currencies.join(", ")}.`;
+    }
+  }
   await update({ payment: { stripe, paystack, pawapay, transactpay, bank } });
-  return { ok: "Payment settings saved." };
+  return note.startsWith(" But") ? { error: `Payment settings saved.${note}` } : { ok: `Payment settings saved.${note}` };
+}
+
+/** "Check again" on the TransactPay settings: asks which currencies the account takes, for the current mode. */
+export async function checkTransactpayCurrencies(): Promise<FormState> {
+  await requireRole("admin");
+  const checked = await detectTransactpayCurrencies();
+  if ("error" in checked) return { error: checked.error };
+  const payment = (await getSettings()).payment;
+  const tp = { ...DEFAULT_GATEWAY_FOR_TRANSACTPAY, ...payment.transactpay };
+  await update({ payment: { ...payment, transactpay: { ...tp, [`${tp.mode}Currencies`]: checked.currencies, [`${tp.mode}CheckedAt`]: new Date().toISOString() } } });
+  return { ok: `TransactPay takes: ${checked.currencies.join(", ")}.` };
 }
 
 // ---------- Email ----------

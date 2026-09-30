@@ -5,6 +5,7 @@ import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
 import { EmailDriverFields } from "@/components/admin/email-driver";
+import { TransactpayCheckButton } from "@/components/admin/transactpay-check";
 import { ActionButton, ActionForm, FileField, Input, SecretInput, Select, SubmitButton, Switch, Textarea } from "@/components/forms";
 import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon, SearchIcon, SparkIcon } from "@/components/icons";
 import { Badge, DataTable, Notice, StatusBadge } from "@/components/ui";
@@ -145,7 +146,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
         {[
           { name: "Stripe", logo: <Logo text="S" color="#635BFF" />, badge: gatewayBadge(stripe, true), text: "GBP · USD · EUR · CAD" },
           { name: "Paystack", logo: <Logo text="P" color="#0BA4DB" />, badge: gatewayBadge(paystack, true), text: "NGN · GHS · KES · ZAR" },
-          { name: "TransactPay", logo: <Logo text="T" color="#1F4ED8" />, badge: transactpayBadge(true), text: "NGN · card, transfer, OPay" },
+          { name: "TransactPay", logo: <Logo text="T" color="#1F4ED8" />, badge: transactpayBadge(true), text: transactpay.currencies?.length ? `First for ${transactpay.currencies.join(" · ")}` : "African currencies, detected" },
           { name: "pawaPay", logo: <Logo text="M" color="#12A150" />, badge: gatewayBadge(pawapay, true), text: "Mobile money · 8 currencies" },
           { name: "Bank transfer", logo: <span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>, badge: bank.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : <Badge>Off</Badge>, text: bank.enabled ? `${bank.currency}, confirmed by admins` : "Manual confirmation" },
         ].map((g) => (
@@ -201,9 +202,9 @@ export async function PaymentsTab({ s }: { s: Settings }) {
         <CopyField label="Webhook URL" value={absoluteUrl("/api/webhooks/paystack")} />
       </Section>
 
-      <Section title="TransactPay" description="Card, bank transfer and OPay for naira (NGN). When switched on, naira payments go through TransactPay instead of Paystack." icon={<Logo text="T" color="#1F4ED8" />} badge={transactpayBadge()}
+      <Section title="TransactPay" description="Card, bank transfer, OPay and mobile money across Africa. When switched on, every currency your TransactPay account takes goes through TransactPay first, with Paystack as the backup." icon={<Logo text="T" color="#1F4ED8" />} badge={transactpayBadge()}
         footer={<>Find all three keys in the <a href="https://app.transactpay.ai/sign-in" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">TransactPay Dashboard → Settings → API Keys &amp; Webhooks</a> (switch between Test and Live at the top right; each has its own keys). Paste the webhook URL there too.</>}>
-        <Switch label="Take naira payments with TransactPay" name="transactpayEnabled" defaultChecked={transactpay.enabled} hint="Students paying in NGN get TransactPay's checkout (card, bank transfer or OPay). Paystack still handles GHS, KES and ZAR. Turn this off to send naira back to Paystack." />
+        <Switch label="Take payments with TransactPay first" name="transactpayEnabled" defaultChecked={transactpay.enabled} hint="Students paying in a currency TransactPay takes get its checkout. If TransactPay is off, doesn't take a currency or can't start a payment, Paystack (or Stripe) is used instead." />
         {envNote(transactpay, "TRANSACTPAY_SECRET_KEY")}
         <ModePicker name="transactpayMode" value={transactpay.mode} />
         {transactpay.mode === "live" && <Notice tone="amber"><strong>Live mode:</strong> real payments will be taken.</Notice>}
@@ -219,6 +220,17 @@ export async function PaymentsTab({ s }: { s: Settings }) {
               </div>
             );
           })}
+        </div>
+        <div className="flex flex-col gap-2 rounded-xl border border-edge bg-panel p-4">
+          <p className="text-sm font-semibold text-ink">Currencies TransactPay takes ({transactpay.mode} mode)</p>
+          <p className="text-sm text-body">
+            {transactpay.currencies?.length
+              ? <>{transactpay.currencies.join(", ")}. These go through TransactPay first; everything else (and anything TransactPay can&apos;t start) uses Paystack, Stripe or pawaPay as usual. Checked {new Date(transactpay.checkedAt!).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: s.timezone })}.</>
+              : transactpay.secretKey && transactpay.publicKey && transactpay.encryptionKey
+                ? "Not checked yet. Save or check again to find out."
+                : "Save your keys and we'll ask TransactPay which currencies your account takes (NGN, GHS, KES, UGX…). There's no list to look up, so this starts a small test order in each currency; they're never paid."}
+          </p>
+          {transactpay.secretKey && transactpay.publicKey && transactpay.encryptionKey && <TransactpayCheckButton />}
         </div>
         <CopyField label="Webhook URL" value={absoluteUrl("/api/webhooks/transactpay")} />
       </Section>

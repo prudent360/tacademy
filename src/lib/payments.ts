@@ -8,7 +8,7 @@ import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
 import { countryByCode, mobileMoneyCountryForDial } from "./countries";
-import { CURRENCY_CODES, formatMoney, gatewayFor, mobileMoneyCountries } from "./money";
+import { CURRENCIES, CURRENCY_CODES, formatMoney, gatewayFor, mobileMoneyCountries } from "./money";
 import { notify } from "./notify";
 import { PART_PAYMENT_PLANS, quote, type EnrolPlan } from "./pricing";
 import { absoluteUrl } from "./site";
@@ -51,17 +51,52 @@ export async function payableMethods(): Promise<Record<PayMethod, string[]>> {
   };
 }
 
-/** Currencies TransactPay can take in place of Paystack. */
-const TRANSACTPAY_CURRENCIES = ["NGN"];
+/** The African currencies TransactPay might take; which ones it does depends on the account (see detectTransactpayCurrencies). */
+export const TRANSACTPAY_CANDIDATES = CURRENCIES.filter((c) => c.gateway !== "stripe").map((c) => c.code);
 
 /**
- * Who handles "Pay online" in each currency. Normally Stripe, Paystack or pawaPay (lib/money.ts); when
- * TransactPay is switched on and has its keys (or local test payments are allowed), it takes naira from Paystack.
+ * Who handles "Pay online" in each currency. TransactPay comes first for every currency it was found to accept
+ * on the account; otherwise the usual provider from lib/money.ts (Stripe, Paystack or pawaPay). Without keys,
+ * local development sends naira to TransactPay's simulated checkout.
  */
 export async function onlineProviders(): Promise<Record<string, "stripe" | "paystack" | "pawapay" | "transactpay">> {
   const tp = await gatewayConfig("transactpay");
-  const transactpayReady = tp.enabled && (hasKeys("transactpay", tp) || testPaymentsAllowed());
-  return Object.fromEntries(CURRENCY_CODES.map((code) => [code, transactpayReady && TRANSACTPAY_CURRENCIES.includes(code) ? "transactpay" : gatewayFor(code)]));
+  const keyed = hasKeys("transactpay", tp);
+  const takes = !tp.enabled ? [] : keyed ? tp.currencies ?? [] : testPaymentsAllowed() ? ["NGN"] : [];
+  return Object.fromEntries(CURRENCY_CODES.map((code) => [code, takes.includes(code) ? "transactpay" : gatewayFor(code)]));
+}
+
+/** A country for each currency, for TransactPay's test orders. */
+const CURRENCY_COUNTRY: Record<string, string> = { NGN: "NG", GHS: "GH", KES: "KE", ZAR: "ZA", UGX: "UG", TZS: "TZ", RWF: "RW", XOF: "CI", XAF: "CM" };
+
+/**
+ * Finds which currencies the TransactPay account accepts. TransactPay has no list to ask for, so this starts a
+ * small order in each candidate currency (they're never paid and simply stay "Initiated") and keeps the ones
+ * TransactPay accepts with at least one way to pay.
+ */
+export async function detectTransactpayCurrencies(keys?: { publicKey: string; encryptionKey: string }): Promise<{ currencies: string[] } | { error: string }> {
+  const cfg = keys ?? (await gatewayConfig("transactpay"));
+  if (!cfg.publicKey || !cfg.encryptionKey) return { error: "Add the public and encryption keys first." };
+  const stamp = Date.now().toString(36).toUpperCase();
+  const results = await Promise.all(TRANSACTPAY_CANDIDATES.map(async (currency) => {
+    try {
+      const data = await transactpay<{ data?: { otherPaymentOptions?: { code: string; currency?: string }[] } }>("/payment/order/create", cfg.publicKey, {
+        data: transactpayEncrypt({
+          customer: { firstname: "Currency", lastname: "Check", mobile: "08000000000", country: CURRENCY_COUNTRY[currency] ?? "NG", email: "currency-check@example.com" },
+          order: { amount: 100, reference: `TSU-CHECK-${currency}-${stamp}`, description: "Currency check (not a payment)", currency },
+          payment: { RedirectUrl: absoluteUrl("/") },
+        }, cfg.encryptionKey),
+      });
+      const options = data.data?.otherPaymentOptions ?? [];
+      return { currency, ok: options.length > 0 };
+    } catch (error) {
+      return { currency, ok: false, message: error instanceof Error ? error.message : String(error) };
+    }
+  }));
+  const currencies = results.filter((r) => r.ok).map((r) => r.currency);
+  // If nothing worked, the keys are usually the problem: say what TransactPay said.
+  if (!currencies.length) return { error: `TransactPay didn't accept any currency. ${results.find((r) => r.message)?.message ?? "Check the keys match the selected mode."}` };
+  return { currencies };
 }
 
 /** Currencies students can pay in online by any method. */
@@ -160,9 +195,11 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
   method?: PayMethod;
   /** pawaPay country (ISO alpha-3); needed when a currency spans several countries. */
   country?: string;
+  /** Set when retrying after TransactPay couldn't start the payment, to use the usual provider instead. */
+  skipTransactpay?: boolean;
 }): Promise<{ url: string; reference: string } | { error: string }> {
   const { originalAmount, paymentPlan, registrationFee = 0, discountCodeId, description } = details;
-  const provider = (await onlineProviders())[currency] ?? gatewayFor(currency);
+  const provider = details.skipTransactpay ? gatewayFor(currency) : (await onlineProviders())[currency] ?? gatewayFor(currency);
   const gateway = details.method === "mobile" || provider === "pawapay" ? "pawapay" : provider;
   const countries = mobileMoneyCountries(currency);
   const country = gateway !== "pawapay" ? undefined : details.country && countries.includes(details.country) ? details.country : countries.length === 1 ? countries[0] : undefined;
@@ -243,6 +280,12 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
   } catch (error) {
     console.error("Checkout failed", error);
     await db.update(payments).set({ status: "failed" }).where(eq(payments.reference, reference));
+    // TransactPay comes first but isn't the only option: when it can't start a payment, the usual card
+    // provider (Paystack or Stripe) takes over if it's set up. Mobile-money-only currencies can't fall back here.
+    const backup = gatewayFor(currency);
+    if (gateway === "transactpay" && backup !== "pawapay" && (await gatewayConfig(backup)).enabled && ((await gatewayConfigured(backup)) || testPaymentsAllowed())) {
+      return beginOnlinePayment(user, course, cohort, currency, { ...details, skipTransactpay: true });
+    }
     return { error: "We couldn't start the payment. Please try again in a moment." };
   }
 }

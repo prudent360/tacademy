@@ -88,6 +88,11 @@ export type GatewaySettings = {
   /** TransactPay's RSA public key for encrypting requests (not secret, stored as given). */
   testEncryptionKey?: string;
   liveEncryptionKey?: string;
+  /** TransactPay: the currencies the account was found to accept, per mode, and when that was checked. */
+  testCurrencies?: string[];
+  liveCurrencies?: string[];
+  testCheckedAt?: string;
+  liveCheckedAt?: string;
 };
 export type BankTransferSettings = { enabled: boolean; accountName: string; bankName: string; accountNumber: string; sortCode: string; currency: string; instructions: string };
 export type PaymentSettings = { stripe: GatewaySettings; paystack: GatewaySettings; pawapay: GatewaySettings; transactpay?: GatewaySettings; bank: BankTransferSettings };
