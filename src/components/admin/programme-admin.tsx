@@ -62,7 +62,7 @@ export async function ProgrammeAdmin({ course, created }: { course: Course; crea
           <ul className="flex flex-col divide-y divide-line">
             {list.map((c) => (
               <li key={c.id}>
-                <Link href={`/admin/cohorts/${c.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-panel md:px-6">
+                <Link href={`/teach/cohorts/${c.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 hover:bg-panel md:px-6">
                   <span className="flex flex-col gap-0.5">
                     <span className="font-semibold text-ink">{c.name}</span>
                     <span className="text-sm text-muted">{c.startDate ? `${formatDateOnly(c.startDate)}${c.endDate ? ` – ${formatDateOnly(c.endDate)}` : ""}` : "Dates TBC"}</span>

@@ -12,7 +12,7 @@ import { formatDateOnly, formatDateTime, relativeTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
 import { cohortLeaderboard } from "@/lib/xp";
 
-export const metadata: Metadata = { title: "My class" };
+export const metadata: Metadata = { title: "My course" };
 
 export default async function StudentCohortPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ welcome?: string }> }) {
   const [{ id: raw }, { welcome }, user, settings] = await Promise.all([params, searchParams, requireUser(), getSettings()]);
@@ -51,7 +51,7 @@ export default async function StudentCohortPage({ params, searchParams }: { para
 
       <div className="grid items-start gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="flex min-w-0 flex-col gap-6">
-          <Card title="Upcoming classes">
+          <Card title="Upcoming live classes">
             {upcoming.length ? (
               <ul className="-my-4 divide-y divide-line">{upcoming.map(({ session }) => <SessionRow key={session.id} session={session} timeZone={tz} />)}</ul>
             ) : <p className="text-[15px] text-muted">No upcoming classes scheduled.</p>}
@@ -85,7 +85,7 @@ export default async function StudentCohortPage({ params, searchParams }: { para
           </Card>
 
           {past.length > 0 && (
-            <Card title="Past classes" action={markedCount > 0 ? <span className="text-sm text-muted">Attended {attended} of {markedCount}</span> : undefined}>
+            <Card title="Past live classes" action={markedCount > 0 ? <span className="text-sm text-muted">Attended {attended} of {markedCount}</span> : undefined}>
               <ul className="-my-4 divide-y divide-line">{past.map(({ session }) => <SessionRow key={session.id} session={session} timeZone={tz} attendance={marks.get(session.id)} />)}</ul>
             </Card>
           )}

@@ -9,7 +9,7 @@ import { SparkIcon, XIcon } from "@/components/icons";
 export function CourseAdvisor() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div className="course-advisor fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
         <section aria-label="Course advisor" className="flex w-[calc(100vw-2rem)] max-w-[380px] flex-col gap-3 rounded-[16px] border border-edge bg-white p-4 shadow-[0_30px_80px_-30px_rgba(25,17,46,.55)]">
           <div className="flex items-center justify-between gap-3">

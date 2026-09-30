@@ -5,7 +5,7 @@ import { Brand } from "./brand";
 
 export function SiteFooter({ settings }: { settings: Settings }) {
   return (
-    <footer className="border-t border-line bg-white">
+    <footer className="site-footer border-t border-line bg-white">
       <div className="mx-auto grid max-w-[1200px] gap-10 px-5 py-14 sm:px-8 md:grid-cols-[1.35fr_.8fr_.9fr_1fr]">
         <div className="flex flex-col gap-4">
           <Brand settings={settings} />

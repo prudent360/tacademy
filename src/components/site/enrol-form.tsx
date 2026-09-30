@@ -285,7 +285,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
             <div aria-live="polite" className="empty:hidden">
               {!pending && state?.error && (
                 <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                  {state.error}{state.signIn && <> <Link href={state.signIn} className="font-semibold underline">{state.signIn.startsWith("/login") ? "Sign in" : "Go to my class"}</Link></>}
+                  {state.error}{state.signIn && <> <Link href={state.signIn} className="font-semibold underline">{state.signIn.startsWith("/login") ? "Sign in" : "Open my course"}</Link></>}
                 </p>
               )}
             </div>

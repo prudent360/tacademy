@@ -10,7 +10,7 @@ import { assignments, attendance, classSessions, enrollments, submissions } from
 import { requireRole } from "@/lib/auth";
 import { getSettings, getTeachingCohortIds } from "@/lib/data";
 import { upcomingSessionsFor } from "@/lib/student";
-import { cohortsWithStats, gradingQueue } from "@/lib/teach";
+import { attendanceToDo, cohortsWithStats, gradingQueue } from "@/lib/teach";
 import { formatDateOnly, formatDayMonth, formatSessionRange, greeting, relativeTime, thisWeek, untilLabel } from "@/lib/time";
 import { MODE_LABEL, firstName } from "@/lib/utils";
 
@@ -25,13 +25,14 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
   const week = thisWeek(now);
   const today = new Date().toISOString().slice(0, 10);
 
-  const [rows, queue, upcoming, sessions, marks, deadlines] = await Promise.all([
+  const [rows, queue, upcoming, sessions, marks, deadlines, unmarked] = await Promise.all([
     cohortsWithStats(ids),
     gradingQueue(ids),
     upcomingSessionsFor(ids, 8),
     ids.length ? db.select({ id: classSessions.id, cohortId: classSessions.cohortId, startsAt: classSessions.startsAt, endsAt: classSessions.endsAt, cancelled: classSessions.cancelled }).from(classSessions).where(inArray(classSessions.cohortId, ids)) : [],
     ids.length ? db.select({ cohortId: classSessions.cohortId, status: attendance.status }).from(attendance).innerJoin(classSessions, eq(classSessions.id, attendance.sessionId)).where(inArray(classSessions.cohortId, ids)) : [],
     ids.length ? db.select().from(assignments).where(and(inArray(assignments.cohortId, ids), eq(assignments.published, true), gte(assignments.dueAt, now), lte(assignments.dueAt, new Date(now.getTime() + 14 * 86_400_000)))).orderBy(assignments.dueAt).limit(5) : [],
+    attendanceToDo(ids),
   ]);
   const deadlineIds = deadlines.map((d) => d.id);
   const [subCounts, studentCounts] = await Promise.all([
@@ -58,14 +59,14 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
       <GreetingBanner
         tone="instructor"
         title={`${greeting(tz, now)}, ${firstName(user.name)}`}
-        subtitle={next ? <>Next up: <strong className="text-white">{next.session.title}</strong> ({next.course.title}), {formatSessionRange(next.session.startsAt, next.session.endsAt, tz)}.</> : "No upcoming classes. Add some from a cohort's timetable."}
+        subtitle={next ? <>Next up: <strong className="text-white">{next.session.title}</strong> ({next.course.title}), {formatSessionRange(next.session.startsAt, next.session.endsAt, tz)}.</> : "No upcoming live classes. Add some from a cohort's Live classes tab."}
         aside={next ? (
           <div className="flex flex-col gap-3 rounded-[5px] border border-white/15 bg-white/[0.07] p-4 backdrop-blur">
             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-light">
               {next.session.mode === "virtual" ? <VideoIcon className="size-4" /> : <PinIcon className="size-4" />} {MODE_LABEL[next.session.mode]} · starts in
             </span>
             <Countdown to={new Date(next.session.startsAt).toISOString()} />
-            <Link href={`/teach/sessions/${next.session.id}`} className="inline-flex h-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-accent hover:bg-accent-soft">Class details & attendance</Link>
+            <Link href={`/teach/sessions/${next.session.id}`} className="inline-flex h-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-accent hover:bg-accent-soft">Open live class</Link>
           </div>
         ) : undefined}
       >
@@ -75,15 +76,34 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
 
       {denied && <Notice tone="amber">You don&apos;t teach that cohort. Ask an admin to add you as an instructor.</Notice>}
 
+      {unmarked.length > 0 && (
+        <Panel title={`Attendance to take (${unmarked.length})`} icon={UsersIcon}>
+          <ul className="flex flex-col gap-2.5">
+            {unmarked.slice(0, 5).map(({ session, course, cohortName }) => (
+              <li key={session.id}>
+                <Link href={`/teach/sessions/${session.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-[5px] border border-amber-200 bg-amber-50/60 p-3.5 hover:border-amber-300">
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="truncate font-semibold text-ink">{session.title}</span>
+                    <span className="truncate text-sm text-muted">{course.title}: {cohortName} · {formatSessionRange(session.startsAt, session.endsAt, tz)}</span>
+                  </span>
+                  <span className="text-sm font-semibold text-accent">Take attendance →</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {unmarked.length > 5 && <p className="mt-3 text-sm text-muted">And {unmarked.length - 5} more. Open each cohort&apos;s Live classes tab to catch up.</p>}
+        </Panel>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Active cohorts" value={current.length} icon={LayersIcon} tone="purple" hint={past.length ? `${past.length} finished` : undefined} />
         <StatTile label="Students" value={totalStudents} icon={UsersIcon} tone="cyan" hint={overallAttendance === null ? undefined : `${overallAttendance}% attendance`} />
         <StatTile label="Waiting for feedback" value={queue.length} icon={ClipboardIcon} tone={queue.length ? "amber" : "green"} href="/teach/grading" hint={queue[0] ? `Oldest ${relativeTime(queue[0].submission.submittedAt)}` : "All caught up"} />
-        <StatTile label="Classes this week" value={classesThisWeek} icon={CalendarIcon} tone="navy" href="/teach/schedule" />
+        <StatTile label="Live classes this week" value={classesThisWeek} icon={CalendarIcon} tone="navy" href="/teach/schedule" />
       </div>
 
       <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Panel title="Upcoming classes" href="/teach/schedule" linkLabel="Timetable" icon={CalendarIcon}>
+        <Panel title="Upcoming live classes" href="/teach/schedule" linkLabel="Timetable" icon={CalendarIcon}>
           {live.length ? (
             <ul className="flex flex-col gap-2.5">
               {live.slice(0, 5).map(({ session, course }) => {
@@ -107,7 +127,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
                 );
               })}
             </ul>
-          ) : <PanelEmpty icon={CalendarIcon}>No upcoming classes.</PanelEmpty>}
+          ) : <PanelEmpty icon={CalendarIcon}>No upcoming live classes.</PanelEmpty>}
         </Panel>
 
         <div className="flex flex-col gap-6">
@@ -173,7 +193,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
                     <p className="font-display text-[17px] font-bold text-ink group-hover:text-accent">{r.course.title}</p>
                     <p className="text-sm text-muted">{r.cohort.name}{r.cohort.startDate ? ` · ${formatDateOnly(r.cohort.startDate)} – ${formatDateOnly(r.cohort.endDate)}` : ""}</p>
                   </div>
-                  <ProgressBar value={done} max={list.length} label="Classes delivered" detail={list.length ? `${done}/${list.length}` : "No timetable yet"} />
+                  <ProgressBar value={done} max={list.length} label="Live classes held" detail={list.length ? `${done}/${list.length}` : "No timetable yet"} />
                   <div className="grid grid-cols-3 gap-2 border-t border-line pt-4 text-sm">
                     <span className="flex flex-col"><span className="text-xs text-muted">Students</span><span className="font-semibold text-ink">{r.students}</span></span>
                     <span className="flex flex-col"><span className="text-xs text-muted">Attendance</span><span className="font-semibold text-ink">{rate === null ? "–" : `${rate}%`}</span></span>
@@ -183,7 +203,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
               );
             })}
           </div>
-        ) : <PanelEmpty icon={LayersIcon}>{user.role === "admin" ? "Create a course and cohort under Courses & cohorts." : "An admin will assign you to cohorts; they'll appear here."}</PanelEmpty>}
+        ) : <PanelEmpty icon={LayersIcon}>{user.role === "admin" ? "Create a course and a cohort under Courses & cohorts." : "An admin will assign you to cohorts; they'll appear here."}</PanelEmpty>}
         {past.length > 0 && (
           <details className="mt-5 border-t border-line pt-4">
             <summary className="cursor-pointer text-sm font-semibold text-accent">Finished cohorts ({past.length})</summary>
@@ -197,7 +217,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
       {current.length > 0 && (
         <Panel title="Quick actions">
           <div className="grid gap-3 md:grid-cols-3">
-            <QuickAction href={`/teach/cohorts/${current[0].cohort.id}`} icon={CalendarIcon} title="Add a class" text={`To ${current[0].course.title}`} tone="purple" />
+            <QuickAction href={`/teach/cohorts/${current[0].cohort.id}?tab=classes`} icon={CalendarIcon} title="Add a live class" text={`To ${current[0].course.title}`} tone="purple" />
             <QuickAction href={`/teach/cohorts/${current[0].cohort.id}?tab=assignments`} icon={ClipboardIcon} title="Set an assignment" text="Students are emailed instantly" tone="cyan" />
             <QuickAction href={`/teach/cohorts/${current[0].cohort.id}?tab=announcements`} icon={MegaphoneIcon} title="Post an announcement" text="In-app and by email" tone="navy" />
           </div>

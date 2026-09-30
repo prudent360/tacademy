@@ -37,7 +37,7 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
   return (
     <>
       <PageHeader
-        back={{ href: assignment.lessonId ? `/dashboard/cohorts/${assignment.cohortId}/learn` : `/dashboard/cohorts/${assignment.cohortId}`, label: assignment.lessonId ? "Course learning" : found?.course.title ?? "Back" }}
+        back={{ href: assignment.lessonId ? `/dashboard/cohorts/${assignment.cohortId}/learn` : `/dashboard/cohorts/${assignment.cohortId}`, label: assignment.lessonId ? "Lessons" : found?.course.title ?? "Back" }}
         title={assignment.title}
         description={<span className="flex flex-wrap items-center gap-2">{assignment.dueAt ? `Due ${formatDateTime(assignment.dueAt, tz)}` : "No deadline"} · {assignment.maxScore} points <Badge tone={STATE_LABEL[state].tone}>{STATE_LABEL[state].label}</Badge></span>}
       />

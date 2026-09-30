@@ -47,7 +47,7 @@ export default async function UserPage({ params, searchParams }: { params: Promi
         <div className="flex flex-col gap-6">
           {teaching.length > 0 && (
             <Card title="Teaches">
-              <ul className="flex flex-col gap-2">{teaching.map(({ cohort, course }) => <li key={cohort.id}><Link href={`/admin/cohorts/${cohort.id}`} className="font-semibold text-accent">{course.title}: {cohort.name}</Link></li>)}</ul>
+              <ul className="flex flex-col gap-2">{teaching.map(({ cohort, course }) => <li key={cohort.id}><Link href={`/teach/cohorts/${cohort.id}`} className="font-semibold text-accent">{course.title}: {cohort.name}</Link></li>)}</ul>
             </Card>
           )}
           <Card title="Enrolments" padded={false}>
@@ -55,7 +55,7 @@ export default async function UserPage({ params, searchParams }: { params: Promi
               <DataTable>
                 <thead><tr><th>Course</th><th>Starts</th><th>Status</th></tr></thead>
                 <tbody>{enrolled.map(({ enrollment, cohort, course }) => (
-                  <tr key={enrollment.id}><td><Link href={`/admin/cohorts/${cohort.id}`} className="font-semibold text-ink hover:text-accent">{course.title}</Link><p className="text-sm text-muted">{cohort.name}</p></td><td className="text-muted">{formatDateOnly(cohort.startDate) || "TBC"}</td><td><StatusBadge status={enrollment.status} /></td></tr>
+                  <tr key={enrollment.id}><td><Link href={`/teach/cohorts/${cohort.id}`} className="font-semibold text-ink hover:text-accent">{course.title}</Link><p className="text-sm text-muted">{cohort.name}</p></td><td className="text-muted">{formatDateOnly(cohort.startDate) || "TBC"}</td><td><StatusBadge status={enrollment.status} /></td></tr>
                 ))}</tbody>
               </DataTable>
             ) : <p className="p-6 text-muted">No enrolments.</p>}

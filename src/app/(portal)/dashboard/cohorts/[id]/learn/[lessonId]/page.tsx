@@ -52,7 +52,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
   const quizBlocks = Boolean(quiz?.requiredToComplete && quizState && !quizState.passed && !complete);
   return <>
     <LessonStart cohortId={cohortId} lessonId={lessonId} />
-    <PageHeader back={{ href: `/dashboard/cohorts/${cohortId}/learn`, label: "Course learning" }} title={found.lesson.title} description={<span className="flex items-center gap-2">{found.module.title}<Badge><ClockIcon className="size-3.5" /> {found.lesson.estimatedMinutes} min</Badge></span>} />
+    <PageHeader back={{ href: `/dashboard/cohorts/${cohortId}/learn`, label: "Lessons" }} title={found.lesson.title} description={<span className="flex items-center gap-2">{found.module.title}<Badge><ClockIcon className="size-3.5" /> {found.lesson.estimatedMinutes} min</Badge></span>} />
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
       <main className="flex min-w-0 flex-col gap-6">
         {found.lesson.summary && <p className="text-lg leading-relaxed text-muted">{found.lesson.summary}</p>}

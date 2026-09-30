@@ -206,7 +206,7 @@ async function saveCohort(id: number | null, courseId: number, formData: FormDat
 export async function createCohort(courseId: number, _state: FormState, formData: FormData): Promise<FormState> {
   const result = await saveCohort(null, courseId, formData);
   if (typeof result !== "number") return result;
-  redirect(`/admin/cohorts/${result}?created=1`);
+  redirect(`/teach/cohorts/${result}?created=1`);
 }
 
 export async function updateCohort(id: number, courseId: number, _state: FormState, formData: FormData): Promise<FormState> {
@@ -239,7 +239,7 @@ export async function addStudentToCohort(cohortId: number, _state: FormState, fo
   const name = String(formData.get("name") ?? "").trim().slice(0, 120) || parsedEmail.data.split("@")[0];
   const { id, created } = await findOrInvite(name, parsedEmail.data, "student");
   const added = await activateEnrollment(id, cohortId, "manual");
-  revalidatePath(`/admin/cohorts/${cohortId}`);
+  revalidatePath(`/teach/cohorts/${cohortId}`);
   if (!added) return { error: "That student is already enrolled on this cohort." };
   return { ok: created ? "Student account created, invitation and enrolment emails sent." : "Student enrolled and emailed." };
 }
@@ -261,7 +261,7 @@ export async function setEnrollmentStatus(enrollmentId: number, status: "active"
   } else if (status === "cancelled") {
     await db.update(certificates).set({ revokedAt: new Date() }).where(eq(certificates.enrollmentId, enrollmentId));
   }
-  revalidatePath(`/admin/cohorts/${row.cohortId}`);
+  revalidatePath(`/teach/cohorts/${row.cohortId}`);
   revalidatePath(`/admin/users/${row.userId}`);
   revalidatePath("/dashboard", "layout");
 }

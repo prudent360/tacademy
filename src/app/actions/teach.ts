@@ -125,7 +125,7 @@ export async function deleteSession(id: number): Promise<void> {
   await requireTeacher(existing.cohortId);
   await db.delete(classSessions).where(eq(classSessions.id, id));
   refresh(existing.cohortId);
-  redirect(`/teach/cohorts/${existing.cohortId}`);
+  redirect(`/teach/cohorts/${existing.cohortId}?tab=classes`);
 }
 
 export async function saveAttendance(sessionId: number, _state: FormState, formData: FormData): Promise<FormState> {

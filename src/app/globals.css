@@ -223,3 +223,7 @@ body:has([data-under-header]) #main { margin-top: -4.75rem; }
     transform: rotateY(calc(var(--arc) * -3deg));
   }
 }
+
+/* Focused pages (like the internship application) leave out the site footer and the course advisor button. */
+body:has([data-no-footer]) .site-footer,
+body:has([data-no-footer]) .course-advisor { display: none; }

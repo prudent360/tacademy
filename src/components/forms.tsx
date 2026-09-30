@@ -52,10 +52,10 @@ export function ActionForm({
   );
 }
 
-export function SubmitButton({ children = "Save", pendingText = "Saving…" }: { children?: React.ReactNode; pendingText?: string }) {
+export function SubmitButton({ children = "Save", pendingText = "Saving…", block = false }: { children?: React.ReactNode; pendingText?: string; block?: boolean }) {
   const pending = useContext(PendingContext);
   return (
-    <button type="submit" disabled={pending} className="inline-flex h-11 w-fit cursor-pointer items-center justify-center gap-2 rounded-lg bg-accent px-6 text-[15px] font-semibold text-white hover:bg-accent-dark disabled:cursor-wait disabled:opacity-70">
+    <button type="submit" disabled={pending} className={`inline-flex h-11 ${block ? "w-full" : "w-fit"} cursor-pointer items-center justify-center gap-2 rounded-lg bg-accent px-6 text-[15px] font-semibold text-white hover:bg-accent-dark disabled:cursor-wait disabled:opacity-70`}>
       {pending ? pendingText : children}
     </button>
   );

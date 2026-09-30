@@ -232,7 +232,7 @@ Your instructor has reviewed **{{assignmentTitle}}**. {{result}}
 
 {{message}}
 
-[[Open my class|{{cohortUrl}}]]`,
+[[Open my course|{{cohortUrl}}]]`,
   },
   certificate_issued: {
     name: "Certificate issued",

@@ -38,7 +38,7 @@ function refreshCourseLearning(courseId: number) {
 /** Where instructors return to after saving: the Learning tab of the cohort they came from. */
 function teachReturn(formData: FormData): string {
   const cohortId = Number(formData.get("cohort"));
-  return Number.isInteger(cohortId) && cohortId > 0 ? `/teach/cohorts/${cohortId}?tab=learning` : "/teach";
+  return Number.isInteger(cohortId) && cohortId > 0 ? `/teach/cohorts/${cohortId}?tab=lessons` : "/teach";
 }
 
 export async function createModule(courseId: number, _state: FormState, formData: FormData): Promise<FormState> {

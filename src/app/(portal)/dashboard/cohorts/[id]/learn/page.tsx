@@ -55,7 +55,7 @@ export default async function LearnPage({ params }: { params: Promise<{ id: stri
   const activityCount = availableLessons.length + availableAssignments.length;
 
   return <>
-    <PageHeader back={{ href: `/dashboard/cohorts/${cohortId}`, label: found.course.title }} title="Course learning" description={`${found.cohort.name} · ${completedCount} of ${activityCount} available activities completed`} actions={next && <Link href={`/dashboard/cohorts/${cohortId}/learn/${next.id}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-dark"><PlayIcon className="size-4" /> Continue learning</Link>} />
+    <PageHeader back={{ href: `/dashboard/cohorts/${cohortId}`, label: found.course.title }} title="Lessons" description={`${found.cohort.name} · ${completedCount} of ${activityCount} available activities completed`} actions={next && <Link href={`/dashboard/cohorts/${cohortId}/learn/${next.id}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-dark"><PlayIcon className="size-4" /> Continue learning</Link>} />
     {activityCount > 0 && <Card><ProgressBar value={completedCount} max={activityCount} label="Available course progress" detail={`${Math.round((completedCount / activityCount) * 100)}%`} /></Card>}
     {modules.length ? <div className="flex flex-col gap-5">{modules.map((module, index) => {
       const moduleAssignments = linkedAssignments.filter((row) => module.lessons.some((lesson) => lesson.id === row.assignment.lessonId));
@@ -71,6 +71,6 @@ export default async function LearnPage({ params }: { params: Promise<{ id: stri
           return [lessonRow, ...assignmentRows];
         })}</ol> : <p className="text-sm text-muted">Lessons are being prepared.</p>}
       </Card>;
-    })}</div> : <EmptyState icon={BookIcon} title="Learning content is coming soon">Your classes, assignments and announcements are still available from the cohort page.</EmptyState>}
+    })}</div> : <EmptyState icon={BookIcon} title="Lessons are coming soon">Your live classes, assignments and announcements are still available from the cohort page.</EmptyState>}
   </>;
 }

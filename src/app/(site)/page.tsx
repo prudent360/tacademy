@@ -35,7 +35,7 @@ const FORMATS = [
   },
   {
     icon: BuildingIcon, tone: "bg-cyan-soft text-cyan-ink", title: "In person",
-    text: "Hands-on sessions in our training space, with instructors beside you while you build.",
+    text: "Hands-on live classes in our training space, with instructors beside you while you build.",
     points: ["Small groups", "Lab machines available", "Networking with peers"],
   },
   {

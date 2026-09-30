@@ -24,7 +24,8 @@ function Field({ label, htmlFor, required, hint, children }: { label: string; ht
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <fieldset className="flex flex-col gap-5 border-t border-line pt-7 first:border-t-0 first:pt-0">
+    // min-w-0: fieldsets otherwise refuse to shrink below their widest content, pushing fields out of the card on phones.
+    <fieldset className="flex min-w-0 flex-col gap-5 border-t border-line pt-7 first:border-t-0 first:pt-0">
       <legend className="mb-1 font-display text-lg font-bold text-ink">{title}</legend>
       {children}
     </fieldset>
@@ -125,7 +126,7 @@ export function ApplicationForm({ programmes, intakes, defaultCountry }: { progr
           <Field label="LinkedIn profile" htmlFor={`${id}-linkedin`}><input id={`${id}-linkedin`} name="linkedinUrl" type="url" maxLength={500} placeholder="https://www.linkedin.com/in/…" className={input} /></Field>
         </div>
         <Field label="CV (optional)" htmlFor={`${id}-cv`} hint="PDF or Word, up to 4 MB.">
-          <input id={`${id}-cv`} name="cv" type="file" accept=".pdf,.doc,.docx,application/pdf" className="text-sm text-body file:mr-3 file:h-10 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-4 file:font-semibold file:text-accent" />
+          <input id={`${id}-cv`} name="cv" type="file" accept=".pdf,.doc,.docx,application/pdf" className="w-full min-w-0 max-w-full text-sm text-body file:mr-3 file:h-10 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-4 file:font-semibold file:text-accent" />
         </Field>
       </Section>
 

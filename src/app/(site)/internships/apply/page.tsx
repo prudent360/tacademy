@@ -21,7 +21,7 @@ export default async function ApplyPage() {
     .map((c) => ({ id: c.id, label: `${p.title} · ${c.name}${c.startDate ? ` (starts ${formatDateOnly(c.startDate)})` : ""} · ${MODE_LABEL[c.deliveryMode]}` })));
 
   return (
-    <div data-under-header className="relative bg-navy">
+    <div data-under-header data-no-footer className="relative bg-navy">
       {/* The photo stays fixed to the screen while the form scrolls over it, so it fills the view from top to bottom
           at its natural size (a sticky layer, since iOS ignores background-attachment: fixed). */}
       <div aria-hidden="true" className="absolute inset-0">

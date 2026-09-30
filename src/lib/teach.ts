@@ -1,7 +1,7 @@
 import "server-only";
-import { and, asc, count, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, exists, gte, inArray, lt, notExists } from "drizzle-orm";
 import { getDb } from "@/db";
-import { assignments, classSessions, cohorts, courses, enrollments, submissions, users } from "@/db/schema";
+import { assignments, attendance, classSessions, cohorts, courses, enrollments, submissions, users } from "@/db/schema";
 
 export async function cohortsWithStats(cohortIds: number[]) {
   if (!cohortIds.length) return [];
@@ -29,4 +29,23 @@ export async function gradingQueue(cohortIds: number[]) {
     .innerJoin(courses, eq(courses.id, cohorts.courseId))
     .where(and(inArray(assignments.cohortId, cohortIds), eq(submissions.status, "submitted")))
     .orderBy(asc(submissions.submittedAt));
+}
+
+/** Live classes that have ended with no attendance taken, oldest first. Classes in cohorts with no active students are skipped. */
+export async function attendanceToDo(cohortIds: number[]) {
+  if (!cohortIds.length) return [];
+  const db = await getDb();
+  return db
+    .select({ session: classSessions, course: { id: courses.id, title: courses.title }, cohortName: cohorts.name })
+    .from(classSessions)
+    .innerJoin(cohorts, eq(cohorts.id, classSessions.cohortId))
+    .innerJoin(courses, eq(courses.id, cohorts.courseId))
+    .where(and(
+      inArray(classSessions.cohortId, cohortIds),
+      eq(classSessions.cancelled, false),
+      lt(classSessions.endsAt, new Date()),
+      notExists(db.select({ id: attendance.sessionId }).from(attendance).where(eq(attendance.sessionId, classSessions.id))),
+      exists(db.select({ id: enrollments.id }).from(enrollments).where(and(eq(enrollments.cohortId, classSessions.cohortId), eq(enrollments.status, "active")))),
+    ))
+    .orderBy(asc(classSessions.startsAt));
 }

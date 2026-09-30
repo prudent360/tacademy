@@ -2,20 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { addStudentToCohort, deleteCohort, issueCertificate, setEnrollmentStatus, updateCohort } from "@/app/actions/admin";
 import { createAssignment, createSessions, deleteAnnouncement, postAnnouncement } from "@/app/actions/teach";
 import { createModule, setModulePublished, setModuleRelease } from "@/app/actions/learning";
+import { CohortForm } from "@/components/admin/cohort-form";
 import { ModuleForm } from "@/components/admin/learning-forms";
 import { ActionButton, ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton } from "@/components/forms";
 import { Markdown } from "@/components/markdown";
 import { SessionRow } from "@/components/portal/session-row";
+import { AttendanceForm } from "@/components/teach/attendance-form";
 import { SessionFields } from "@/components/teach/session-fields";
-import { Badge, Card, DataTable, EmptyState, ModeBadge, PageHeader, Tabs } from "@/components/ui";
-import { CalendarIcon, ClipboardIcon, MegaphoneIcon, UsersIcon } from "@/components/icons";
+import { Badge, Card, DataTable, EmptyState, ModeBadge, Notice, PageHeader, StatusBadge, Tabs } from "@/components/ui";
+import { CalendarIcon, ClipboardIcon, MegaphoneIcon, UsersIcon, VideoIcon } from "@/components/icons";
 import { getDb } from "@/db";
-import { announcements, assignments, attendance, classSessions, courseModules, enrollments, lessonProgress, lessons, moduleReleases, submissions } from "@/db/schema";
+import { announcements, assignments, attendance, certificates, classSessions, cohortInstructors, courseModules, enrollments, lessonProgress, lessons, moduleReleases, submissions, users, type ClassSession, type Cohort, type Course } from "@/db/schema";
 import { requireTeacher } from "@/lib/auth";
+import { certificateEligibility } from "@/lib/certificates";
 import { getCohortStudents, getCohortWithCourse, getSettings } from "@/lib/data";
-import { formatDateOnly, formatDateTime, relativeTime, toZonedInput } from "@/lib/time";
+import { formatDateOnly, formatDateTime, formatSessionRange, relativeTime, toZonedInput, untilLabel } from "@/lib/time";
 import { idParam } from "@/lib/validation";
 import { draftAnnouncement } from "@/app/actions/ai";
 import { AiDraftButton } from "@/components/ai/draft-button";
@@ -25,91 +29,76 @@ import { RichTextEditor } from "@/components/rich-text-editor";
 
 export const metadata: Metadata = { title: "Cohort" };
 
-type Tab = "classes" | "learning" | "assignments" | "students" | "announcements";
+const TABS = ["overview", "classes", "lessons", "assignments", "students", "announcements", "settings"] as const;
+type Tab = (typeof TABS)[number];
+type Mark = { sessionId: number; userId: number; status: typeof attendance.$inferSelect.status };
 
-export default async function TeachCohortPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
-  const [{ id: raw }, { tab: rawTab }] = await Promise.all([params, searchParams]);
+/** One place to run a cohort, for admins and instructors alike. Settings is admin only. */
+export default async function CohortPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; created?: string }> }) {
+  const [{ id: raw }, { tab: rawTab, created }] = await Promise.all([params, searchParams]);
   const id = idParam(raw);
   if (!id) notFound();
-  await requireTeacher(id);
+  const user = await requireTeacher(id);
+  const isAdmin = user.role === "admin";
   const aiWriting = await aiAvailable("writing");
   const found = await getCohortWithCourse(id);
   if (!found) notFound();
   const { cohort, course } = found;
   const settings = await getSettings();
   const tz = settings.timezone;
-  const tab: Tab = (["classes", "learning", "assignments", "students", "announcements"] as const).find((t) => t === rawTab) ?? "classes";
+  // "learning" was the old name for the lessons tab; old links still work.
+  const wanted = rawTab === "learning" ? "lessons" : rawTab;
+  const tab: Tab = TABS.find((t) => t === wanted && (t !== "settings" || isAdmin)) ?? "overview";
   const db = await getDb();
 
-  const [sessions, work, students, news, learning] = await Promise.all([
+  const [sessions, work, students, news, learning, toGrade] = await Promise.all([
     db.select().from(classSessions).where(eq(classSessions.cohortId, id)).orderBy(asc(classSessions.startsAt)),
     db.select().from(assignments).where(eq(assignments.cohortId, id)).orderBy(asc(assignments.dueAt)),
     getCohortStudents(id),
     db.select().from(announcements).where(eq(announcements.cohortId, id)).orderBy(desc(announcements.createdAt)),
     db.select({ module: courseModules, lesson: lessons, releaseAt: moduleReleases.releaseAt }).from(courseModules).leftJoin(lessons, eq(lessons.moduleId, courseModules.id)).leftJoin(moduleReleases, and(eq(moduleReleases.moduleId, courseModules.id), eq(moduleReleases.cohortId, id))).where(eq(courseModules.courseId, course.id)).orderBy(asc(courseModules.position), asc(lessons.position)),
+    db.select({ n: count() }).from(submissions).innerJoin(assignments, eq(assignments.id, submissions.assignmentId)).where(and(eq(assignments.cohortId, id), eq(submissions.status, "submitted"))).then((r) => r[0]?.n ?? 0),
   ]);
+  const marks: Mark[] = sessions.length ? await db.select({ sessionId: attendance.sessionId, userId: attendance.userId, status: attendance.status }).from(attendance).where(inArray(attendance.sessionId, sessions.map((s) => s.id))) : [];
   const now = new Date();
   const base = `/teach/cohorts/${id}`;
-
-  // A sensible default for the next class: a week after the last one, same time.
-  const last = sessions.at(-1);
-  const nextStart = last ? new Date(new Date(last.startsAt).getTime() + 7 * 86_400_000) : null;
+  const held = sessions.filter((s) => new Date(s.endsAt) < now && !s.cancelled);
+  const needsAttendance = students.some((s) => s.status === "active") ? held.filter((s) => !marks.some((m) => m.sessionId === s.id)) : [];
+  const publishedLessons = learning.filter((row) => row.lesson?.published && row.module.published).length;
+  const internship = course.kind === "internship";
 
   return (
     <>
       <PageHeader
-        back={{ href: "/teach", label: "My cohorts" }}
-        title={course.title}
-        description={<span className="flex flex-wrap items-center gap-2">{cohort.name}{cohort.startDate && ` · ${formatDateOnly(cohort.startDate)}${cohort.endDate ? ` – ${formatDateOnly(cohort.endDate)}` : ""}`} <ModeBadge mode={cohort.deliveryMode} /></span>}
+        back={isAdmin ? { href: `/admin/${internship ? "internships" : "courses"}/${course.id}`, label: course.title } : { href: "/teach", label: "Teaching" }}
+        title={`${course.title}: ${cohort.name}`}
+        description={<span className="flex flex-wrap items-center gap-2">{cohort.startDate ? `${formatDateOnly(cohort.startDate)}${cohort.endDate ? ` – ${formatDateOnly(cohort.endDate)}` : ""}` : "Dates to be confirmed"} <ModeBadge mode={cohort.deliveryMode} /></span>}
       />
+      {created && <Notice>{internship ? "Intake" : "Cohort"} created. Next, add its live classes under Live classes{course.published ? "." : ", and publish the course so students can enrol."}</Notice>}
       <Tabs current={tab} items={[
-        { key: "classes", label: "Classes", href: base, count: sessions.length },
-        { key: "learning", label: "Learning", href: `${base}?tab=learning`, count: learning.filter((row) => row.lesson?.published && row.module.published).length },
+        { key: "overview", label: "Overview", href: base },
+        { key: "classes", label: "Live classes", href: `${base}?tab=classes`, count: sessions.length },
+        { key: "lessons", label: "Lessons", href: `${base}?tab=lessons`, count: publishedLessons },
         { key: "assignments", label: "Assignments", href: `${base}?tab=assignments`, count: work.length },
         { key: "students", label: "Students", href: `${base}?tab=students`, count: students.length },
         { key: "announcements", label: "Announcements", href: `${base}?tab=announcements`, count: news.length },
+        ...(isAdmin ? [{ key: "settings", label: "Settings", href: `${base}?tab=settings` }] : []),
       ]} />
+
+      {tab === "overview" && <OverviewTab base={base} cohort={cohort} sessions={sessions} needsAttendance={needsAttendance} toGrade={toGrade} studentCount={students.length} publishedLessons={publishedLessons} assignmentCount={work.length} timeZone={tz} now={now} />}
 
       {tab === "classes" && (
         <div className="grid items-start gap-6 xl:grid-cols-[1.5fr_1fr]">
-          <Card title="Timetable">
-            {sessions.length ? (
-              <ul className="-my-4 divide-y divide-line">
-                {sessions.map((s) => (
-                  <SessionRow key={s.id} session={s} timeZone={tz} now={now} showActions={false}>
-                    <Link href={`/teach/sessions/${s.id}`} className="w-fit text-sm font-semibold text-accent hover:text-accent-dark">
-                      {new Date(s.endsAt) < now ? "Take attendance / add recording →" : "Edit class →"}
-                    </Link>
-                  </SessionRow>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState icon={CalendarIcon} title="No classes yet">Add the first class. You can repeat it weekly to build the whole timetable at once.</EmptyState>
-            )}
-          </Card>
-          <Card title="Add class">
-            <ActionForm action={createSessions.bind(null, id)} resetOnSuccess>
-              <SessionFields
-                repeat
-                defaults={{
-                  mode: cohort.deliveryMode === "physical" ? "physical" : "virtual",
-                  venue: cohort.venue,
-                  startsAt: nextStart ? toZonedInput(nextStart, tz) : undefined,
-                  durationMinutes: last ? Math.round((+new Date(last.endsAt) - +new Date(last.startsAt)) / 60000) : 120,
-                  meetingUrl: [...sessions].reverse().find((s) => s.meetingUrl)?.meetingUrl ?? "",
-                }}
-              />
-              <SubmitButton pendingText="Adding…">Add to timetable</SubmitButton>
-            </ActionForm>
-          </Card>
+          <ClassesTimetable sessions={sessions} students={students} marks={marks} timeZone={tz} now={now} />
+          <AddClassCard cohortId={id} cohort={cohort} sessions={sessions} timeZone={tz} />
         </div>
       )}
 
-      {tab === "learning" && <LearningTab cohortId={id} courseId={course.id} learning={learning} students={students} />}
+      {tab === "lessons" && <LearningTab cohortId={id} courseId={course.id} learning={learning} students={students} />}
 
       {tab === "assignments" && <AssignmentsTab cohortId={id} work={work} studentCount={students.length} timeZone={tz} learning={learning} />}
 
-      {tab === "students" && <StudentsTab cohortId={id} students={students} sessionIds={sessions.filter((s) => new Date(s.endsAt) < now && !s.cancelled).map((s) => s.id)} assignmentIds={work.map((w) => w.id)} />}
+      {tab === "students" && <StudentsTab cohortId={id} cohort={cohort} isAdmin={isAdmin} marks={marks.filter((m) => held.some((s) => s.id === m.sessionId))} heldCount={held.length} assignmentIds={work.map((w) => w.id)} learning={learning} />}
 
       {tab === "announcements" && (
         <div className="grid items-start gap-6 xl:grid-cols-[1fr_1.3fr]">
@@ -142,7 +131,142 @@ export default async function TeachCohortPage({ params, searchParams }: { params
           </Card>
         </div>
       )}
+
+      {tab === "settings" && isAdmin && <SettingsTab cohort={cohort} course={course} currencies={settings.currencies} />}
     </>
+  );
+}
+
+function OverviewTab({ base, cohort, sessions, needsAttendance, toGrade, studentCount, publishedLessons, assignmentCount, timeZone, now }: { base: string; cohort: Cohort; sessions: ClassSession[]; needsAttendance: ClassSession[]; toGrade: number; studentCount: number; publishedLessons: number; assignmentCount: number; timeZone: string; now: Date }) {
+  const next = sessions.find((s) => !s.cancelled && new Date(s.endsAt) >= now);
+  const live = next && new Date(next.startsAt).getTime() - 15 * 60_000 <= now.getTime();
+  const todos: { text: string; href: string; action: string }[] = [
+    ...(needsAttendance.length ? [{ text: `${needsAttendance.length} live ${needsAttendance.length === 1 ? "class needs" : "classes need"} attendance`, href: `${base}?tab=classes`, action: "Take attendance" }] : []),
+    ...(toGrade ? [{ text: `${toGrade} ${toGrade === 1 ? "submission" : "submissions"} to grade`, href: `${base}?tab=assignments`, action: "Grade" }] : []),
+    ...(!sessions.length ? [{ text: "No live classes on the timetable yet", href: `${base}?tab=classes`, action: "Add classes" }] : []),
+    ...(!publishedLessons ? [{ text: "No published lessons yet", href: `${base}?tab=lessons`, action: "Add lessons" }] : []),
+  ];
+  const facts: [string, string][] = [
+    ["Students", `${studentCount}${cohort.capacity ? ` of ${cohort.capacity}` : ""}`],
+    ["Live classes held", `${sessions.filter((s) => !s.cancelled && new Date(s.endsAt) < now).length} of ${sessions.filter((s) => !s.cancelled).length}`],
+    ["Lessons published", String(publishedLessons)],
+    ["Assignments", String(assignmentCount)],
+  ];
+  return (
+    <div className="grid items-start gap-6 xl:grid-cols-[1.3fr_1fr]">
+      <div className="flex flex-col gap-6">
+        <Card title="Next live class">
+          {next ? (
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-ink">{next.title} {live && <Badge tone="green">Happening now</Badge>}</p>
+                <p className="text-sm text-muted">{formatSessionRange(next.startsAt, next.endsAt, timeZone)}{live ? "" : ` · ${untilLabel(next.startsAt, now)}`}</p>
+                {next.mode === "physical" && next.venue && <p className="text-sm text-body">{next.venue}</p>}
+              </div>
+              <span className="flex flex-wrap gap-2">
+                {next.mode === "virtual" && next.meetingUrl && <a href={next.meetingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-sm font-semibold text-white hover:bg-accent-dark"><VideoIcon className="size-4" /> Join</a>}
+                <Link href={`/teach/sessions/${next.id}`} className="inline-flex h-9 items-center rounded-lg border border-edge-strong bg-white px-3.5 text-sm font-semibold text-ink hover:bg-page">{live ? "Take attendance" : "Edit class"}</Link>
+              </span>
+            </div>
+          ) : <p className="text-sm text-muted">Nothing scheduled. <Link href={`${base}?tab=classes`} className="font-semibold text-accent">Add live classes</Link>.</p>}
+        </Card>
+        <Card title="To do">
+          {todos.length ? (
+            <ul className="-my-2 flex flex-col divide-y divide-line">
+              {todos.map((t) => (
+                <li key={t.text} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <span className="text-[15px] font-medium text-ink">{t.text}</span>
+                  <Link href={t.href} className="text-sm font-semibold text-accent hover:text-accent-dark">{t.action} →</Link>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-sm text-muted">All caught up.</p>}
+        </Card>
+      </div>
+      <Card title="At a glance">
+        <dl className="-my-2 divide-y divide-line">
+          {facts.map(([label, value]) => (
+            <div key={label} className="flex items-center justify-between gap-3 py-3"><dt className="text-sm text-muted">{label}</dt><dd className="font-semibold text-ink">{value}</dd></div>
+          ))}
+        </dl>
+      </Card>
+    </div>
+  );
+}
+
+function ClassesTimetable({ sessions, students, marks, timeZone, now }: { sessions: ClassSession[]; students: { id: number; name: string; status: string }[]; marks: Mark[]; timeZone: string; now: Date }) {
+  const active = students.filter((s) => s.status === "active");
+  return (
+    <Card title="Timetable">
+      {sessions.length ? (
+        <ul className="-my-4 divide-y divide-line">
+          {sessions.map((s) => {
+            const ended = new Date(s.endsAt) < now;
+            const started = new Date(s.startsAt) <= now;
+            const mine = marks.filter((m) => m.sessionId === s.id);
+            const came = mine.filter((m) => m.status === "present" || m.status === "late").length;
+            const due = started && !s.cancelled && active.length > 0;
+            return (
+              <SessionRow key={s.id} session={s} timeZone={timeZone} now={now} showActions={false}>
+                {due && (
+                  <details className="group rounded-[5px] border border-edge">
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                      {mine.length ? <span className="text-body">Attendance: <strong className="text-ink">{came}/{mine.length}</strong> present</span> : <Badge tone="amber">Attendance not taken</Badge>}
+                      <span className="font-semibold text-accent group-open:hidden">{mine.length ? "Edit attendance" : "Take attendance"}</span>
+                      <span className="hidden font-semibold text-muted group-open:inline">Close</span>
+                    </summary>
+                    <div className="border-t border-line px-3 pb-3 pt-1"><AttendanceForm sessionId={s.id} students={active} marks={mine} /></div>
+                  </details>
+                )}
+                <Link href={`/teach/sessions/${s.id}`} className="w-fit text-sm font-semibold text-accent hover:text-accent-dark">{ended ? "Edit class or add recording →" : "Edit class →"}</Link>
+              </SessionRow>
+            );
+          })}
+        </ul>
+      ) : (
+        <EmptyState icon={CalendarIcon} title="No live classes yet">Add the first one. You can repeat it weekly to build the whole timetable at once.</EmptyState>
+      )}
+    </Card>
+  );
+}
+
+function AddClassCard({ cohortId, cohort, sessions, timeZone }: { cohortId: number; cohort: Cohort; sessions: ClassSession[]; timeZone: string }) {
+  // A sensible default for the next class: a week after the last one, same time.
+  const last = sessions.at(-1);
+  const nextStart = last ? new Date(new Date(last.startsAt).getTime() + 7 * 86_400_000) : null;
+  return (
+    <Card title="Add a live class">
+      <ActionForm action={createSessions.bind(null, cohortId)} resetOnSuccess>
+        <SessionFields
+          repeat
+          defaults={{
+            mode: cohort.deliveryMode === "physical" ? "physical" : "virtual",
+            venue: cohort.venue,
+            startsAt: nextStart ? toZonedInput(nextStart, timeZone) : undefined,
+            durationMinutes: last ? Math.round((+new Date(last.endsAt) - +new Date(last.startsAt)) / 60000) : 120,
+            meetingUrl: [...sessions].reverse().find((s) => s.meetingUrl)?.meetingUrl ?? "",
+          }}
+        />
+        <SubmitButton pendingText="Adding…">Add to timetable</SubmitButton>
+      </ActionForm>
+    </Card>
+  );
+}
+
+async function SettingsTab({ cohort, course, currencies }: { cohort: Cohort; course: Course; currencies: Parameters<typeof CohortForm>[0]["currencies"] }) {
+  const db = await getDb();
+  const [staff, assigned] = await Promise.all([
+    db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users).where(inArray(users.role, ["instructor", "admin"])),
+    db.select({ userId: cohortInstructors.userId }).from(cohortInstructors).where(eq(cohortInstructors.cohortId, cohort.id)),
+  ]);
+  const internship = course.kind === "internship";
+  return (
+    <div className="flex max-w-4xl flex-col gap-6">
+      <Card title={internship ? "Intake settings" : "Cohort settings"}>
+        <CohortForm action={updateCohort.bind(null, cohort.id, course.id)} cohort={cohort} instructors={staff} assigned={assigned.map((a) => a.userId)} currencies={currencies} internship={internship} />
+      </Card>
+      <div className="flex justify-end"><DeleteButton action={deleteCohort.bind(null, cohort.id)} label={internship ? "Delete intake" : "Delete cohort"} /></div>
+    </div>
   );
 }
 
@@ -268,41 +392,105 @@ async function AssignmentsTab({ cohortId, work, studentCount, timeZone, learning
   );
 }
 
-async function StudentsTab({ cohortId, students, sessionIds, assignmentIds }: { cohortId: number; students: Awaited<ReturnType<typeof getCohortStudents>>; sessionIds: number[]; assignmentIds: number[] }) {
+type LearningRow = { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect | null; releaseAt: Date | null };
+
+/** Everyone on the cohort in one list: attendance, lessons, work and certificates. Admins can also add, complete and remove students here. */
+async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assignmentIds, learning }: { cohortId: number; cohort: Cohort; isAdmin: boolean; marks: Mark[]; heldCount: number; assignmentIds: number[]; learning: LearningRow[] }) {
   const db = await getDb();
-  const ids = students.map((s) => s.id);
-  const [marks, grades] = await Promise.all([
-    sessionIds.length && ids.length ? db.select().from(attendance).where(and(inArray(attendance.sessionId, sessionIds), inArray(attendance.userId, ids))) : [],
+  const roster = await db.select({ enrollment: enrollments, user: { id: users.id, name: users.name, email: users.email } }).from(enrollments).innerJoin(users, eq(users.id, enrollments.userId)).where(and(eq(enrollments.cohortId, cohortId), inArray(enrollments.status, isAdmin ? ["active", "completed", "cancelled"] : ["active", "completed"]))).orderBy(asc(users.name));
+  const ids = roster.map((r) => r.user.id);
+  const lessonIds = learning.flatMap((row) => (row.module.published && row.lesson?.published ? [row.lesson.id] : []));
+  const enrollmentIds = roster.map((r) => r.enrollment.id);
+  const [grades, done, issued, eligibility] = await Promise.all([
     assignmentIds.length && ids.length ? db.select({ userId: submissions.userId, status: submissions.status, score: submissions.score, max: assignments.maxScore }).from(submissions).innerJoin(assignments, eq(assignments.id, submissions.assignmentId)).where(and(inArray(submissions.assignmentId, assignmentIds), inArray(submissions.userId, ids))) : [],
+    lessonIds.length && enrollmentIds.length ? db.select({ enrollmentId: lessonProgress.enrollmentId, n: count() }).from(lessonProgress).where(and(inArray(lessonProgress.enrollmentId, enrollmentIds), inArray(lessonProgress.lessonId, lessonIds), sql`${lessonProgress.completedAt} is not null`)).groupBy(lessonProgress.enrollmentId) : [],
+    enrollmentIds.length ? db.select().from(certificates).where(inArray(certificates.enrollmentId, enrollmentIds)) : [],
+    isAdmin ? Promise.all(roster.map(async ({ enrollment }) => [enrollment.id, await certificateEligibility(enrollment.id)] as const)).then((rows) => new Map(rows)) : new Map<number, Awaited<ReturnType<typeof certificateEligibility>>>(),
   ]);
-  if (!students.length) return <EmptyState icon={UsersIcon} title="No students yet">Students appear here once they enrol and pay, or when an admin adds them.</EmptyState>;
+  const activeIds = roster.filter((r) => r.enrollment.status === "active").map((r) => r.enrollment.id);
+  const enrolled = roster.filter((r) => r.enrollment.status !== "cancelled");
+
   return (
     <div className="flex flex-col gap-4">
-      <DataTable>
-        <thead><tr><th>Student</th><th>Attendance</th><th>Submitted</th><th>Average</th><th>Status</th></tr></thead>
-        <tbody>
-          {students.map((s) => {
-            const mine = marks.filter((m) => m.userId === s.id);
-            const attended = mine.filter((m) => m.status === "present" || m.status === "late").length;
-            const work = grades.filter((g) => g.userId === s.id);
-            const scored = work.filter((g) => g.status === "graded" && g.score !== null);
-            const avg = scored.length ? Math.round(scored.reduce((a, g) => a + (g.score! / g.max) * 100, 0) / scored.length) : null;
-            return (
-              <tr key={s.id}>
-                <td><span className="flex flex-col"><span className="font-semibold text-ink">{s.name}</span><a href={`mailto:${s.email}`} className="text-sm text-accent">{s.email}</a></span></td>
-                <td>{mine.length ? `${attended}/${mine.length} (${Math.round((attended / mine.length) * 100)}%)` : "–"}</td>
-                <td>{work.length}/{assignmentIds.length}</td>
-                <td className="font-semibold">{avg === null ? "–" : `${avg}%`}</td>
-                <td><Badge tone={s.status === "completed" ? "accent" : "green"}>{s.status === "completed" ? "Completed" : "Active"}</Badge></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </DataTable>
-      <details className="rounded-[14px] border border-edge bg-white px-5 py-4">
-        <summary className="cursor-pointer text-sm font-semibold text-accent">Copy email addresses</summary>
-        <textarea readOnly className="mt-3 w-full rounded-lg border border-edge bg-panel p-3 font-mono text-sm" rows={3} defaultValue={students.map((s) => s.email).join(", ")} aria-label={`Email addresses for cohort ${cohortId}`} />
-      </details>
+      {isAdmin && (
+        <details className="rounded-[14px] border border-edge bg-white px-5 py-4">
+          <summary className="cursor-pointer text-sm font-semibold text-accent">Add a student</summary>
+          <ActionForm action={addStudentToCohort.bind(null, cohortId)} resetOnSuccess className="mt-4 flex flex-col gap-4">
+            <p className="text-sm text-muted">Enrol someone without online payment (e.g. scholarship or bank transfer). New emails get an account and an invitation to set a password.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input label="Email" name="email" type="email" required />
+              <Input label="Name (for new accounts)" name="name" />
+            </div>
+            <div><SubmitButton pendingText="Adding…">Add student</SubmitButton></div>
+          </ActionForm>
+        </details>
+      )}
+      {roster.length ? (
+        <DataTable>
+          <thead><tr><th>Student</th><th>Attendance</th><th>Lessons</th><th>Assignments</th><th>Average</th><th>Status</th>{isAdmin && <th><span className="sr-only">Actions</span></th>}</tr></thead>
+          <tbody>
+            {roster.map(({ enrollment, user }) => {
+              const mine = marks.filter((m) => m.userId === user.id);
+              const attended = mine.filter((m) => m.status === "present" || m.status === "late").length;
+              const work = grades.filter((g) => g.userId === user.id);
+              const scored = work.filter((g) => g.status === "graded" && g.score !== null);
+              const avg = scored.length ? Math.round(scored.reduce((a, g) => a + (g.score! / g.max) * 100, 0) / scored.length) : null;
+              const lessonsDone = done.find((d) => d.enrollmentId === enrollment.id)?.n ?? 0;
+              const certificate = issued.find((c) => c.enrollmentId === enrollment.id && !c.revokedAt);
+              const check = eligibility.get(enrollment.id);
+              return (
+                <tr key={enrollment.id} className={enrollment.status === "cancelled" ? "opacity-60" : undefined}>
+                  <td>
+                    <span className="flex max-w-xs flex-col">
+                      {isAdmin ? <Link href={`/admin/users/${user.id}`} className="font-semibold text-ink hover:text-accent">{user.name}</Link> : <span className="font-semibold text-ink">{user.name}</span>}
+                      <a href={`mailto:${user.email}`} className="truncate text-sm text-accent">{user.email}</a>
+                      {isAdmin && <span className="text-xs text-muted">{enrollment.source} · joined {relativeTime(enrollment.createdAt)}</span>}
+                      {check && !check.eligible && enrollment.status !== "cancelled" && <span className="mt-1 text-xs text-amber-800">Certificate pending: {check.reasons.join(" ")}</span>}
+                    </span>
+                  </td>
+                  <td>{heldCount ? (mine.length ? `${attended}/${mine.length} (${Math.round((attended / mine.length) * 100)}%)` : "Not taken") : "–"}</td>
+                  <td>{lessonIds.length ? `${lessonsDone}/${lessonIds.length}` : "–"}</td>
+                  <td>{work.length}/{assignmentIds.length}</td>
+                  <td className="font-semibold">{avg === null ? "–" : `${avg}%`}</td>
+                  <td>
+                    <span className="flex flex-col items-start gap-1">
+                      <StatusBadge status={enrollment.status} />
+                      {certificate && <Link href={`/certificates/${certificate.code}`} target="_blank" className="text-xs font-semibold text-accent">Certificate</Link>}
+                    </span>
+                  </td>
+                  {isAdmin && (
+                    <td>
+                      <span className="flex flex-wrap justify-end gap-2">
+                        {enrollment.status === "active" && <ActionButton action={setEnrollmentStatus.bind(null, enrollment.id, "completed")} variant="primary" pendingText="Completing…">{check?.eligible ? "Complete & issue" : "Mark completed"}</ActionButton>}
+                        {enrollment.status === "completed" && !certificate && check?.eligible && <ActionButton action={issueCertificate.bind(null, enrollment.id)} variant="primary" pendingText="Issuing…">Issue certificate</ActionButton>}
+                        {enrollment.status === "active" && <ActionButton action={setEnrollmentStatus.bind(null, enrollment.id, "cancelled")} variant="danger" pendingText="…">Remove</ActionButton>}
+                        {enrollment.status === "cancelled" && <ActionButton action={setEnrollmentStatus.bind(null, enrollment.id, "active")} pendingText="…">Restore</ActionButton>}
+                      </span>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </DataTable>
+      ) : <EmptyState icon={UsersIcon} title="No students yet">Students appear here once they enrol and pay{isAdmin ? ", or when you add them above" : ", or when an admin adds them"}.</EmptyState>}
+      {isAdmin && activeIds.length > 0 && (
+        <Card title="End of course">
+          <p className="mb-4 text-sm text-muted">Mark every active student as completed when the {cohort.name} run finishes. Completed students keep access to their materials and feedback but stop receiving reminders; eligible students get their certificate.</p>
+          <ActionButton action={completeAll.bind(null, activeIds)} pendingText="Updating…">Mark {activeIds.length} {activeIds.length === 1 ? "student" : "students"} as completed</ActionButton>
+        </Card>
+      )}
+      {enrolled.length > 0 && (
+        <details className="rounded-[14px] border border-edge bg-white px-5 py-4">
+          <summary className="cursor-pointer text-sm font-semibold text-accent">Copy email addresses</summary>
+          <textarea readOnly className="mt-3 w-full rounded-lg border border-edge bg-panel p-3 font-mono text-sm" rows={3} defaultValue={enrolled.map((r) => r.user.email).join(", ")} aria-label="Email addresses for this cohort" />
+        </details>
+      )}
     </div>
   );
+}
+
+async function completeAll(ids: number[]) {
+  "use server";
+  for (const id of ids) await setEnrollmentStatus(id, "completed");
 }

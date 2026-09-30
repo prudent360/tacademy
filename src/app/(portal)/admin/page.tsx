@@ -135,7 +135,7 @@ export default async function AdminHome() {
                 const seats = taken.get(cohort.id) ?? 0;
                 return (
                   <li key={cohort.id}>
-                    <Link href={`/admin/cohorts/${cohort.id}`} className="flex flex-col gap-2 rounded-[5px] border border-edge p-4 transition hover:-translate-y-0.5 hover:border-accent-muted hover:bg-panel">
+                    <Link href={`/teach/cohorts/${cohort.id}`} className="flex flex-col gap-2 rounded-[5px] border border-edge p-4 transition hover:-translate-y-0.5 hover:border-accent-muted hover:bg-panel">
                       <span className="flex items-start justify-between gap-3">
                         <span className="flex min-w-0 flex-col"><span className="truncate font-semibold text-ink">{course.title}</span><span className="text-sm text-muted">{cohort.name} · starts {formatDateOnly(cohort.startDate) || "TBC"}</span></span>
                         {!cohort.enrollmentOpen && <StatusBadge status="pending" label="Closed" />}

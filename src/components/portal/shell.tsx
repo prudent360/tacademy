@@ -51,7 +51,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
   const programmes: NavGroup = {
     label: "Programmes",
     items: [
-      { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon, also: ["/admin/cohorts", "/admin/modules", "/admin/lessons"] },
+      { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon, also: ["/admin/cohorts", "/teach/cohorts", "/admin/modules", "/admin/lessons"] },
       {
         href: "/admin/internships", label: "Internships", icon: BriefcaseIcon, children: [
           { href: "/admin/internships", label: "Programmes", icon: BriefcaseIcon },

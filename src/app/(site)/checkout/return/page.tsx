@@ -37,7 +37,7 @@ export default async function CheckoutReturnPage({ searchParams }: { searchParam
       <p className="font-mono text-xs text-muted">Reference {payment.reference}</p>
       <div className="flex flex-wrap justify-center gap-3">
         {paid && payment.cohortId && signedIn ? (
-          <Link href={`/dashboard/cohorts/${payment.cohortId}?welcome=1`} className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Go to my class</Link>
+          <Link href={`/dashboard/cohorts/${payment.cohortId}?welcome=1`} className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Open my course</Link>
         ) : paid ? (
           <Link href="/login" className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Sign in</Link>
         ) : (

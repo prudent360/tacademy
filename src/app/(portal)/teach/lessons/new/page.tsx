@@ -20,7 +20,7 @@ export default async function NewTeachLessonPage({ searchParams }: { searchParam
   await requireCourseEditor(found.course.id);
   const cohortId = idParam(cohort ?? "") ?? undefined;
   return <>
-    <PageHeader back={{ href: cohortId ? `/teach/cohorts/${cohortId}?tab=learning` : "/teach", label: "Course learning" }} title="New lesson" description={`${found.course.title} · ${found.module.title}`} />
+    <PageHeader back={{ href: cohortId ? `/teach/cohorts/${cohortId}?tab=lessons` : "/teach", label: "Lessons" }} title="New lesson" description={`${found.course.title} · ${found.module.title}`} />
     <Card><LessonForm action={createLesson.bind(null, moduleId)} cohortId={cohortId} /></Card>
   </>;
 }
