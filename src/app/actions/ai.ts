@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { assignments, cohorts, courseModules, courses, enrollments, lessons, moduleReleases, submissions } from "@/db/schema";
 import { aiQuota, askAi, trimChat, type AiResult } from "@/lib/ai";
-import { getCurrentUser, requireRole, requireTeacher } from "@/lib/auth";
+import { getCurrentUser, requireCourseEditor, requireRole, requireTeacher } from "@/lib/auth";
 import { fromPrice, isFree, withCohorts } from "@/lib/catalog";
 import { getPublishedCourses, getSettings } from "@/lib/data";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
@@ -201,4 +201,70 @@ export async function draftEmailTemplate(key: string, values: Record<string, str
     maxTokens: 4000,
   });
   return "error" in result ? result : { fields: { body: result.text } };
+}
+
+const lessonDraftSchema = z.object({ summary: z.string(), content: z.string(), estimatedMinutes: z.number().int() });
+
+/**
+ * Drafts a lesson from its title (and summary, if one's written): a one-line summary and the full lesson
+ * content in Markdown. Uses the course and module for context, and the module's other lessons to avoid overlap.
+ */
+export async function draftLesson(moduleId: number, lessonId: number | null, values: Record<string, string>): Promise<AiDraft> {
+  const db = await getDb();
+  const [found] = await db.select({ module: courseModules, course: courses }).from(courseModules).innerJoin(courses, eq(courses.id, courseModules.courseId)).where(eq(courseModules.id, moduleId));
+  if (!found) return { error: "This module no longer exists." };
+  const user = await requireCourseEditor(found.course.id);
+  const limited = await aiQuota("writing", String(user.id), 60);
+  if (limited) return { error: limited };
+  const title = String(values.title ?? "").trim().slice(0, 200);
+  if (!title) return { error: "Add the lesson title first, so the draft knows what to cover." };
+  const summary = String(values.summary ?? "").trim().slice(0, 600);
+  const siblings = (await db.select({ id: lessons.id, title: lessons.title }).from(lessons).where(eq(lessons.moduleId, moduleId))).filter((l) => l.id !== lessonId).map((l) => l.title);
+
+  const result = await askAi("writing", {
+    system: [
+      "You write lessons for a live, instructor-led tech training academy. Students are adults, often beginners changing career; many are in Nigeria and the UK.",
+      "Write in plain British English: clear, friendly and practical. Explain ideas simply before using jargon, and define terms the first time they appear.",
+      "The lesson content is Markdown: short sections with ## headings, short paragraphs, bullet points where they help, and at least one worked example.",
+      "Use fenced code blocks with a language tag (for example ```sql) whenever code, formulas or queries are involved, and keep examples realistic (sales, customers, staff, orders).",
+      "End with a '## Key points' recap (3–5 bullets) and a '## Try it yourself' task the student can do in a few minutes.",
+      "Aim for about 600–1,000 words. Don't invent facts about the academy, dates or links, and don't mention a video.",
+      "The summary is one or two sentences saying what the student will learn, for the module outline.",
+      "estimatedMinutes is how long a typical student needs to read and try the lesson.",
+    ].join(" "),
+    messages: [{
+      role: "user",
+      content: [
+        `Course: ${found.course.title}${found.course.level ? ` (${found.course.level})` : ""}`,
+        `Module: ${found.module.title}${found.module.summary ? ` — ${found.module.summary}` : ""}`,
+        siblings.length ? `Other lessons in this module (don't repeat them): ${siblings.join("; ")}` : "",
+        `Lesson title: ${title}`,
+        summary ? `The instructor's summary (follow it closely): ${summary}` : "",
+      ].filter(Boolean).join("\n"),
+    }],
+    schema: {
+      type: "object",
+      properties: { summary: { type: "string" }, content: { type: "string" }, estimatedMinutes: { type: "integer" } },
+      required: ["summary", "content", "estimatedMinutes"],
+      additionalProperties: false,
+    },
+    maxTokens: 6000,
+  });
+  if ("error" in result) return result;
+  let draft: z.infer<typeof lessonDraftSchema>;
+  try {
+    const parsed = lessonDraftSchema.safeParse(JSON.parse(result.text));
+    if (!parsed.success) return { error: "The draft came back incomplete. Please try again." };
+    draft = parsed.data;
+  } catch {
+    return { error: "The draft came back incomplete. Please try again." };
+  }
+  // A summary the instructor already wrote is kept; only empty fields and the content are filled.
+  return {
+    fields: {
+      ...(summary ? {} : { summary: draft.summary.trim().slice(0, 600) }),
+      content: draft.content.trim(),
+      estimatedMinutes: String(Math.min(180, Math.max(5, draft.estimatedMinutes))),
+    },
+  };
 }

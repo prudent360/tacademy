@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { updateLesson } from "@/app/actions/learning";
 import { LessonForm } from "@/components/admin/learning-forms";
+import { draftLesson } from "@/app/actions/ai";
+import { aiAvailable } from "@/lib/ai";
 import { Card, Notice, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
 import { courseModules, courses, lessons } from "@/db/schema";
@@ -23,12 +25,13 @@ export default async function TeachLessonPage({ params, searchParams }: { params
   await requireCourseEditor(found.course.id);
   const cohortId = idParam(cohort ?? "") ?? undefined;
   const video = await lessonVideo(found.lesson.videoUrl);
+  const ai = await aiAvailable("writing");
   return <>
     <PageHeader back={{ href: cohortId ? `/teach/cohorts/${cohortId}?tab=lessons` : "/teach", label: "Lessons" }} title={found.lesson.title} description={`${found.course.title} · ${found.module.title}`} />
     {created && <Notice>Lesson created. Add the video and content, then tick “Published for students” when it&apos;s ready.</Notice>}
     {found.lesson.videoUrl && !video && <Notice tone="amber">This video link can&apos;t be played inside the lesson, so students get a button that opens it instead. Bunny Stream, YouTube, Vimeo and Loom links play inline.</Notice>}
     <div className="grid items-start gap-6 xl:grid-cols-[1.5fr_1fr]">
-      <Card><LessonForm action={updateLesson.bind(null, id)} lesson={found.lesson} cohortId={cohortId} /></Card>
+      <Card><LessonForm action={updateLesson.bind(null, id)} lesson={found.lesson} cohortId={cohortId} draft={ai ? draftLesson.bind(null, found.module.id, id) : undefined} /></Card>
       {video && (
         <Card title="Video preview">
           <div className="relative aspect-video w-full overflow-hidden rounded-[5px] bg-navy">

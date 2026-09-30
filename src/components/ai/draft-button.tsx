@@ -8,7 +8,7 @@ import { SparkIcon } from "@/components/icons";
  * "Draft with AI": sends the surrounding form's current values to `draft` and fills the fields it
  * returns. Nothing is saved; the person reviews the draft and submits the form as usual.
  */
-export function AiDraftButton({ draft, label = "Draft with AI", confirmReplace = true }: { draft: (values: Record<string, string>) => Promise<AiDraft>; label?: string; confirmReplace?: boolean }) {
+export function AiDraftButton({ draft, label = "Draft with AI", confirmReplace = true, confirmFields }: { draft: (values: Record<string, string>) => Promise<AiDraft>; label?: string; confirmReplace?: boolean; confirmFields?: string[] }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState<{ busy: boolean; error?: string; done?: boolean }>({ busy: false });
 
@@ -22,7 +22,9 @@ export function AiDraftButton({ draft, label = "Draft with AI", confirmReplace =
     if ("error" in result) return setState({ busy: false, error: result.error });
     const fields = Object.entries(result.fields).map(([name, value]) => [form.elements.namedItem(name), value] as const);
     const filled = fields.filter(([el]) => el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) as [HTMLInputElement | HTMLTextAreaElement, string][];
-    if (confirmReplace && filled.some(([el]) => el.value.trim()) && !window.confirm("Replace what's already written with the AI draft?")) return setState({ busy: false });
+    // Only ask before overwriting writing (not, say, a number field that always has a default).
+    const matters = filled.filter(([el]) => !confirmFields || confirmFields.includes(el.name));
+    if (confirmReplace && matters.some(([el]) => el.value.trim()) && !window.confirm("Replace what's already written with the AI draft?")) return setState({ busy: false });
     for (const [el, value] of filled) {
       el.value = value;
       el.dispatchEvent(new Event("input", { bubbles: true }));

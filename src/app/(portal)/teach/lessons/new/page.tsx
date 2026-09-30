@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { createLesson } from "@/app/actions/learning";
 import { LessonForm } from "@/components/admin/learning-forms";
+import { draftLesson } from "@/app/actions/ai";
+import { aiAvailable } from "@/lib/ai";
 import { Card, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
 import { courseModules, courses } from "@/db/schema";
@@ -19,8 +21,9 @@ export default async function NewTeachLessonPage({ searchParams }: { searchParam
   if (!found) notFound();
   await requireCourseEditor(found.course.id);
   const cohortId = idParam(cohort ?? "") ?? undefined;
+  const ai = await aiAvailable("writing");
   return <>
     <PageHeader back={{ href: cohortId ? `/teach/cohorts/${cohortId}?tab=lessons` : "/teach", label: "Lessons" }} title="New lesson" description={`${found.course.title} · ${found.module.title}`} />
-    <Card><LessonForm action={createLesson.bind(null, moduleId)} cohortId={cohortId} /></Card>
+    <Card><LessonForm action={createLesson.bind(null, moduleId)} cohortId={cohortId} draft={ai ? draftLesson.bind(null, moduleId, null) : undefined} /></Card>
   </>;
 }
