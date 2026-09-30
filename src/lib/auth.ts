@@ -8,14 +8,15 @@ import { cohortInstructors, cohorts, type Role, type User } from "@/db/schema";
 import { users } from "@/db/schema";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession, verifySessionToken } from "./session";
 
-export async function createSession(user: Pick<User, "id" | "role" | "sessionVersion">): Promise<void> {
+/** Signs the user in. Without "remember me", the cookie lasts until the browser closes (the token itself still expires as usual). */
+export async function createSession(user: Pick<User, "id" | "role" | "sessionVersion">, { remember = true }: { remember?: boolean } = {}): Promise<void> {
   const token = await signSession({ userId: user.id, role: user.role, v: user.sessionVersion });
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_TTL_SECONDS,
+    ...(remember ? { maxAge: SESSION_TTL_SECONDS } : {}),
   });
 }
 

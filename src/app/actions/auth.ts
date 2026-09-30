@@ -44,7 +44,7 @@ export async function login(_state: FormState, formData: FormData): Promise<Form
   await clearLoginFailures(email);
   const blocked = secretError();
   if (blocked) return blocked;
-  await createSession(user);
+  await createSession(user, { remember: formData.get("remember") === "on" });
   redirect(safeNext(formData.get("next")) ?? homeFor(user.role));
 }
 

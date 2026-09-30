@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { resetPassword } from "@/app/actions/auth";
-import { ActionForm, Input, SubmitButton } from "@/components/forms";
+import { PasswordField } from "@/components/auth/fields";
+import { ActionForm, SubmitButton } from "@/components/forms";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 import { peekToken } from "@/lib/tokens";
 
@@ -27,8 +28,8 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       </div>
       <ActionForm action={resetPassword}>
         <input type="hidden" name="token" value={token} />
-        <Input label="New password" name="password" type="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} required hint={`At least ${MIN_PASSWORD_LENGTH} characters.`} />
-        <Input label="Confirm password" name="confirm" type="password" autoComplete="new-password" required />
+        <PasswordField label="New password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} hint={`At least ${MIN_PASSWORD_LENGTH} characters.`} />
+        <PasswordField label="Confirm password" name="confirm" autoComplete="new-password" />
         <SubmitButton pendingText="Saving…" block>Save and sign in</SubmitButton>
       </ActionForm>
     </>
