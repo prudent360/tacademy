@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "public/pglite/**",
     "next-env.d.ts",
   ]),
 ]);

@@ -1,7 +1,16 @@
 /// <reference lib="webworker" />
 // Runs SQL in the browser with PGlite (Postgres compiled to WebAssembly), off the main thread so a slow
 // query can be stopped. Each query runs in a transaction that's rolled back, so the data never changes.
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite } from "@electric-sql/pglite";
+
+// PGlite is loaded as it ships from /pglite (copied there by scripts/copy-pglite.mjs), not bundled:
+// production bundling drops its internal helpers and it fails with "instantiateWasm is not a function".
+const PGLITE_URL = "/pglite/index.js";
+let engine: Promise<typeof import("@electric-sql/pglite")> | null = null;
+function loadEngine() {
+  engine ??= import(/* webpackIgnore: true */ /* turbopackIgnore: true */ PGLITE_URL).catch((error) => { engine = null; throw error; });
+  return engine;
+}
 
 const MAX_ROWS = 1000;
 
@@ -13,7 +22,8 @@ async function dbFor(key: string, setup: string): Promise<PGlite> {
   if (current?.key === key) return current.db;
   await current?.db.close().catch(() => {});
   current = null;
-  const db = await PGlite.create();
+  const { PGlite: Engine } = await loadEngine();
+  const db = await Engine.create();
   await db.exec(setup);
   current = { key, db };
   return db;

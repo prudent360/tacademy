@@ -43,3 +43,6 @@ next-env.d.ts
 # local data
 /.data
 !.env.example
+
+# PGlite browser files, copied from node_modules by scripts/copy-pglite.mjs
+/public/pglite/
