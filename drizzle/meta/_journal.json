@@ -134,6 +134,13 @@
       "when": 1790702972865,
       "tag": "0018_internship_courses",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790772700668,
+      "tag": "0019_sql_questions",
+      "breakpoints": true
     }
   ]
 }

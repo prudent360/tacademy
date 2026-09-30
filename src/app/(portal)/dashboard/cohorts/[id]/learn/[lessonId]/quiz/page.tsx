@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { startQuiz, submitQuiz } from "@/app/actions/quiz";
 import { CheckCircleIcon, XIcon } from "@/components/icons";
 import { QuizTimer } from "@/components/quiz/quiz-timer";
 import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
-import { quizAttempts, quizQuestions, quizzes, type QuizQuestion } from "@/db/schema";
+import { quizAttempts, quizQuestions, quizzes, sqlDatasets, type QuizQuestion } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
-import { attemptDeadline, isCorrect, lessonAccess, quizStatus } from "@/lib/quiz";
+import { SqlQuestion } from "@/components/sql/sql-question";
+import { attemptDeadline, lessonAccess, questionCorrect, quizStatus } from "@/lib/quiz";
 import { idParam } from "@/lib/validation";
 
 export const metadata: Metadata = { title: "Quiz" };
@@ -53,6 +54,8 @@ export default async function QuizPage({ params, searchParams }: { params: Promi
 
   const byId = new Map(questions.map((q) => [q.id, q]));
   const ordered = attempt.questionOrder.map((id) => byId.get(id)).filter((q): q is QuizQuestion => Boolean(q));
+  const datasetIds = [...new Set(ordered.flatMap((q) => (q.kind === "sql" && q.datasetId ? [q.datasetId] : [])))];
+  const datasets = datasetIds.length ? await db.select({ id: sqlDatasets.id, updatedAt: sqlDatasets.updatedAt, tables: sqlDatasets.tables }).from(sqlDatasets).where(inArray(sqlDatasets.id, datasetIds)) : [];
 
   // In progress: the questions (correct answers never reach the browser before submitting).
   if (!attempt.submittedAt) {
@@ -67,9 +70,14 @@ export default async function QuizPage({ params, searchParams }: { params: Promi
           <Card key={q.id}>
             <fieldset className="flex flex-col gap-3">
               <legend className="mb-2 flex flex-col gap-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted">Question {i + 1} of {ordered.length}{q.kind === "multiple" && " · select all that apply"}</span>
-                <span className="text-lg font-semibold text-ink">{q.prompt}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted">Question {i + 1} of {ordered.length}{q.kind === "multiple" && " · select all that apply"}{q.kind === "sql" && " · write a SQL query"}</span>
+                <span className="whitespace-pre-wrap text-lg font-semibold text-ink">{q.prompt}</span>
               </legend>
+              {q.kind === "sql" && (() => {
+                const dataset = datasets.find((d) => d.id === q.datasetId);
+                // Only what the student needs goes to the browser: never the answer query or its result.
+                return dataset ? <SqlQuestion questionId={q.id} position={i + 1} dataset={{ id: dataset.id, version: dataset.updatedAt.toISOString(), tables: dataset.tables }} starter={q.starterSql} columns={q.expected?.columns.length ?? 0} /> : <p className="text-sm text-muted">This question&apos;s dataset is missing. Tell your instructor.</p>;
+              })()}
               {q.options.map((option, j) => (
                 <label key={j} className="flex cursor-pointer items-start gap-3 rounded-lg border border-edge-strong px-4 py-3 text-[15px] text-body transition hover:border-accent-muted has-[:checked]:border-accent has-[:checked]:bg-accent-soft/60">
                   <input type={q.kind === "multiple" ? "checkbox" : "radio"} name={`q-${q.id}`} value={j} className="mt-1 size-4 shrink-0 accent-accent" />
@@ -107,7 +115,7 @@ export default async function QuizPage({ params, searchParams }: { params: Promi
     <div className="flex flex-col gap-3">
       {ordered.map((q, i) => {
         const chosen = attempt.answers[q.id] ?? [];
-        const right = isCorrect(q, chosen);
+        const right = questionCorrect(q, attempt);
         return (
           <Card key={q.id}>
             <div className="flex flex-col gap-3">
@@ -115,6 +123,17 @@ export default async function QuizPage({ params, searchParams }: { params: Promi
                 {right ? <CheckCircleIcon className="mt-0.5 size-5 shrink-0 text-emerald-600" /> : <XIcon className="mt-0.5 size-5 shrink-0 text-red-600" />}
                 <span>{i + 1}. {q.prompt}</span>
               </p>
+              {q.kind === "sql" && (
+                <div className="flex flex-col gap-2 pl-7 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">Your query</p>
+                  <pre className="overflow-x-auto rounded-lg border border-edge bg-panel px-3 py-2 font-mono text-[13px] text-ink">{attempt.sqlAnswers[q.id]?.trim() || "(no query)"}</pre>
+                  {!right && <p className="text-muted">Its result didn&apos;t match the expected one{q.orderMatters ? " (row order counts for this question)" : ""}.</p>}
+                  {reveal && (<>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted">A correct answer</p>
+                    <pre className="overflow-x-auto rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 font-mono text-[13px] text-emerald-900">{q.solutionSql}</pre>
+                  </>)}
+                </div>
+              )}
               <ul className="flex flex-col gap-1.5 pl-7 text-sm">
                 {q.options.map((option, j) => {
                   const picked = chosen.includes(j);

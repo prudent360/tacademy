@@ -5,10 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { courseModules, lessons, quizAttempts, quizQuestions, quizzes, type QuestionKind } from "@/db/schema";
+import { courseModules, lessons, quizAttempts, quizQuestions, quizzes, sqlDatasets, type QuestionKind, type SqlResult } from "@/db/schema";
 import { aiQuota, askAi } from "@/lib/ai";
 import { requireCourseEditor, requireUser } from "@/lib/auth";
-import { isCorrect, lessonAccess, markLessonComplete, QUIZ_GRACE_MS, quizStatus } from "@/lib/quiz";
+import { lessonAccess, markLessonComplete, QUIZ_GRACE_MS, questionCorrect, quizStatus } from "@/lib/quiz";
+import { parseSqlResult, resultsMatch, SQL_MAX_QUERY_CHARS } from "@/lib/sql";
 import type { FormState } from "@/lib/validation";
 
 const MAX_OPTIONS = 6;
@@ -81,10 +82,12 @@ export async function updateQuiz(quizId: number, _state: FormState, formData: Fo
 }
 
 type QuestionInput = { kind: QuestionKind; prompt: string; options: string[]; correct: number[]; explanation: string };
+type SqlParts = { datasetId: number | null; starterSql: string; solutionSql: string; expected: SqlResult | null; orderMatters: boolean };
 
 /** Checks a question makes sense: 2–6 options, and one right answer (or at least one for "select all"). */
 function checkQuestion(q: QuestionInput): string | null {
   if (!q.prompt.trim()) return "Write the question.";
+  if (q.kind === "sql") return null;
   if (q.options.length < 2) return "Add at least two answer options.";
   if (q.correct.some((i) => i < 0 || i >= q.options.length)) return "Mark which answers are correct.";
   if (q.kind !== "multiple" && q.correct.length !== 1) return "Mark exactly one correct answer.";
@@ -92,10 +95,25 @@ function checkQuestion(q: QuestionInput): string | null {
   return null;
 }
 
+/** A SQL question's dataset, starter code and answer. The answer's result was worked out in the browser when it was run. */
+async function sqlFromForm(formData: FormData): Promise<SqlParts | { error: string }> {
+  const datasetId = Number(formData.get("datasetId"));
+  const [dataset] = Number.isInteger(datasetId) && datasetId > 0 ? await (await getDb()).select({ id: sqlDatasets.id }).from(sqlDatasets).where(eq(sqlDatasets.id, datasetId)) : [];
+  if (!dataset) return { error: "Choose the dataset students will query." };
+  const solutionSql = String(formData.get("solutionSql") ?? "").trim().slice(0, SQL_MAX_QUERY_CHARS);
+  if (!solutionSql) return { error: "Write the answer query." };
+  const expected = parseSqlResult(formData.get("expected"));
+  if (!expected || !expected.columns.length) return { error: "Run the answer query so we know the correct result." };
+  return { datasetId, starterSql: String(formData.get("starterSql") ?? "").slice(0, SQL_MAX_QUERY_CHARS), solutionSql, expected, orderMatters: formData.get("orderMatters") === "on" };
+}
+
+const NO_SQL: SqlParts = { datasetId: null, starterSql: "", solutionSql: "", expected: null, orderMatters: false };
+
 function questionFromForm(formData: FormData): QuestionInput {
-  const kind = (["single", "multiple", "truefalse"] as const).find((k) => k === formData.get("kind")) ?? "single";
+  const kind = (["single", "multiple", "truefalse", "sql"] as const).find((k) => k === formData.get("kind")) ?? "single";
   const prompt = String(formData.get("prompt") ?? "").trim().slice(0, 1000);
   const explanation = String(formData.get("explanation") ?? "").trim().slice(0, 1000);
+  if (kind === "sql") return { kind, prompt, explanation, options: [], correct: [] };
   if (kind === "truefalse") return { kind, prompt, explanation, options: ["True", "False"], correct: formData.get("truth") === "false" ? [1] : [0] };
   // Keep the options that were filled in, remembering which of them were marked correct.
   const raw = Array.from({ length: MAX_OPTIONS }, (_, i) => ({ text: String(formData.get(`option-${i}`) ?? "").trim().slice(0, 300), correct: formData.getAll("correct").includes(String(i)) }));
@@ -105,9 +123,12 @@ function questionFromForm(formData: FormData): QuestionInput {
 
 export async function saveQuestion(quizId: number, questionId: number | null, _state: FormState, formData: FormData): Promise<FormState> {
   if (!(await editQuiz(quizId))) return { error: "This quiz no longer exists." };
-  const question = questionFromForm(formData);
-  const problem = checkQuestion(question);
+  const base = questionFromForm(formData);
+  const problem = checkQuestion(base);
   if (problem) return { error: problem };
+  const sqlParts = base.kind === "sql" ? await sqlFromForm(formData) : NO_SQL;
+  if ("error" in sqlParts) return sqlParts;
+  const question = { ...base, ...sqlParts };
   const db = await getDb();
   if (questionId) {
     const [row] = await db.update(quizQuestions).set(question).where(and(eq(quizQuestions.id, questionId), eq(quizQuestions.quizId, quizId))).returning({ id: quizQuestions.id });
@@ -240,12 +261,23 @@ export async function submitQuiz(cohortId: number, lessonId: number, attemptId: 
   const questions = await db.select().from(quizQuestions).where(eq(quizQuestions.quizId, quiz.id));
   const late = quiz.timeLimitMinutes !== null && Date.now() > attempt.startedAt.getTime() + quiz.timeLimitMinutes * 60_000 + QUIZ_GRACE_MS;
   const answers: Record<string, number[]> = {};
-  if (!late) for (const q of questions) answers[q.id] = formData.getAll(`q-${q.id}`).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < q.options.length);
+  const sqlAnswers: Record<string, string> = {};
+  const sqlCorrect: Record<string, boolean> = {};
+  if (!late) {
+    for (const q of questions) {
+      if (q.kind === "sql") {
+        // The query ran in the student's browser; its result is compared with the stored answer, which never left the server.
+        sqlAnswers[q.id] = String(formData.get(`sql-${q.id}`) ?? "").slice(0, SQL_MAX_QUERY_CHARS);
+        const got = parseSqlResult(formData.get(`result-${q.id}`));
+        sqlCorrect[q.id] = Boolean(q.expected && got && sqlAnswers[q.id].trim() && resultsMatch(q.expected, got, q.orderMatters));
+      } else answers[q.id] = formData.getAll(`q-${q.id}`).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < q.options.length);
+    }
+  }
   const asked = questions.filter((q) => attempt.questionOrder.includes(q.id));
-  const correctCount = asked.filter((q) => isCorrect(q, answers[q.id])).length;
+  const correctCount = asked.filter((q) => questionCorrect(q, { answers, sqlCorrect })).length;
   const score = asked.length ? Math.round((correctCount / asked.length) * 100) : 0;
   const passed = score >= quiz.passPercent;
-  await db.update(quizAttempts).set({ answers, correctCount, total: asked.length, score, passed, submittedAt: new Date() }).where(eq(quizAttempts.id, attemptId));
+  await db.update(quizAttempts).set({ answers, sqlAnswers, sqlCorrect, correctCount, total: asked.length, score, passed, submittedAt: new Date() }).where(eq(quizAttempts.id, attemptId));
   if (passed && quiz.requiredToComplete) await markLessonComplete(access.enrollmentId, lessonId);
   revalidatePath(`/dashboard/cohorts/${cohortId}/learn`, "layout");
   revalidatePath("/dashboard");

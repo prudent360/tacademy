@@ -1,14 +1,15 @@
+import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { createQuiz, deleteQuestion, deleteQuiz, generateQuestions, saveQuestion, updateQuiz } from "@/app/actions/quiz";
 import { ActionButton, ActionForm, Checkbox, DeleteButton, Input, Select, SubmitButton } from "@/components/forms";
 import { CheckIcon, SparkIcon } from "@/components/icons";
 import { Badge, Card } from "@/components/ui";
 import { getDb } from "@/db";
-import { quizQuestions, quizzes } from "@/db/schema";
+import { quizQuestions, quizzes, sqlDatasets } from "@/db/schema";
 import { aiAvailable } from "@/lib/ai";
 import { QuestionForm } from "./question-form";
 
-const KIND_LABEL = { single: "One answer", multiple: "Select all", truefalse: "True/false" } as const;
+const KIND_LABEL = { single: "One answer", multiple: "Select all", truefalse: "True/false", sql: "SQL" } as const;
 
 /** Quiz settings and questions for a lesson, on the admin and instructor lesson pages. */
 export async function QuizEditor({ lessonId }: { lessonId: number }) {
@@ -24,10 +25,12 @@ export async function QuizEditor({ lessonId }: { lessonId: number }) {
       </Card>
     );
   }
-  const [questions, ai] = await Promise.all([
+  const [questions, ai, datasetRows] = await Promise.all([
     db.select().from(quizQuestions).where(eq(quizQuestions.quizId, quiz.id)).orderBy(asc(quizQuestions.position), asc(quizQuestions.id)),
     aiAvailable("writing"),
+    db.select({ id: sqlDatasets.id, name: sqlDatasets.name, updatedAt: sqlDatasets.updatedAt, tables: sqlDatasets.tables }).from(sqlDatasets).orderBy(asc(sqlDatasets.name)),
   ]);
+  const datasets = datasetRows.map((d) => ({ id: d.id, name: d.name, version: d.updatedAt.toISOString(), tables: d.tables }));
   return (
     <div className="flex flex-col gap-6">
       <Card title="Quiz settings" action={<DeleteButton action={deleteQuiz.bind(null, quiz.id)} label="Remove quiz" />}>
@@ -53,14 +56,21 @@ export async function QuizEditor({ lessonId }: { lessonId: number }) {
                     <span className="font-mono text-sm text-muted">{i + 1}</span>
                     <span className="flex min-w-0 grow flex-col gap-1.5">
                       <span className="flex flex-wrap items-center gap-2 font-semibold text-ink">{q.prompt} <Badge>{KIND_LABEL[q.kind]}</Badge></span>
-                      <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                        {q.options.map((o, j) => <span key={j} className={q.correct.includes(j) ? "flex items-center gap-1 font-semibold text-emerald-700" : "text-muted"}>{q.correct.includes(j) && <CheckIcon className="size-3.5" />}{o}</span>)}
-                      </span>
+                      {q.kind === "sql" ? (
+                        <span className="flex flex-col gap-1 text-sm">
+                          <span className="text-muted">{datasets.find((d) => d.id === q.datasetId)?.name ?? "Dataset"} · {q.expected ? `answer: ${q.expected.rows.length} row${q.expected.rows.length === 1 ? "" : "s"}` : "no answer set"}{q.orderMatters ? " · order matters" : ""}</span>
+                          <code className="line-clamp-2 whitespace-pre-wrap font-mono text-[12.5px] text-body">{q.solutionSql}</code>
+                        </span>
+                      ) : (
+                        <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                          {q.options.map((o, j) => <span key={j} className={q.correct.includes(j) ? "flex items-center gap-1 font-semibold text-emerald-700" : "text-muted"}>{q.correct.includes(j) && <CheckIcon className="size-3.5" />}{o}</span>)}
+                        </span>
+                      )}
                     </span>
                     <span className="shrink-0 text-sm font-semibold text-accent">Edit</span>
                   </summary>
                   <div className="flex flex-col gap-4 border-t border-line p-4">
-                    <QuestionForm action={saveQuestion.bind(null, quiz.id, q.id)} question={q} submitLabel="Save question" />
+                    <QuestionForm action={saveQuestion.bind(null, quiz.id, q.id)} question={q} submitLabel="Save question" datasets={datasets} />
                     <div className="flex justify-end"><DeleteButton action={deleteQuestion.bind(null, q.id)} label="Delete question" /></div>
                   </div>
                 </details>
@@ -80,8 +90,8 @@ export async function QuizEditor({ lessonId }: { lessonId: number }) {
         </Card>
       )}
 
-      <Card title="Add a question">
-        <QuestionForm action={saveQuestion.bind(null, quiz.id, null)} submitLabel="Add question" />
+      <Card title="Add a question" action={<Link href="/teach/datasets" className="text-sm font-semibold text-accent hover:text-accent-dark">SQL datasets</Link>}>
+        <QuestionForm action={saveQuestion.bind(null, quiz.id, null)} submitLabel="Add question" datasets={datasets} />
       </Card>
     </div>
   );

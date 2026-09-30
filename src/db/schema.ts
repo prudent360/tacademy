@@ -373,8 +373,25 @@ export const lessonProgress = pgTable("lesson_progress", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
 }, (t) => [uniqueIndex("lesson_progress_enrollment_lesson_idx").on(t.enrollmentId, t.lessonId), index("lesson_progress_enrollment_idx").on(t.enrollmentId)]);
 
-export const QUESTION_KINDS = ["single", "multiple", "truefalse"] as const;
+export const QUESTION_KINDS = ["single", "multiple", "truefalse", "sql"] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
+
+/** The tables in a SQL dataset, for showing students what they can query. */
+export type SqlTableInfo = { name: string; rows: number; columns: { name: string; type: string }[] };
+/** A query's result as marked: column names and rows of values turned into text. */
+export type SqlResult = { columns: string[]; rows: (string | null)[][] };
+
+/** Practice data for SQL questions: the SQL that creates and fills its tables, run in the browser. */
+export const sqlDatasets = pgTable("sql_datasets", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  setupSql: text("setup_sql").notNull(),
+  tables: jsonb("tables").$type<SqlTableInfo[]>().notNull().default([]),
+  createdById: integer("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 /** An automatically marked quiz at the end of a lesson. */
 export const quizzes = pgTable("quizzes", {
@@ -402,6 +419,12 @@ export const quizQuestions = pgTable("quiz_questions", {
   correct: jsonb("correct").$type<number[]>().notNull().default([]),
   explanation: text("explanation").notNull().default(""),
   position: integer("position").notNull().default(0),
+  // SQL questions: the dataset to query, optional starter code, the instructor's answer and the result it gives.
+  datasetId: integer("dataset_id").references(() => sqlDatasets.id, { onDelete: "restrict" }),
+  starterSql: text("starter_sql").notNull().default(""),
+  solutionSql: text("solution_sql").notNull().default(""),
+  expected: jsonb("expected").$type<SqlResult | null>(),
+  orderMatters: boolean("order_matters").notNull().default(false),
   createdAt: createdAt(),
 }, (t) => [index("quiz_questions_quiz_idx").on(t.quizId, t.position)]);
 
@@ -413,6 +436,9 @@ export const quizAttempts = pgTable("quiz_attempts", {
   questionOrder: jsonb("question_order").$type<number[]>().notNull().default([]),
   /** Chosen option indexes, keyed by question id. */
   answers: jsonb("answers").$type<Record<string, number[]>>().notNull().default({}),
+  /** SQL questions: the query submitted, and whether its result matched, keyed by question id. */
+  sqlAnswers: jsonb("sql_answers").$type<Record<string, string>>().notNull().default({}),
+  sqlCorrect: jsonb("sql_correct").$type<Record<string, boolean>>().notNull().default({}),
   correctCount: integer("correct_count").notNull().default(0),
   total: integer("total").notNull().default(0),
   /** Percentage, 0–100; null until submitted. */
@@ -556,6 +582,7 @@ export type LessonProgress = typeof lessonProgress.$inferSelect;
 export type Quiz = typeof quizzes.$inferSelect;
 export type QuizQuestion = typeof quizQuestions.$inferSelect;
 export type QuizAttempt = typeof quizAttempts.$inferSelect;
+export type SqlDataset = typeof sqlDatasets.$inferSelect;
 export type ModuleRelease = typeof moduleReleases.$inferSelect;
 export type ClassSession = typeof classSessions.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;

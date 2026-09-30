@@ -35,6 +35,11 @@ export function isCorrect(question: Pick<QuizQuestion, "correct">, chosen: numbe
   return want.length > 0 && want.length === got.length && want.every((v, i) => v === got[i]);
 }
 
+/** Whether an attempt got a question right: SQL questions were marked when submitted, others by the options chosen. */
+export function questionCorrect(question: Pick<QuizQuestion, "id" | "kind" | "correct">, attempt: { answers: Record<string, number[]>; sqlCorrect: Record<string, boolean> }): boolean {
+  return question.kind === "sql" ? attempt.sqlCorrect[question.id] === true : isCorrect(question, attempt.answers[question.id]);
+}
+
 export type QuizStatus = { attemptsUsed: number; attemptsLeft: number | null; best: number | null; passed: boolean };
 
 /** How a student is doing on a quiz: attempts used, best score and whether they've passed. */
@@ -97,7 +102,7 @@ export async function cohortQuizReport(cohortId: number, courseId: number): Prom
     const qs = questions.filter((q) => q.quizId === quiz.id);
     const rates = qs.map((q) => {
       const asked = mine.filter((a) => a.attempt.questionOrder.includes(q.id));
-      return { prompt: q.prompt, asked: asked.length, percentCorrect: asked.length ? Math.round((asked.filter((a) => isCorrect(q, a.attempt.answers[q.id])).length / asked.length) * 100) : 100 };
+      return { prompt: q.prompt, asked: asked.length, percentCorrect: asked.length ? Math.round((asked.filter((a) => questionCorrect(q, a.attempt)).length / asked.length) * 100) : 100 };
     }).filter((r) => r.asked > 0).sort((a, b) => a.percentCorrect - b.percentCorrect);
     return {
       quizId: quiz.id,

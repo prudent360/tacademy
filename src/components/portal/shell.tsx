@@ -4,10 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { BrandMark } from "@/components/brand-mark";
-import {
-  AwardIcon, BellIcon, BookIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DownloadIcon, ExternalIcon, GridIcon,
-  BriefcaseIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon,
-} from "@/components/icons";
+import { AwardIcon, BellIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
 import type { Role } from "@/db/schema";
 
 /** A link, or (with children) a dropdown whose first child is its main page. `href` may carry a ?tab= query. */
@@ -39,6 +36,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
       { href: "/teach", label: role === "admin" ? "Teaching" : "Dashboard", icon: role === "admin" ? LayersIcon : GridIcon, exact: true },
       { href: "/teach/grading", label: "To grade", icon: ClipboardIcon, badge: counts.toGrade },
       { href: "/teach/schedule", label: "Timetable", icon: CalendarIcon },
+      { href: "/teach/datasets", label: "SQL datasets", icon: DatabaseIcon },
     ],
   };
   const overview: NavGroup = {

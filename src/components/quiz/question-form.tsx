@@ -4,17 +4,19 @@ import { useState } from "react";
 import { ActionForm, SubmitButton, Textarea } from "@/components/forms";
 import type { QuestionKind, QuizQuestion } from "@/db/schema";
 import type { FormState } from "@/lib/validation";
+import { SqlQuestionFields, type DatasetOption } from "@/components/sql/sql-question-fields";
 
 const KINDS: { value: QuestionKind; label: string }[] = [
   { value: "single", label: "One correct answer" },
   { value: "multiple", label: "Select all that apply" },
   { value: "truefalse", label: "True or false" },
+  { value: "sql", label: "SQL query" },
 ];
 
 const input = "h-10 min-w-0 grow rounded-[5px] border border-edge-strong bg-white px-3 text-sm text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
 
 /** Adds or edits one question. Options left blank are dropped when saved. */
-export function QuestionForm({ action, question, submitLabel }: { action: (state: FormState, formData: FormData) => Promise<FormState>; question?: QuizQuestion; submitLabel: string }) {
+export function QuestionForm({ action, question, submitLabel, datasets }: { action: (state: FormState, formData: FormData) => Promise<FormState>; question?: QuizQuestion; submitLabel: string; datasets: DatasetOption[] }) {
   const [kind, setKind] = useState<QuestionKind>(question?.kind ?? "single");
   const options = Array.from({ length: 6 }, (_, i) => question?.options[i] ?? "");
   return (
@@ -27,8 +29,10 @@ export function QuestionForm({ action, question, submitLabel }: { action: (state
           </label>
         ))}
       </fieldset>
-      <Textarea label={kind === "truefalse" ? "Statement" : "Question"} name="prompt" defaultValue={question?.prompt} rows={2} required maxLength={1000} />
-      {kind === "truefalse" ? (
+      <Textarea label={kind === "truefalse" ? "Statement" : kind === "sql" ? "Task" : "Question"} name="prompt" defaultValue={question?.prompt} rows={kind === "sql" ? 3 : 2} required maxLength={1000} placeholder={kind === "sql" ? "e.g. List the five customers who spent the most on completed orders, with their total spend, highest first." : undefined} />
+      {kind === "sql" ? (
+        <SqlQuestionFields question={question} datasets={datasets} />
+      ) : kind === "truefalse" ? (
         <fieldset className="flex gap-2">
           <legend className="mb-2 text-sm font-semibold text-ink">The statement is</legend>
           {(["true", "false"] as const).map((v) => (
