@@ -243,3 +243,33 @@ body:has([data-no-footer]) .course-advisor { display: none; }
   .scene-in, .step-progress { animation: none; }
   .step-progress { width: 100%; }
 }
+
+/* Homepage product showcase: cards float in and bob gently; bars, rings and result rows fill in. */
+@keyframes showcase-float {
+  from { opacity: 0; transform: translateY(14px) scale(.92); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes showcase-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes showcase-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes showcase-ring {
+  from { stroke-dashoffset: 94.2; }
+  to { stroke-dashoffset: var(--ring-to, 0); }
+}
+@keyframes showcase-row {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: none; }
+}
+.showcase-float { opacity: 0; animation: showcase-float .6s cubic-bezier(.2, .8, .2, 1) both; }
+.showcase-bob { animation: showcase-bob 4s ease-in-out infinite; }
+.showcase-fill { animation: showcase-fill 1.1s cubic-bezier(.2, .8, .2, 1) .25s both; }
+.showcase-ring { stroke-dashoffset: var(--ring-to, 0); animation: showcase-ring 1.3s cubic-bezier(.2, .8, .2, 1) .2s both; }
+.showcase-rows > * { animation: showcase-row .45s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .showcase-float, .showcase-bob, .showcase-fill, .showcase-ring, .showcase-rows > * { animation: none; opacity: 1; }
+}

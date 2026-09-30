@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { LearningShowcase } from "@/components/learning-showcase";
+import { ProductShowcase } from "@/components/site/product-showcase";
 import { HowItWorks } from "@/components/site/how-it-works";
 import Image from "next/image";
-import { ArrowRight, BellIcon, BuildingIcon, CalendarIcon, CardIcon, CheckIcon, ClipboardIcon, MegaphoneIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
+import { ArrowRight, BuildingIcon, CheckIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
 import { CourseCard } from "@/components/site/course-card";
 import { ModeBadge } from "@/components/ui";
 import { isFree, withCohorts } from "@/lib/catalog";
@@ -52,15 +52,6 @@ const STEPS = [
   { title: "Pay securely", text: "Pay online by card or mobile money, in the currency that suits you." },
   { title: "Learn and build", text: "Attend classes, get reminders before each one, and submit real assignments." },
   { title: "Get feedback", text: "Instructors grade your work with written feedback, so you know exactly how to improve." },
-];
-
-const FEATURES = [
-  { icon: ClipboardIcon, title: "Assignments that matter", text: "Project-based tasks with clear deadlines. Upload files or share links, and resubmit when asked." },
-  { icon: MessageIcon, title: "Written instructor feedback", text: "Every submission is reviewed and scored, with notes you can come back to." },
-  { icon: BellIcon, title: "Reminders that arrive on time", text: "Email and in-app reminders the day before and an hour before each class, and before deadlines." },
-  { icon: CalendarIcon, title: "Your timetable, synced", text: "Every class with its joining link or venue, one tap away from your calendar." },
-  { icon: MegaphoneIcon, title: "Cohort announcements", text: "Updates from your instructors land in your inbox and your dashboard." },
-  { icon: CardIcon, title: "Receipts and records", text: "Payment receipts, attendance and grades all kept in one place." },
 ];
 
 const PATHS = ["Data Analytics", "Business Intelligence", "SQL", "Data Engineering", "Digital Skills"];
@@ -258,26 +249,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Platform features: the dashboard illustration beside what students get. */}
-      <section className="border-t border-line bg-white">
-        <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-5 py-20 sm:px-8 md:py-24 lg:grid-cols-[.95fr_1.05fr] lg:gap-16">
-          <div className="relative overflow-hidden rounded-[24px] bg-accent shadow-[0_40px_80px_-45px_rgba(113,52,217,.9)]">
-            <LearningShowcase className="px-6 py-12 sm:px-10 sm:py-14" />
-          </div>
-          <div className="flex flex-col gap-9">
-            <SectionHeading align="left" eyebrow="Your learning space" title="Everything for your cohort, in one dashboard" subtitle="Classes, assignments, feedback and payments, organised for you from day one." />
-            <div className="grid gap-x-8 gap-y-7 sm:grid-cols-2">
-              {FEATURES.map(({ icon: Icon, title, text }) => (
-                <div key={title} className="flex gap-3.5">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><Icon className="size-5" /></span>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="font-display text-base font-bold text-ink">{title}</h3>
-                    <p className="text-sm leading-relaxed text-muted">{text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* The platform, shown off: students' and instructors' views, animated. */}
+      <section id="platform" className="scroll-mt-20 border-t border-line bg-white">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-5 py-20 sm:px-8 md:py-24">
+          <SectionHeading eyebrow="Your learning space" title="Everything for your cohort, in one place" subtitle="Live classes, lessons, practice and feedback for students. Attendance, grading and announcements for instructors." />
+          <ProductShowcase />
         </div>
       </section>
 
