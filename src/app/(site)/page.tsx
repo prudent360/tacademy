@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { LearningShowcase } from "@/components/learning-showcase";
+import { HowItWorks } from "@/components/site/how-it-works";
 import Image from "next/image";
 import { ArrowRight, BellIcon, BuildingIcon, CalendarIcon, CardIcon, CheckIcon, ClipboardIcon, MegaphoneIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
 import { CourseCard } from "@/components/site/course-card";
@@ -47,7 +49,7 @@ const FORMATS = [
 
 const STEPS = [
   { title: "Choose a cohort", text: "Pick a course and the start date and format that fit your schedule." },
-  { title: "Pay securely", text: "Pay by card with Stripe or Paystack, or with mobile money across Africa through pawaPay." },
+  { title: "Pay securely", text: "Pay online by card or mobile money, in the currency that suits you." },
   { title: "Learn and build", text: "Attend classes, get reminders before each one, and submit real assignments." },
   { title: "Get feedback", text: "Instructors grade your work with written feedback, so you know exactly how to improve." },
 ];
@@ -255,44 +257,33 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how" className="relative scroll-mt-20 overflow-hidden border-t border-line bg-navy text-white">
-        <div aria-hidden="true" className="absolute inset-0">
-          <Image src="/images/how-it-works-classroom.webp" alt="" fill sizes="100vw" className="object-cover object-center" />
-          {/* Dark behind the heading, fading into brand purple behind the steps. */}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.86)_0%,rgba(25,17,46,.72)_35%,rgba(58,24,130,.86)_75%,#5a24b8_100%)]" />
-        </div>
-        <div className="relative mx-auto flex max-w-[1200px] flex-col gap-12 px-5 py-20 sm:px-8 md:py-28">
-          <div className="flex flex-col gap-3.5">
-            <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-cyan-light md:text-[13px]">How it works</p>
-            <h2 className="max-w-[640px] font-display text-3xl font-bold tracking-tight [text-shadow:0_2px_24px_rgba(0,0,0,.35)] md:text-[44px] md:leading-[1.1]">From sign-up to your first piece of feedback</h2>
-          </div>
-          <ol className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, i) => (
-              <li key={step.title} className="flex flex-col gap-3 rounded-[14px] border border-white/15 bg-navy/55 p-6 backdrop-blur-md">
-                <span className="font-mono text-sm text-accent-muted">0{i + 1}</span>
-                <h3 className="font-display text-xl font-bold">{step.title}</h3>
-                <p className="text-[15px] leading-relaxed text-white/75">{step.text}</p>
-              </li>
-            ))}
-          </ol>
+      {/* How it works: the steps beside an animated picture of each one. */}
+      <section id="how" className="scroll-mt-20 border-t border-line bg-panel">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-5 py-20 sm:px-8 md:py-28">
+          <SectionHeading align="left" eyebrow="How it works" title="From sign-up to your first piece of feedback" subtitle="Four steps, and you're learning live with your cohort." />
+          <HowItWorks steps={STEPS} />
         </div>
       </section>
 
-      {/* Platform features */}
+      {/* Platform features: the dashboard illustration beside what students get. */}
       <section className="border-t border-line bg-white">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-5 py-20 sm:px-8 md:py-24">
-          <SectionHeading eyebrow="Your learning space" title="Everything for your cohort, in one dashboard" subtitle="Classes, assignments, feedback and payments, organised for you from day one." />
-          <div className="grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="flex gap-4">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><Icon className="size-5" /></span>
-                <div className="flex flex-col gap-1.5">
-                  <h3 className="font-display text-lg font-bold text-ink">{title}</h3>
-                  <p className="text-[15px] leading-relaxed text-muted">{text}</p>
+        <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-5 py-20 sm:px-8 md:py-24 lg:grid-cols-[.95fr_1.05fr] lg:gap-16">
+          <div className="relative overflow-hidden rounded-[24px] bg-accent shadow-[0_40px_80px_-45px_rgba(113,52,217,.9)]">
+            <LearningShowcase className="px-6 py-12 sm:px-10 sm:py-14" />
+          </div>
+          <div className="flex flex-col gap-9">
+            <SectionHeading align="left" eyebrow="Your learning space" title="Everything for your cohort, in one dashboard" subtitle="Classes, assignments, feedback and payments, organised for you from day one." />
+            <div className="grid gap-x-8 gap-y-7 sm:grid-cols-2">
+              {FEATURES.map(({ icon: Icon, title, text }) => (
+                <div key={title} className="flex gap-3.5">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><Icon className="size-5" /></span>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="font-display text-base font-bold text-ink">{title}</h3>
+                    <p className="text-sm leading-relaxed text-muted">{text}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>

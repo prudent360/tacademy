@@ -21,8 +21,8 @@ const ROWS = [
   { initials: "TB", tone: "bg-amber-100 text-amber-700", widths: ["w-28", "w-14"] },
 ];
 
-/** The illustrated panel beside the sign-in form, cycling through what the academy offers. */
-export function AuthShowcase() {
+/** An illustrated panel cycling through what the academy offers. Used beside the sign-in form and on the homepage; sits on a brand-purple background. */
+export function LearningShowcase({ className = "px-10 py-14" }: { className?: string }) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -33,8 +33,10 @@ export function AuthShowcase() {
 
   const slide = SLIDES[index];
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-12 px-10 py-14">
-      <div aria-hidden="true" className="relative h-[320px] w-[420px] shrink-0 scale-90 xl:scale-100">
+    <div className={`flex h-full flex-col items-center justify-center gap-10 ${className}`}>
+      {/* Drawn at 420×320 and scaled down on narrow screens; the outer box reserves the scaled size. */}
+      <div aria-hidden="true" className="relative h-[229px] w-[300px] shrink-0 sm:h-[320px] sm:w-[420px]">
+      <div className="absolute left-0 top-0 h-[320px] w-[420px] origin-top-left scale-[.714] sm:scale-100">
         <div className="absolute left-1/2 top-1/2 size-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.07]" />
         <div className="absolute left-1/2 top-1/2 size-[240px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10" />
         <svg viewBox="0 0 420 320" className="absolute inset-0 size-full" fill="none">
@@ -63,6 +65,7 @@ export function AuthShowcase() {
             ))}
           </div>
         </div>
+      </div>
       </div>
 
       <div className="flex max-w-[380px] flex-col items-center gap-2.5 text-center">

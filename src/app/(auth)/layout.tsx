@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AuthShowcase } from "@/components/auth/showcase";
+import { LearningShowcase } from "@/components/learning-showcase";
 import { Brand } from "@/components/site/brand";
 import { getSettings } from "@/lib/data";
 
@@ -18,7 +18,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           </div>
         </div>
         <aside className="hidden bg-accent lg:block">
-          <AuthShowcase />
+          <LearningShowcase />
         </aside>
       </div>
       <nav aria-label="Legal" className="flex gap-6 py-6 text-[13px] text-muted">

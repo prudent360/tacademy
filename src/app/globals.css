@@ -227,3 +227,19 @@ body:has([data-under-header]) #main { margin-top: -4.75rem; }
 /* Focused pages (like the internship application) leave out the site footer and the course advisor button. */
 body:has([data-no-footer]) .site-footer,
 body:has([data-no-footer]) .course-advisor { display: none; }
+
+/* Homepage "How it works": each step's picture eases in, and a bar fills while the step is shown. */
+@keyframes scene-in {
+  from { opacity: 0; transform: translateY(14px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes step-progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.scene-in { animation: scene-in .55s cubic-bezier(.2, .8, .2, 1) both; }
+.step-progress { animation: step-progress 5.5s linear both; }
+@media (prefers-reduced-motion: reduce) {
+  .scene-in, .step-progress { animation: none; }
+  .step-progress { width: 100%; }
+}
