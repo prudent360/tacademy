@@ -146,7 +146,7 @@ export function Checkbox({ label, name, defaultChecked, hint }: { label: string;
 }
 
 /** File picker that shows the current file and lets the admin remove it. */
-export function FileField({ label, name, current, accept = "image/*", hint, removeName }: { label: string; name: string; current?: string | null; accept?: string; hint?: string; removeName: string }) {
+export function FileField({ label, name, current, accept = "image/*", hint, removeName, previewClassName = "h-16 w-24 rounded-md object-cover" }: { label: string; name: string; current?: string | null; accept?: string; hint?: string; removeName: string; previewClassName?: string }) {
   const id = useId();
   const isImage = accept.startsWith("image");
   return (
@@ -156,7 +156,7 @@ export function FileField({ label, name, current, accept = "image/*", hint, remo
         <div className="flex flex-wrap items-center gap-4 rounded-lg border border-edge bg-panel p-3">
           {isImage ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={current} alt="" className="h-16 w-24 rounded-md object-cover" />
+            <img src={current} alt="" className={previewClassName} />
           ) : (
             <a href={current} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-accent underline">View current file</a>
           )}

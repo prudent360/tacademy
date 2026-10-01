@@ -13,6 +13,8 @@ export const DEFAULT_SETTINGS: Settings = {
   heroTitle: "",
   heroSubtitle: "",
   logoUrl: null,
+  logoDarkUrl: null,
+  faviconUrl: null,
   heroImageUrl: null,
   supportEmail: "",
   phone: "",

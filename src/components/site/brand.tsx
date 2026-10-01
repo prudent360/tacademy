@@ -2,14 +2,18 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import type { Settings } from "@/db/schema";
 
-/** Logo lockup: the uploaded logo if there is one, otherwise the brand mark and wordmark. */
-export function Brand({ settings, href = "/", className = "", tone = "primary" }: { settings: Pick<Settings, "siteName" | "logoUrl">; href?: string; className?: string; tone?: "primary" | "reversed" }) {
+/**
+ * Logo lockup: the uploaded logo for the background (light, or `tone="reversed"` for dark) if there is one,
+ * otherwise the brand mark and wordmark.
+ */
+export function Brand({ settings, href = "/", className = "", tone = "primary" }: { settings: Pick<Settings, "siteName" | "logoUrl" | "logoDarkUrl">; href?: string; className?: string; tone?: "primary" | "reversed" }) {
   const [first, ...rest] = settings.siteName.split(" ");
+  const logo = tone === "reversed" ? settings.logoDarkUrl : settings.logoUrl;
   return (
     <Link href={href} aria-label={`${settings.siteName} home`} className={`flex shrink-0 items-center gap-2.5 ${className}`}>
-      {settings.logoUrl ? (
+      {logo ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={settings.logoUrl} alt={settings.siteName} className="h-9 w-auto max-w-[200px] object-contain" />
+        <img src={logo} alt={settings.siteName} className="h-9 w-auto max-w-[200px] object-contain" />
       ) : (
         <>
           <BrandMark className="size-9 shrink-0" tone={tone} />

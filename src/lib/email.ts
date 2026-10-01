@@ -41,13 +41,17 @@ function button(label: string, url: string): string {
 }
 
 /**
- * The logo for the dark email header and footer: the uploaded logo on a white tile, or the white brand mark
- * beside the wordmark. Email clients don't show SVG, so an uploaded SVG and the built-in mark use PNGs instead.
+ * The logo for the dark email header and footer: the uploaded dark-background logo, else the light logo on a
+ * white tile, else the white brand mark beside the wordmark (a PNG, since email clients don't show SVG).
  */
-function emailLogo(settings: { siteName: string; logoUrl: string | null }, home: string, size: "large" | "small"): string {
+function emailLogo(settings: { siteName: string; logoUrl: string | null; logoDarkUrl: string | null }, home: string, size: "large" | "small"): string {
   const alt = escapeHtml(settings.siteName);
   const large = size === "large";
-  if (settings.logoUrl && !/\.svg($|\?)/i.test(settings.logoUrl)) {
+  if (settings.logoDarkUrl) {
+    const height = large ? 44 : 30;
+    return `<a href="${home}" style="text-decoration:none"><img src="${escapeHtml(absoluteUrl(settings.logoDarkUrl))}" alt="${alt}" height="${height}" style="display:block;height:${height}px;width:auto;max-width:220px;border:0"></a>`;
+  }
+  if (settings.logoUrl) {
     const height = large ? 40 : 28;
     return `<a href="${home}" style="display:inline-block;background:#ffffff;border-radius:10px;padding:${large ? "10px 16px" : "7px 12px"};text-decoration:none"><img src="${escapeHtml(absoluteUrl(settings.logoUrl))}" alt="${alt}" height="${height}" style="display:block;height:${height}px;width:auto;max-width:200px;border:0"></a>`;
   }

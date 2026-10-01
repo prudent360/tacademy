@@ -159,7 +159,12 @@ export const settings = pgTable("settings", {
   heroEyebrow: text("hero_eyebrow").notNull().default(""),
   heroTitle: text("hero_title").notNull().default(""),
   heroSubtitle: text("hero_subtitle").notNull().default(""),
+  /** Logo for white or light backgrounds. */
   logoUrl: text("logo_url"),
+  /** Logo for dark backgrounds (portal sidebar, email header and footer). */
+  logoDarkUrl: text("logo_dark_url"),
+  /** Square browser-tab and home-screen icon; the drawn mark is used when empty. */
+  faviconUrl: text("favicon_url"),
   /** Photo on the home page hero; a bundled team photo is used when empty. */
   heroImageUrl: text("hero_image_url"),
   supportEmail: text("support_email").notNull().default(""),

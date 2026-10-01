@@ -73,9 +73,13 @@ export async function saveBranding(_state: FormState, formData: FormData): Promi
   if (!parsed.success) return { error: firstError(parsed.error) };
   const current = await getSettings();
   let logoUrl: string | null;
+  let logoDarkUrl: string | null;
+  let faviconUrl: string | null;
   let heroImageUrl: string | null;
   try {
     logoUrl = await resolveFileField(formData, { file: "logo", remove: "removeLogo", current: current.logoUrl, folder: "branding" });
+    logoDarkUrl = await resolveFileField(formData, { file: "logoDark", remove: "removeLogoDark", current: current.logoDarkUrl, folder: "branding" });
+    faviconUrl = await resolveFileField(formData, { file: "favicon", remove: "removeFavicon", current: current.faviconUrl, folder: "branding" });
     heroImageUrl = await resolveFileField(formData, { file: "heroImage", remove: "removeHeroImage", current: current.heroImageUrl, folder: "branding" });
   } catch (error) {
     const message = uploadErrorMessage(error);
@@ -85,12 +89,16 @@ export async function saveBranding(_state: FormState, formData: FormData): Promi
   await update({
     ...parsed.data,
     logoUrl,
+    logoDarkUrl,
+    faviconUrl,
     heroImageUrl,
     stats: parsePairs(formData.get("stats"), 4).map(([value, label]) => ({ value, label })),
     faqs: parseFaqs(formData.get("faqs")),
     testimonials: parsePairs(formData.get("testimonials"), 6).map(([quote, name, role]) => ({ quote, name, role: role ?? "" })),
   });
   await deleteIfReplaced(current.logoUrl, logoUrl);
+  await deleteIfReplaced(current.logoDarkUrl, logoDarkUrl);
+  await deleteIfReplaced(current.faviconUrl, faviconUrl);
   await deleteIfReplaced(current.heroImageUrl, heroImageUrl);
   return { ok: "Branding saved." };
 }

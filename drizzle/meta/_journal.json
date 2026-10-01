@@ -141,6 +141,13 @@
       "when": 1790772700668,
       "tag": "0019_sql_questions",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790817384240,
+      "tag": "0020_branding_logos",
+      "breakpoints": true
     }
   ]
 }

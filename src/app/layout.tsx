@@ -10,6 +10,8 @@ const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subset
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
+  // Resolves to the favicon uploaded in Settings > Branding, or the built-in mark.
+  icons: { icon: "/brand-icon", apple: "/brand-icon?apple" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

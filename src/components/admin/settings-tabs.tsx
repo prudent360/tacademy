@@ -110,8 +110,12 @@ export function GeneralTab({ s }: { s: Settings }) {
 export function BrandingTab({ s }: { s: Settings }) {
   return (
     <ActionForm action={saveBranding} className="flex flex-col gap-6">
-      <Section title="Logo" description="Replaces the drawn Tekskillup mark in the header, sidebar and footer.">
-        <FileField label="Logo image" name="logo" current={s.logoUrl} removeName="removeLogo" hint="PNG or WebP with a transparent background, about 360×72 px." />
+      <Section title="Logo and icon" description="Replace the drawn Tekskillup mark. Leave any of these empty to keep the built-in version.">
+        <div className="grid gap-6 md:grid-cols-2">
+          <FileField label="Logo for light backgrounds (website)" name="logo" current={s.logoUrl} removeName="removeLogo" previewClassName="h-12 w-auto max-w-[220px] rounded-md bg-white object-contain p-1.5 ring-1 ring-edge" hint="Dark text or colours. Used on the website header and footer and the sign-in page. PNG or WebP with a transparent background, about 360×72 px." />
+          <FileField label="Logo for dark backgrounds (sidebar and emails)" name="logoDark" current={s.logoDarkUrl} removeName="removeLogoDark" previewClassName="h-12 w-auto max-w-[220px] rounded-md bg-[#1d1238] object-contain p-1.5" hint="White or light text. Used on the dashboard sidebar and in emails. Without it, the light logo is shown on a white tile." />
+        </div>
+        <FileField label="Favicon" name="favicon" current={s.faviconUrl} removeName="removeFavicon" previewClassName="size-12 rounded-md bg-white object-contain p-1 ring-1 ring-edge" hint="The small icon in browser tabs, bookmarks and phone home screens. A square PNG, at least 512×512 px." />
       </Section>
       <Section title="Home page hero">
         <Input label="Eyebrow" name="heroEyebrow" defaultValue={s.heroEyebrow} placeholder="Online & in-person cohorts" />

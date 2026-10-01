@@ -268,12 +268,13 @@ function StudentIdPill({ id }: { id: string }) {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl, unread, toGrade, newApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null };
   siteName: string;
   logoUrl: string | null;
+  logoDarkUrl: string | null;
   unread: number;
   toGrade: number;
   /** Admins: internship applications waiting for review. */
@@ -309,9 +310,15 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
     <aside className="flex h-full w-[276px] flex-col border-r border-white/[.06] bg-[linear-gradient(180deg,#19112e_0%,#21163a_55%,#171025_100%)] text-white shadow-[18px_0_50px_-38px_rgba(25,17,46,.8)]">
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
         <Link href={home} className="flex items-center gap-2.5" onClick={() => setDrawer(false)}>
-          {logoUrl ? (
+          {logoDarkUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={siteName} className="h-8 w-auto max-w-[180px] object-contain" />
+            <img src={logoDarkUrl} alt={siteName} className="h-8 w-auto max-w-[180px] object-contain" />
+          ) : logoUrl ? (
+            // A logo made for light backgrounds goes on a white tile so it stays readable.
+            <span className="rounded-lg bg-white px-2.5 py-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoUrl} alt={siteName} className="h-6 w-auto max-w-[160px] object-contain" />
+            </span>
           ) : (
             <>
               <BrandMark className="size-8" tone="reversed" />
