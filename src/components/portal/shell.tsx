@@ -312,12 +312,12 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
         <Link href={home} className="flex items-center gap-2.5" onClick={() => setDrawer(false)}>
           {logoDarkUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoDarkUrl} alt={siteName} className="h-8 w-auto max-w-[180px] object-contain" />
+            <img src={logoDarkUrl} alt={siteName} className="h-11 w-auto max-w-[210px] object-contain" />
           ) : logoUrl ? (
             // A logo made for light backgrounds goes on a white tile so it stays readable.
             <span className="rounded-lg bg-white px-2.5 py-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoUrl} alt={siteName} className="h-6 w-auto max-w-[160px] object-contain" />
+              <img src={logoUrl} alt={siteName} className="h-8 w-auto max-w-[190px] object-contain" />
             </span>
           ) : (
             <>

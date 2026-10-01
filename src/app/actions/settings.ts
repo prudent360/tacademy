@@ -16,6 +16,7 @@ import { sendDueReminders } from "@/lib/reminders";
 import { encryptSecret } from "@/lib/secrets";
 import { deleteIfReplaced } from "@/lib/storage";
 import { isValidTimeZone } from "@/lib/time";
+import { trimLogo } from "@/lib/trim-image";
 import { resolveFileField, uploadErrorMessage } from "@/lib/upload-field";
 import { firstName, parseList } from "@/lib/utils";
 import { firstError, formValues, optionalEmail, required, text, type FormState } from "@/lib/validation";
@@ -77,6 +78,8 @@ export async function saveBranding(_state: FormState, formData: FormData): Promi
   let faviconUrl: string | null;
   let heroImageUrl: string | null;
   try {
+    // Logos are cropped to their content so they show at full size.
+    for (const field of ["logo", "logoDark"]) if (formData.has(field)) formData.set(field, (await trimLogo(formData.get(field)))!);
     logoUrl = await resolveFileField(formData, { file: "logo", remove: "removeLogo", current: current.logoUrl, folder: "branding" });
     logoDarkUrl = await resolveFileField(formData, { file: "logoDark", remove: "removeLogoDark", current: current.logoDarkUrl, folder: "branding" });
     faviconUrl = await resolveFileField(formData, { file: "favicon", remove: "removeFavicon", current: current.faviconUrl, folder: "branding" });
