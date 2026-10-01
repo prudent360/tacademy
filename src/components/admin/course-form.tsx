@@ -46,7 +46,7 @@ export function CourseForm({ action, course, ai = false, kind = "course", linkab
           ) : <p className="text-sm text-muted">No courses yet. Create courses first to link them.</p>}
         </fieldset>
       )}
-      <Textarea label={internship ? "Programme outline" : "Curriculum"} name="curriculum" defaultValue={course?.curriculum.map((module) => `${module.title}${module.summary ? ` | ${module.summary}` : ""}`).join("\n")} rows={7} hint="One module per line: Module title | short description" />
+      <Textarea label={internship ? "Programme outline" : "Curriculum"} name="curriculum" defaultValue={course?.curriculum.map((module) => `${module.title}${module.summary ? ` | ${module.summary}` : ""}`).join("\n")} rows={7} hint="One module per line: Module title | short description. Only shown until the Curriculum above has published lessons; after that the course page lists those modules automatically." />
       {ai && <AiDraftButton draft={draftCourseText.bind(null, "curriculum")} label="Draft curriculum with AI" />}
       <div className="grid gap-5 md:grid-cols-2">
         <Textarea label="Portfolio projects" name="portfolioProjects" defaultValue={course?.portfolioProjects.join("\n")} rows={4} hint="One practical project per line." />

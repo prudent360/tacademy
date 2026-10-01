@@ -315,7 +315,8 @@ export const courseModules = pgTable("course_modules", {
   title: text("title").notNull(),
   summary: text("summary").notNull().default(""),
   position: integer("position").notNull().default(0),
-  published: boolean("published").notNull().default(false),
+  /** Always true now: what students see is decided by each lesson's own published switch (and release dates). */
+  published: boolean("published").notNull().default(true),
   createdAt: createdAt(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("course_modules_course_idx").on(t.courseId, t.position)]);

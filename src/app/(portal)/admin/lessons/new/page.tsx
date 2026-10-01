@@ -19,5 +19,5 @@ export default async function NewLessonPage({ searchParams }: { searchParams: Pr
   const [found] = await (await getDb()).select({ module: courseModules, course: courses }).from(courseModules).innerJoin(courses, eq(courses.id, courseModules.courseId)).where(eq(courseModules.id, moduleId));
   if (!found) notFound();
   const ai = await aiAvailable("writing");
-  return <><PageHeader back={{ href: `/admin/modules/${moduleId}`, label: found.module.title }} title="New lesson" description={found.course.title} /><Card><LessonForm action={createLesson.bind(null, moduleId)} draft={ai ? draftLesson.bind(null, moduleId, null) : undefined} /></Card></>;
+  return <><PageHeader back={{ href: `/admin/courses/${found.course.id}#curriculum`, label: "Curriculum" }} title="New lesson" description={found.course.title} /><Card><LessonForm action={createLesson.bind(null, moduleId)} draft={ai ? draftLesson.bind(null, moduleId, null) : undefined} /></Card></>;
 }

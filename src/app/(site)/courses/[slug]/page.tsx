@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ChevronRight, ClockIcon, LayersIcon, MonitorIcon, PinIcon, UsersIcon } from "@/components/icons";
+import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ChevronRight, ClipboardIcon, ClockIcon, FileIcon, LayersIcon, MonitorIcon, PinIcon, PlayIcon, UsersIcon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
 import { CourseArt } from "@/components/site/course-art";
 import { CurriculumRequest } from "@/components/site/curriculum-request";
@@ -9,6 +9,7 @@ import { Avatar, Badge, ModeBadge, Notice } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
 import { getCourseBySlug, getInstructorsByCohort, getSettings, getStudentCohorts, linkedCourseTitles } from "@/lib/data";
+import { publicCurriculum } from "@/lib/curriculum";
 import { formatMoney } from "@/lib/money";
 import { cohortCurrencies } from "@/lib/pricing";
 import type { Cohort } from "@/db/schema";
@@ -32,7 +33,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const [{ slug }, { cancelled }] = await Promise.all([params, searchParams]);
   const course = await getCourseBySlug(slug);
   if (!course) notFound();
-  const [settings, user, [summary]] = await Promise.all([getSettings(), getCurrentUser(), withCohorts([course])]);
+  const [settings, user, [summary], curriculum] = await Promise.all([getSettings(), getCurrentUser(), withCohorts([course]), publicCurriculum(course.id, course.curriculum)]);
   const cohorts = summary.cohorts;
   const instructorsByCohort = await getInstructorsByCohort(cohorts.map((c) => c.id));
   const instructors = [...new Map([...instructorsByCohort.values()].flat().map((i) => [i.id, i])).values()];
@@ -48,7 +49,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const secondaryButton = photo
     ? "inline-flex h-12 cursor-pointer items-center rounded-[5px] border border-white/40 bg-white/10 px-6 font-semibold text-white backdrop-blur transition hover:bg-white/20"
     : "inline-flex h-12 cursor-pointer items-center rounded-[5px] border border-edge-strong bg-white px-6 font-semibold text-ink transition hover:border-accent-muted hover:bg-panel";
-  const courseNav = [course.description && { href: "#overview", label: "Overview" }, course.curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
+  const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -137,11 +138,39 @@ export default async function CoursePage({ params, searchParams }: Props) {
             <span className="flex size-11 shrink-0 items-center justify-center rounded-[5px] bg-white text-accent shadow-sm"><AwardIcon className="size-6" /></span>
             <div><h2 className="font-display text-xl font-bold text-ink">Earn a verified certificate</h2><p className="mt-1 text-[15px] leading-6 text-muted">Complete the course with at least {course.certificateMinAttendance}% attendance, {course.certificateMinAssignments}% of assignments submitted, and a {course.certificateMinScore}% average score. Your certificate includes a public verification link and QR code.</p></div>
           </section>}
-          {course.curriculum.length > 0 && (
+          {curriculum.length > 0 && (
             <section id="curriculum" className="scroll-mt-36 flex flex-col gap-5">
               <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Curriculum</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What you&apos;ll learn, week by week</h2></div>
               <ol className="divide-y divide-line border-y border-line">
-                {course.curriculum.map((module, index) => <li key={`${module.title}-${index}`} className="grid gap-3 py-5 sm:grid-cols-[42px_1fr]"><span className="font-mono text-sm font-semibold text-accent">{String(index + 1).padStart(2, "0")}</span><div><h3 className="font-display text-lg font-bold text-ink">{module.title}</h3>{module.summary && <p className="mt-1 text-[15px] leading-6 text-muted">{module.summary}</p>}</div></li>)}
+                {curriculum.map((module, index) => {
+                  const minutes = module.lessons.reduce((sum, l) => sum + l.minutes, 0);
+                  return (
+                    <li key={`${module.title}-${index}`} className="grid gap-3 py-5 sm:grid-cols-[42px_1fr]">
+                      <span className="font-mono text-sm font-semibold text-accent">{String(index + 1).padStart(2, "0")}</span>
+                      <div>
+                        <h3 className="font-display text-lg font-bold text-ink">{module.title}</h3>
+                        {module.summary && <p className="mt-1 text-[15px] leading-6 text-muted">{module.summary}</p>}
+                        {module.lessons.length > 0 && (
+                          <details className="group mt-2">
+                            <summary className="cursor-pointer list-none text-sm font-semibold text-accent [&::-webkit-details-marker]:hidden">
+                              {module.lessons.length} lesson{module.lessons.length === 1 ? "" : "s"}{minutes ? ` · ${minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60 ? `${minutes % 60} min` : ""}`.trim() : `${minutes} min`}` : ""}
+                              <span className="ml-1 inline-block transition group-open:rotate-90">›</span>
+                            </summary>
+                            <ul className="mt-2 flex flex-col gap-1.5">
+                              {module.lessons.map((lesson, i) => (
+                                <li key={`${lesson.title}-${i}`} className="flex items-center gap-2.5 text-[15px] text-body">
+                                  {lesson.kind === "video" ? <PlayIcon className="size-4 shrink-0 text-accent" /> : lesson.kind === "quiz" ? <ClipboardIcon className="size-4 shrink-0 text-amber-600" /> : <FileIcon className="size-4 shrink-0 text-cyan-ink" />}
+                                  <span className="min-w-0 grow">{lesson.title}</span>
+                                  <span className="shrink-0 text-xs text-muted">{lesson.kind === "quiz" ? "Quiz" : `${lesson.minutes} min`}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ol>
             </section>
           )}

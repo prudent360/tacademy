@@ -22,7 +22,7 @@ export default async function EditLessonPage({ params, searchParams }: { params:
   if (!found) notFound();
   const ai = await aiAvailable("writing");
   return <>
-    <PageHeader back={{ href: `/admin/modules/${found.module.id}`, label: found.module.title }} title={found.lesson.title} description={found.course.title} />
+    <PageHeader back={{ href: `/admin/courses/${found.course.id}#curriculum`, label: "Curriculum" }} title={found.lesson.title} description={`${found.course.title} · ${found.module.title}`} />
     {created && <Notice>Lesson created. Add the content and publish it when it is ready.</Notice>}
     <Card><LessonForm action={updateLesson.bind(null, id)} lesson={found.lesson} draft={ai ? draftLesson.bind(null, found.module.id, id) : undefined} /></Card>
     <QuizEditor lessonId={id} />

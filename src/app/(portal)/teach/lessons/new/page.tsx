@@ -23,7 +23,7 @@ export default async function NewTeachLessonPage({ searchParams }: { searchParam
   const cohortId = idParam(cohort ?? "") ?? undefined;
   const ai = await aiAvailable("writing");
   return <>
-    <PageHeader back={{ href: cohortId ? `/teach/cohorts/${cohortId}?tab=lessons` : "/teach", label: "Lessons" }} title="New lesson" description={`${found.course.title} · ${found.module.title}`} />
+    <PageHeader back={{ href: `/teach/courses/${found.course.id}/curriculum${cohortId ? `?cohort=${cohortId}` : ""}`, label: "Curriculum" }} title="New lesson" description={`${found.course.title} · ${found.module.title}`} />
     <Card><LessonForm action={createLesson.bind(null, moduleId)} cohortId={cohortId} draft={ai ? draftLesson.bind(null, moduleId, null) : undefined} /></Card>
   </>;
 }

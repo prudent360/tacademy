@@ -17,7 +17,7 @@ export async function QuizEditor({ lessonId }: { lessonId: number }) {
   const [quiz] = await db.select().from(quizzes).where(eq(quizzes.lessonId, lessonId));
   if (!quiz) {
     return (
-      <Card title="Quiz">
+      <Card title="Quiz" className="scroll-mt-24" id="quiz">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted">Add a short, automatically marked quiz at the end of this lesson.</p>
           <ActionButton action={createQuiz.bind(null, lessonId)} variant="primary" pendingText="Adding…">Add a quiz</ActionButton>
@@ -32,7 +32,7 @@ export async function QuizEditor({ lessonId }: { lessonId: number }) {
   ]);
   const datasets = datasetRows.map((d) => ({ id: d.id, name: d.name, version: d.updatedAt.toISOString(), tables: d.tables }));
   return (
-    <div className="flex flex-col gap-6">
+    <div id="quiz" className="flex scroll-mt-24 flex-col gap-6">
       <Card title="Quiz settings" action={<DeleteButton action={deleteQuiz.bind(null, quiz.id)} label="Remove quiz" />}>
         <ActionForm action={updateQuiz.bind(null, quiz.id)}>
           <div className="grid gap-5 sm:grid-cols-3">

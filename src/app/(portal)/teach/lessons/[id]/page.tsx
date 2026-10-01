@@ -27,7 +27,7 @@ export default async function TeachLessonPage({ params, searchParams }: { params
   const video = await lessonVideo(found.lesson.videoUrl);
   const ai = await aiAvailable("writing");
   return <>
-    <PageHeader back={{ href: cohortId ? `/teach/cohorts/${cohortId}?tab=lessons` : "/teach", label: "Lessons" }} title={found.lesson.title} description={`${found.course.title} · ${found.module.title}`} />
+    <PageHeader back={{ href: `/teach/courses/${found.course.id}/curriculum${cohortId ? `?cohort=${cohortId}` : ""}`, label: "Curriculum" }} title={found.lesson.title} description={`${found.course.title} · ${found.module.title}`} />
     {created && <Notice>Lesson created. Add the video and content, then tick “Published for students” when it&apos;s ready.</Notice>}
     {found.lesson.videoUrl && !video && <Notice tone="amber">This video link can&apos;t be played inside the lesson, so students get a button that opens it instead. Bunny Stream, YouTube, Vimeo and Loom links play inline.</Notice>}
     <div className="grid items-start gap-6 xl:grid-cols-[1.5fr_1fr]">

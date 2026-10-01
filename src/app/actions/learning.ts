@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -12,12 +12,6 @@ import { quizStatus } from "@/lib/quiz";
 import { fromZonedInput } from "@/lib/time";
 import { firstError, formValues, optionalUrl, required, sortValue, text, type FormState } from "@/lib/validation";
 
-const moduleSchema = z.object({
-  title: required("Module title", 160),
-  summary: text(500),
-  position: sortValue,
-});
-
 const lessonSchema = z.object({
   title: required("Lesson title", 160),
   summary: text(500),
@@ -26,62 +20,13 @@ const lessonSchema = z.object({
   resourceUrl: optionalUrl,
   resourceLabel: text(120),
   estimatedMinutes: z.coerce.number().int().min(1, "Estimated time must be at least one minute.").max(600),
-  position: sortValue,
+  position: sortValue.optional(),
 });
 
 function refreshCourseLearning(courseId: number) {
   revalidatePath(`/admin/courses/${courseId}`);
   revalidatePath("/teach", "layout");
   revalidatePath("/dashboard", "layout");
-}
-
-/** Where instructors return to after saving: the Learning tab of the cohort they came from. */
-function teachReturn(formData: FormData): string {
-  const cohortId = Number(formData.get("cohort"));
-  return Number.isInteger(cohortId) && cohortId > 0 ? `/teach/cohorts/${cohortId}?tab=lessons` : "/teach";
-}
-
-export async function createModule(courseId: number, _state: FormState, formData: FormData): Promise<FormState> {
-  const user = await requireCourseEditor(courseId);
-  const parsed = moduleSchema.safeParse(formValues(formData));
-  if (!parsed.success) return { error: firstError(parsed.error) };
-  const db = await getDb();
-  const [course] = await db.select({ id: courses.id }).from(courses).where(eq(courses.id, courseId));
-  if (!course) return { error: "This course no longer exists." };
-  const [module] = await db.insert(courseModules).values({ ...parsed.data, courseId, published: formData.get("published") === "on" }).returning({ id: courseModules.id });
-  refreshCourseLearning(courseId);
-  redirect(user.role === "admin" ? `/admin/modules/${module.id}?created=1` : teachReturn(formData));
-}
-
-export async function updateModule(moduleId: number, _state: FormState, formData: FormData): Promise<FormState> {
-  const db = await getDb();
-  const [existing] = await db.select({ courseId: courseModules.courseId }).from(courseModules).where(eq(courseModules.id, moduleId));
-  if (!existing) return { error: "This module no longer exists." };
-  await requireCourseEditor(existing.courseId);
-  const parsed = moduleSchema.safeParse(formValues(formData));
-  if (!parsed.success) return { error: firstError(parsed.error) };
-  const [row] = await db.update(courseModules).set({ ...parsed.data, published: formData.get("published") === "on", updatedAt: new Date() }).where(eq(courseModules.id, moduleId)).returning({ courseId: courseModules.courseId });
-  if (!row) return { error: "This module no longer exists." };
-  refreshCourseLearning(row.courseId);
-  return { ok: "Module saved." };
-}
-
-/** Quick publish/unpublish from an instructor's Learning tab. */
-export async function setModulePublished(moduleId: number, published: boolean): Promise<void> {
-  const db = await getDb();
-  const [existing] = await db.select({ courseId: courseModules.courseId }).from(courseModules).where(eq(courseModules.id, moduleId));
-  if (!existing) return;
-  await requireCourseEditor(existing.courseId);
-  await db.update(courseModules).set({ published, updatedAt: new Date() }).where(eq(courseModules.id, moduleId));
-  refreshCourseLearning(existing.courseId);
-}
-
-export async function deleteModule(moduleId: number): Promise<void> {
-  await requireRole("admin");
-  const [row] = await (await getDb()).delete(courseModules).where(eq(courseModules.id, moduleId)).returning({ courseId: courseModules.courseId });
-  if (!row) redirect("/admin/courses");
-  refreshCourseLearning(row.courseId);
-  redirect(`/admin/courses/${row.courseId}`);
 }
 
 export async function createLesson(moduleId: number, _state: FormState, formData: FormData): Promise<FormState> {
@@ -93,6 +38,7 @@ export async function createLesson(moduleId: number, _state: FormState, formData
   if (!parsed.success) return { error: firstError(parsed.error) };
   const [lesson] = await db.insert(lessons).values({
     ...parsed.data,
+    position: formData.has("position") ? parsed.data.position : await nextLessonPosition(moduleId),
     moduleId,
     videoUrl: parsed.data.videoUrl || null,
     resourceUrl: parsed.data.resourceUrl || null,
@@ -110,8 +56,10 @@ export async function updateLesson(lessonId: number, _state: FormState, formData
   await requireCourseEditor(existing.courseId);
   const parsed = lessonSchema.safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
+  const { position, ...fields } = parsed.data;
   const [row] = await db.update(lessons).set({
-    ...parsed.data,
+    ...fields,
+    ...(formData.has("position") ? { position } : {}),
     videoUrl: parsed.data.videoUrl || null,
     resourceUrl: parsed.data.resourceUrl || null,
     published: formData.get("published") === "on",
@@ -131,7 +79,7 @@ export async function deleteLesson(lessonId: number): Promise<void> {
   const [module] = await db.select({ courseId: courseModules.courseId }).from(courseModules).where(eq(courseModules.id, lesson.moduleId));
   await db.delete(lessons).where(eq(lessons.id, lessonId));
   if (module) refreshCourseLearning(module.courseId);
-  redirect(`/admin/modules/${lesson.moduleId}`);
+  redirect(module ? `/admin/courses/${module.courseId}#curriculum` : "/admin/courses");
 }
 
 export async function setLessonComplete(cohortId: number, lessonId: number, complete: boolean): Promise<void> {
@@ -189,4 +137,115 @@ export async function setModuleRelease(cohortId: number, moduleId: number, _stat
   revalidatePath(`/teach/cohorts/${cohortId}`);
   revalidatePath(`/dashboard/cohorts/${cohortId}/learn`, "layout");
   return { ok: raw ? "Release scheduled." : "Module is available immediately." };
+}
+
+// ---------- Curriculum builder ----------
+
+type BuilderResult = { ok: true; id?: number } | { error: string };
+
+async function nextModulePosition(courseId: number): Promise<number> {
+  const rows = await (await getDb()).select({ position: courseModules.position }).from(courseModules).where(eq(courseModules.courseId, courseId));
+  return rows.reduce((max, r) => Math.max(max, r.position + 1), 0);
+}
+
+async function nextLessonPosition(moduleId: number): Promise<number> {
+  const rows = await (await getDb()).select({ position: lessons.position }).from(lessons).where(eq(lessons.moduleId, moduleId));
+  return rows.reduce((max, r) => Math.max(max, r.position + 1), 0);
+}
+
+async function moduleCourse(moduleId: number): Promise<number | null> {
+  const [row] = await (await getDb()).select({ courseId: courseModules.courseId }).from(courseModules).where(eq(courseModules.id, moduleId));
+  return row?.courseId ?? null;
+}
+
+async function lessonCourse(lessonId: number): Promise<number | null> {
+  const [row] = await (await getDb()).select({ courseId: courseModules.courseId }).from(lessons).innerJoin(courseModules, eq(courseModules.id, lessons.moduleId)).where(eq(lessons.id, lessonId));
+  return row?.courseId ?? null;
+}
+
+const titleSchema = required("Title", 160);
+
+/** Adds a module at the end of the course. */
+export async function addModule(courseId: number, title: string): Promise<BuilderResult> {
+  await requireCourseEditor(courseId);
+  const parsed = titleSchema.safeParse(title);
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const db = await getDb();
+  const [course] = await db.select({ id: courses.id }).from(courses).where(eq(courses.id, courseId));
+  if (!course) return { error: "This course no longer exists." };
+  const [module] = await db.insert(courseModules).values({ courseId, title: parsed.data, position: await nextModulePosition(courseId) }).returning({ id: courseModules.id });
+  refreshCourseLearning(courseId);
+  return { ok: true, id: module.id };
+}
+
+/** Renames a module and updates its summary. */
+export async function saveModuleDetails(moduleId: number, title: string, summary: string): Promise<BuilderResult> {
+  const courseId = await moduleCourse(moduleId);
+  if (!courseId) return { error: "This module no longer exists." };
+  await requireCourseEditor(courseId);
+  const parsed = z.object({ title: titleSchema, summary: text(500) }).safeParse({ title, summary });
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  await (await getDb()).update(courseModules).set({ ...parsed.data, updatedAt: new Date() }).where(eq(courseModules.id, moduleId));
+  refreshCourseLearning(courseId);
+  return { ok: true };
+}
+
+/** Adds a draft lesson, or a quiz (a lesson whose quiz must be passed), at the end of a module. */
+export async function addLesson(moduleId: number, title: string, kind: "lesson" | "quiz"): Promise<BuilderResult> {
+  const courseId = await moduleCourse(moduleId);
+  if (!courseId) return { error: "This module no longer exists." };
+  await requireCourseEditor(courseId);
+  const parsed = titleSchema.safeParse(title);
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const db = await getDb();
+  const [lesson] = await db.insert(lessons).values({ moduleId, title: parsed.data, position: await nextLessonPosition(moduleId), estimatedMinutes: kind === "quiz" ? 15 : 10 }).returning({ id: lessons.id });
+  if (kind === "quiz") await db.insert(quizzes).values({ lessonId: lesson.id, requiredToComplete: true });
+  refreshCourseLearning(courseId);
+  return { ok: true, id: lesson.id };
+}
+
+/** The one switch that decides whether students see a lesson (release dates still apply per cohort). */
+export async function setLessonPublished(lessonId: number, published: boolean): Promise<BuilderResult> {
+  const courseId = await lessonCourse(lessonId);
+  if (!courseId) return { error: "This lesson no longer exists." };
+  await requireCourseEditor(courseId);
+  await (await getDb()).update(lessons).set({ published, updatedAt: new Date() }).where(eq(lessons.id, lessonId));
+  refreshCourseLearning(courseId);
+  return { ok: true };
+}
+
+/** Saves the builder's order: modules in order, each with its lessons in order (lessons can move between modules). */
+export async function reorderCurriculum(courseId: number, layout: { id: number; lessons: number[] }[]): Promise<BuilderResult> {
+  await requireCourseEditor(courseId);
+  const db = await getDb();
+  const moduleIds = layout.map((m) => m.id);
+  const lessonIds = layout.flatMap((m) => m.lessons);
+  const owned = moduleIds.length ? await db.select({ id: courseModules.id }).from(courseModules).where(and(eq(courseModules.courseId, courseId), inArray(courseModules.id, moduleIds))) : [];
+  const ownedLessons = lessonIds.length ? await db.select({ id: lessons.id }).from(lessons).innerJoin(courseModules, eq(courseModules.id, lessons.moduleId)).where(and(eq(courseModules.courseId, courseId), inArray(lessons.id, lessonIds))) : [];
+  if (owned.length !== new Set(moduleIds).size || ownedLessons.length !== new Set(lessonIds).size) return { error: "The curriculum changed in the meantime. Reload the page and try again." };
+  await db.transaction(async (tx) => {
+    for (const [i, module] of layout.entries()) {
+      await tx.update(courseModules).set({ position: i }).where(eq(courseModules.id, module.id));
+      for (const [j, lessonId] of module.lessons.entries()) await tx.update(lessons).set({ moduleId: module.id, position: j }).where(eq(lessons.id, lessonId));
+    }
+  });
+  refreshCourseLearning(courseId);
+  return { ok: true };
+}
+
+/** Deletes a module and its lessons from the builder (admins only). */
+export async function removeModule(moduleId: number): Promise<BuilderResult> {
+  await requireRole("admin");
+  const [row] = await (await getDb()).delete(courseModules).where(eq(courseModules.id, moduleId)).returning({ courseId: courseModules.courseId });
+  if (row) refreshCourseLearning(row.courseId);
+  return { ok: true };
+}
+
+/** Deletes a lesson from the builder (admins only). */
+export async function removeLesson(lessonId: number): Promise<BuilderResult> {
+  await requireRole("admin");
+  const courseId = await lessonCourse(lessonId);
+  await (await getDb()).delete(lessons).where(eq(lessons.id, lessonId));
+  if (courseId) refreshCourseLearning(courseId);
+  return { ok: true };
 }

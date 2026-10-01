@@ -4,16 +4,15 @@ import { notFound } from "next/navigation";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { addStudentToCohort, deleteCohort, issueCertificate, setEnrollmentStatus, updateCohort } from "@/app/actions/admin";
 import { createAssignment, createSessions, deleteAnnouncement, postAnnouncement } from "@/app/actions/teach";
-import { createModule, setModulePublished, setModuleRelease } from "@/app/actions/learning";
+import { setModuleRelease } from "@/app/actions/learning";
 import { CohortForm } from "@/components/admin/cohort-form";
-import { ModuleForm } from "@/components/admin/learning-forms";
 import { ActionButton, ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton } from "@/components/forms";
 import { Markdown } from "@/components/markdown";
 import { SessionRow } from "@/components/portal/session-row";
 import { AttendanceForm } from "@/components/teach/attendance-form";
 import { SessionFields } from "@/components/teach/session-fields";
-import { Badge, Card, DataTable, EmptyState, ModeBadge, Notice, PageHeader, StatusBadge, Tabs } from "@/components/ui";
-import { CalendarIcon, ClipboardIcon, MegaphoneIcon, UsersIcon, VideoIcon } from "@/components/icons";
+import { Badge, Card, DataTable, EmptyState, ModeBadge, Notice, PageHeader, StatusBadge, Tabs, buttonClass } from "@/components/ui";
+import { BookIcon, CalendarIcon, ClipboardIcon, EditIcon, MegaphoneIcon, UsersIcon, VideoIcon } from "@/components/icons";
 import { getDb } from "@/db";
 import { announcements, assignments, attendance, certificates, classSessions, cohortInstructors, courseModules, enrollments, lessonProgress, lessons, moduleReleases, submissions, users, type ClassSession, type Cohort, type Course } from "@/db/schema";
 import { requireTeacher } from "@/lib/auth";
@@ -64,7 +63,7 @@ export default async function CohortPage({ params, searchParams }: { params: Pro
   const base = `/teach/cohorts/${id}`;
   const held = sessions.filter((s) => new Date(s.endsAt) < now && !s.cancelled);
   const needsAttendance = students.some((s) => s.status === "active") ? held.filter((s) => !marks.some((m) => m.sessionId === s.id)) : [];
-  const publishedLessons = learning.filter((row) => row.lesson?.published && row.module.published).length;
+  const publishedLessons = learning.filter((row) => row.lesson?.published).length;
   const internship = course.kind === "internship";
 
   return (
@@ -94,7 +93,7 @@ export default async function CohortPage({ params, searchParams }: { params: Pro
         </div>
       )}
 
-      {tab === "lessons" && <LearningTab cohortId={id} courseId={course.id} learning={learning} students={students} />}
+      {tab === "lessons" && <LearningTab cohortId={id} courseId={course.id} learning={learning} students={students} editHref={isAdmin ? `/admin/${internship ? "internships" : "courses"}/${course.id}#curriculum` : `/teach/courses/${course.id}/curriculum?cohort=${id}`} />}
 
       {tab === "assignments" && <AssignmentsTab cohortId={id} work={work} studentCount={students.length} timeZone={tz} learning={learning} />}
 
@@ -270,79 +269,94 @@ async function SettingsTab({ cohort, course, currencies }: { cohort: Cohort; cou
   );
 }
 
-async function LearningTab({ cohortId, courseId, learning, students }: { courseId: number; cohortId: number; learning: { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect | null; releaseAt: Date | null }[]; students: Awaited<ReturnType<typeof getCohortStudents>> }) {
-  const published = learning.filter((row): row is { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect; releaseAt: Date | null } => Boolean(row.module.published && row.lesson?.published));
+/** The cohort's view of the shared curriculum: when each module opens for this cohort and how far students have got. Editing happens in the curriculum builder. */
+async function LearningTab({ cohortId, courseId, learning, students, editHref }: { editHref: string; courseId: number; cohortId: number; learning: { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect | null; releaseAt: Date | null }[]; students: Awaited<ReturnType<typeof getCohortStudents>> }) {
   const db = await getDb();
   const timeZone = (await getSettings()).timezone;
-  const studentIds = students.map((student) => student.id);
-  const lessonIds = published.map((row) => row.lesson.id);
-  const completions = studentIds.length && lessonIds.length ? await db.select({ userId: enrollments.userId, lessonId: lessonProgress.lessonId }).from(lessonProgress).innerJoin(enrollments, eq(enrollments.id, lessonProgress.enrollmentId)).where(and(eq(enrollments.cohortId, cohortId), inArray(enrollments.userId, studentIds), inArray(lessonProgress.lessonId, lessonIds), sql`${lessonProgress.completedAt} is not null`)) : [];
-  const modules = [...new Map(learning.map((row) => [row.module.id, row.module])).values()].sort((a, b) => a.position - b.position || a.id - b.id);
+  const now = new Date();
+  const modules = [...new Map(learning.map((row) => [row.module.id, { module: row.module, releaseAt: row.releaseAt }])).values()].sort((a, b) => a.module.position - b.module.position || a.module.id - b.module.id);
   const lessonsOf = (moduleId: number) => learning.flatMap((row) => (row.module.id === moduleId && row.lesson ? [row.lesson] : [])).sort((a, b) => a.position - b.position || a.id - b.id);
-  const builder = (
-    <Card title="Modules and lessons" action={<span className="text-sm text-muted">Self-paced content for every cohort of this course</span>}>
-      <div className="flex flex-col gap-5">
-        {modules.map((module) => (
-          <div key={module.id} className="rounded-[5px] border border-edge">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-panel px-4 py-3">
-              <p className="flex items-center gap-2 font-semibold text-ink">{module.title} {!module.published && <Badge>Draft</Badge>}</p>
-              <span className="flex items-center gap-2">
-                <ActionButton action={setModulePublished.bind(null, module.id, !module.published)} pendingText="…">{module.published ? "Unpublish" : "Publish module"}</ActionButton>
-                <Link href={`/teach/lessons/new?module=${module.id}&cohort=${cohortId}`} className="inline-flex h-9 items-center rounded-lg bg-accent px-3 text-sm font-semibold text-white hover:bg-accent-dark">Add lesson</Link>
-              </span>
-            </div>
-            {lessonsOf(module.id).length ? (
-              <ul className="divide-y divide-line">
-                {lessonsOf(module.id).map((lesson) => (
-                  <li key={lesson.id}>
-                    <Link href={`/teach/lessons/${lesson.id}?cohort=${cohortId}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-panel">
-                      <span className="flex items-center gap-2 text-sm font-semibold text-ink">{lesson.title}{lesson.videoUrl && <Badge tone="cyan">Video</Badge>}{!lesson.published && <Badge>Draft</Badge>}</span>
-                      <span className="text-sm font-semibold text-accent">Edit</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="px-4 py-3 text-sm text-muted">No lessons yet.</p>}
-          </div>
-        ))}
-        {!modules.length && <p className="text-sm text-muted">Start by adding a module, such as “Week 1: Getting started”, then add video lessons to it.</p>}
-        <details className="rounded-[5px] border border-dashed border-edge-strong p-4" open={!modules.length}>
-          <summary className="cursor-pointer text-sm font-semibold text-accent">Add a module</summary>
-          <div className="mt-4"><ModuleForm action={createModule.bind(null, courseId)} cohortId={cohortId} /></div>
-        </details>
-        <p className="text-xs text-muted">Students see a module once it&apos;s published, and each lesson once it&apos;s published too. Only admins can delete modules and lessons.</p>
-      </div>
-    </Card>
-  );
-  if (!learning.length) return builder;
+  const lessonIds = learning.flatMap((row) => (row.lesson?.published ? [row.lesson.id] : []));
+  const studentIds = students.map((student) => student.id);
+  const completions = studentIds.length && lessonIds.length ? await db.select({ userId: enrollments.userId, lessonId: lessonProgress.lessonId }).from(lessonProgress).innerJoin(enrollments, eq(enrollments.id, lessonProgress.enrollmentId)).where(and(eq(enrollments.cohortId, cohortId), inArray(enrollments.userId, studentIds), inArray(lessonProgress.lessonId, lessonIds), sql`${lessonProgress.completedAt} is not null`)) : [];
+  const editLink = <Link href={editHref} className={buttonClass.small}><EditIcon className="size-4" /> Edit curriculum</Link>;
+
+  if (!lessonIds.length) {
+    return (
+      <EmptyState title={modules.length ? "No published lessons yet" : "No curriculum yet"} icon={BookIcon} action={editLink}>
+        {modules.length ? "Lessons are added, but none are published, so students don't see anything yet." : "Build the course's modules, lessons and quizzes once, and every cohort of the course uses them."}
+      </EmptyState>
+    );
+  }
   const quizReport = await cohortQuizReport(cohortId, courseId);
-  const quizCard = quizReport.length > 0 && (
-    <Card title="Quiz results" padded={false}>
-      <ul className="divide-y divide-line">
-        {quizReport.map((row) => (
-          <li key={row.quizId} className="flex flex-col gap-1.5 px-5 py-4 md:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Link href={`/teach/lessons/${row.lessonId}?cohort=${cohortId}`} className="font-semibold text-ink hover:text-accent">{row.lessonTitle}</Link>
-              <span className="flex flex-wrap gap-2 text-sm">
-                <span className="text-muted">{row.attempted}/{students.length} attempted</span>
-                <Badge tone={row.attempted && row.passed === row.attempted ? "green" : "accent"}>{row.passed} passed</Badge>
-                {row.averageBest !== null && <Badge>avg best {row.averageBest}%</Badge>}
-              </span>
-            </div>
-            {row.hardest && <p className="text-sm text-muted">Most missed ({row.hardest.percentCorrect}% correct): <span className="text-body">{row.hardest.prompt}</span></p>}
-          </li>
-        ))}
-      </ul>
-    </Card>
+  return (
+    <div className="flex flex-col gap-6">
+      <Card title="Schedule" action={editLink}>
+        <p className="mb-5 text-sm text-muted">Each module opens for this cohort on its release date (leave it blank to open straight away). Lessons, quizzes and their order are shared by every cohort and changed with Edit curriculum.</p>
+        <ol className="flex flex-col gap-4">
+          {modules.map(({ module, releaseAt }, index) => {
+            const items = lessonsOf(module.id);
+            const live = items.filter((lesson) => lesson.published);
+            const drafts = items.length - live.length;
+            const open = !releaseAt || releaseAt <= now;
+            return (
+              <li key={module.id} className="rounded-[5px] border border-edge">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line bg-panel/60 px-4 py-3.5">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-semibold text-accent">{String(index + 1).padStart(2, "0")}</span>
+                      <h3 className="font-display font-bold text-ink">{module.title}</h3>
+                      {!live.length ? <Badge>Not visible yet</Badge> : open ? <Badge tone="green">Open</Badge> : <Badge tone="amber">Opens {formatDateTime(releaseAt!, timeZone, { zone: false })}</Badge>}
+                    </span>
+                    {module.summary && <p className="text-sm text-muted">{module.summary}</p>}
+                  </div>
+                  <ActionForm action={setModuleRelease.bind(null, cohortId, module.id)} className="flex flex-wrap items-end gap-2">
+                    <Input label="Release date" name="releaseAt" type="datetime-local" defaultValue={toZonedInput(releaseAt, timeZone)} />
+                    <SubmitButton>Save</SubmitButton>
+                  </ActionForm>
+                </div>
+                <ul className="divide-y divide-line px-4">
+                  {live.map((lesson) => {
+                    const n = completions.filter((item) => item.lessonId === lesson.id).length;
+                    return (
+                      <li key={lesson.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                        <span className="min-w-0 truncate font-medium text-ink">{lesson.title}</span>
+                        <span className="shrink-0 text-muted">{n}/{students.length} complete</span>
+                      </li>
+                    );
+                  })}
+                  {!live.length && <li className="py-2.5 text-sm text-muted">No published lessons in this module.</li>}
+                </ul>
+                {drafts > 0 && <p className="border-t border-line px-4 py-2 text-xs text-muted">{drafts} draft{drafts === 1 ? "" : "s"} hidden from students.</p>}
+              </li>
+            );
+          })}
+        </ol>
+      </Card>
+      {quizReport.length > 0 && (
+        <Card title="Quiz results" padded={false}>
+          <ul className="divide-y divide-line">
+            {quizReport.map((row) => (
+              <li key={row.quizId} className="flex flex-col gap-1.5 px-5 py-4 md:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold text-ink">{row.lessonTitle}</span>
+                  <span className="flex flex-wrap gap-2 text-sm">
+                    <span className="text-muted">{row.attempted}/{students.length} attempted</span>
+                    <Badge tone={row.attempted && row.passed === row.attempted ? "green" : "accent"}>{row.passed} passed</Badge>
+                    {row.averageBest !== null && <Badge>avg best {row.averageBest}%</Badge>}
+                  </span>
+                </div>
+                {row.hardest && <p className="text-sm text-muted">Most missed ({row.hardest.percentCorrect}% correct): <span className="text-body">{row.hardest.prompt}</span></p>}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+      <Card title="Student progress">
+        {students.length ? <ul className="divide-y divide-line">{students.map((student) => { const done = new Set(completions.filter((item) => item.userId === student.id).map((item) => item.lessonId)).size; const pct = Math.round((done / lessonIds.length) * 100); return <li key={student.id} className="py-3"><div className="mb-1 flex justify-between gap-3 text-sm"><span className="font-semibold text-ink">{student.name}</span><span className="text-muted">{done}/{lessonIds.length} · {pct}%</span></div><div className="h-2 overflow-hidden rounded-full bg-page"><div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} /></div></li>; })}</ul> : <p className="text-sm text-muted">No students are enrolled yet.</p>}
+      </Card>
+    </div>
   );
-  return <div className="flex flex-col gap-6">{builder}{quizCard}<div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
-    <Card title="Published course outline">
-      {published.length ? <div className="flex flex-col gap-5">{[...new Map(published.map((row) => [row.module.id, row.module])).values()].map((module) => { const releaseAt = learning.find((row) => row.module.id === module.id)?.releaseAt; return <section key={module.id} className="rounded-[5px] border border-edge p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-display font-bold text-ink">{module.title}</h3>{module.summary && <p className="mt-1 text-sm text-muted">{module.summary}</p>}</div><ActionForm action={setModuleRelease.bind(null, cohortId, module.id)} className="flex flex-wrap items-end gap-2"><Input label="Release date" name="releaseAt" type="datetime-local" defaultValue={toZonedInput(releaseAt, timeZone)} hint="Blank means immediately." /><SubmitButton>Set release</SubmitButton></ActionForm></div><ul className="mt-3 divide-y divide-line">{published.filter((row) => row.module.id === module.id).map((row) => { const n = completions.filter((item) => item.lessonId === row.lesson.id).length; return <li key={row.lesson.id} className="flex items-center justify-between gap-3 py-2.5 text-sm"><span className="font-medium text-ink">{row.lesson.title}</span><span className="text-muted">{n}/{students.length} complete</span></li>; })}</ul></section>; })}</div> : <p className="text-sm text-muted">Modules exist, but none have published lessons yet.</p>}
-    </Card>
-    <Card title="Student progress">
-      {students.length ? <ul className="divide-y divide-line">{students.map((student) => { const done = new Set(completions.filter((item) => item.userId === student.id).map((item) => item.lessonId)).size; const pct = lessonIds.length ? Math.round((done / lessonIds.length) * 100) : 0; return <li key={student.id} className="py-3"><div className="mb-1 flex justify-between gap-3 text-sm"><span className="font-semibold text-ink">{student.name}</span><span className="text-muted">{done}/{lessonIds.length} · {pct}%</span></div><div className="h-2 overflow-hidden rounded-full bg-page"><div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} /></div></li>; })}</ul> : <p className="text-sm text-muted">No students are enrolled yet.</p>}
-    </Card>
-  </div></div>;
 }
 
 async function AssignmentsTab({ cohortId, work, studentCount, timeZone, learning }: { cohortId: number; work: (typeof assignments.$inferSelect)[]; studentCount: number; timeZone: string; learning: { module: typeof courseModules.$inferSelect; lesson: typeof lessons.$inferSelect | null; releaseAt: Date | null }[] }) {
@@ -399,7 +413,7 @@ async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assign
   const db = await getDb();
   const roster = await db.select({ enrollment: enrollments, user: { id: users.id, name: users.name, email: users.email } }).from(enrollments).innerJoin(users, eq(users.id, enrollments.userId)).where(and(eq(enrollments.cohortId, cohortId), inArray(enrollments.status, isAdmin ? ["active", "completed", "cancelled"] : ["active", "completed"]))).orderBy(asc(users.name));
   const ids = roster.map((r) => r.user.id);
-  const lessonIds = learning.flatMap((row) => (row.module.published && row.lesson?.published ? [row.lesson.id] : []));
+  const lessonIds = learning.flatMap((row) => (row.lesson?.published ? [row.lesson.id] : []));
   const enrollmentIds = roster.map((r) => r.enrollment.id);
   const [grades, done, issued, eligibility] = await Promise.all([
     assignmentIds.length && ids.length ? db.select({ userId: submissions.userId, status: submissions.status, score: submissions.score, max: assignments.maxScore }).from(submissions).innerJoin(assignments, eq(assignments.id, submissions.assignmentId)).where(and(inArray(submissions.assignmentId, assignmentIds), inArray(submissions.userId, ids))) : [],

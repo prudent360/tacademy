@@ -22,9 +22,9 @@ export function PageHeader({ title, description, actions, back }: { title: strin
   );
 }
 
-export function Card({ children, className = "", title, action, padded = true }: { children: React.ReactNode; className?: string; title?: string; action?: React.ReactNode; padded?: boolean }) {
+export function Card({ children, className = "", title, action, padded = true, id }: { children: React.ReactNode; className?: string; title?: string; action?: React.ReactNode; padded?: boolean; id?: string }) {
   return (
-    <section className={`rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(25,17,46,.025)] ${className}`}>
+    <section id={id} className={`rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(25,17,46,.025)] ${className}`}>
       {title && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4 md:px-6">
           <h2 className="font-display text-lg font-bold text-ink">{title}</h2>

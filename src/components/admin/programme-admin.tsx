@@ -2,12 +2,14 @@ import Link from "next/link";
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { deleteCourse, updateCourse } from "@/app/actions/admin";
 import { CourseForm } from "@/components/admin/course-form";
+import { CurriculumBuilder } from "@/components/admin/curriculum-builder";
 import { DeleteButton } from "@/components/forms";
 import { ExternalIcon, PlusIcon } from "@/components/icons";
 import { Badge, Card, ModeBadge, Notice, PageHeader, buttonClass } from "@/components/ui";
 import { getDb } from "@/db";
-import { cohorts, courseModules, courses, internshipApplications, lessons, type Course } from "@/db/schema";
+import { cohorts, courses, internshipApplications, type Course } from "@/db/schema";
 import { aiAvailable } from "@/lib/ai";
+import { curriculumFor } from "@/lib/curriculum";
 import { linkedCourseIds, seatsTaken } from "@/lib/data";
 import { formatDateOnly } from "@/lib/time";
 
@@ -21,16 +23,15 @@ export async function ProgrammeAdmin({ course, created }: { course: Course; crea
   const kind = course.kind;
   const w = WORDS[kind];
   const db = await getDb();
-  const [list, modules, ai, linked, courseOptions, applicationCount] = await Promise.all([
+  const [list, curriculum, ai, linked, courseOptions, applicationCount] = await Promise.all([
     db.select().from(cohorts).where(eq(cohorts.courseId, course.id)).orderBy(asc(cohorts.startDate)),
-    db.select({ module: courseModules, lessonId: lessons.id }).from(courseModules).leftJoin(lessons, eq(lessons.moduleId, courseModules.id)).where(eq(courseModules.courseId, course.id)).orderBy(asc(courseModules.position), asc(courseModules.id)),
+    curriculumFor(course.id),
     aiAvailable("writing"),
     kind === "internship" ? linkedCourseIds(course.id) : Promise.resolve([] as number[]),
     kind === "internship" ? db.select({ id: courses.id, title: courses.title }).from(courses).where(eq(courses.kind, "course")).orderBy(asc(courses.sortOrder), asc(courses.title)) : Promise.resolve([]),
     kind === "internship" ? db.select({ n: count() }).from(internshipApplications).where(and(eq(internshipApplications.skillArea, course.title), inArray(internshipApplications.status, ["new", "shortlisted"]))).then((r) => r[0]?.n ?? 0) : Promise.resolve(0),
   ]);
   const taken = await seatsTaken(list.map((c) => c.id));
-  const moduleList = [...new Map(modules.map((row) => [row.module.id, { ...row.module, lessons: modules.filter((x) => x.module.id === row.module.id && x.lessonId).length }])).values()];
   const linkedTitles = courseOptions.filter((c) => linked.includes(c.id)).map((c) => c.title);
 
   return (
@@ -79,20 +80,11 @@ export async function ProgrammeAdmin({ course, created }: { course: Course; crea
           </ul>
         ) : <p className="p-6 text-muted">No {w.run}s yet. <Link href={`/admin/cohorts/new?course=${course.id}`} className="font-semibold text-accent">Add the first one</Link>.</p>}
       </Card>
-      <Card title="Learning modules" padded={false} action={<Link href={`/admin/modules/new?course=${course.id}`} className={buttonClass.secondary}><PlusIcon className="size-4" /> Add module</Link>}>
-        {moduleList.length ? (
-          <ul className="flex flex-col divide-y divide-line">
-            {moduleList.map((module) => (
-              <li key={module.id}>
-                <Link href={`/admin/modules/${module.id}`} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-panel md:px-6">
-                  <span className="flex min-w-0 flex-col gap-0.5"><span className="font-semibold text-ink">{module.title}</span><span className="truncate text-sm text-muted">{module.summary || "No summary yet"}</span></span>
-                  <span className="flex shrink-0 items-center gap-2"><Badge>{module.lessons} lesson{module.lessons === 1 ? "" : "s"}</Badge>{module.published ? <Badge tone="green">Published</Badge> : <Badge>Draft</Badge>}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : <p className="p-6 text-muted">No learning modules yet. <Link href={`/admin/modules/new?course=${course.id}`} className="font-semibold text-accent">Create the first module</Link>.</p>}
-      </Card>
+      <div id="curriculum" className="scroll-mt-24">
+        <Card title="Curriculum" action={<span className="hidden text-sm text-muted sm:block">Shared by every {w.run} of this {kind === "internship" ? "programme" : "course"}</span>}>
+          <CurriculumBuilder courseId={course.id} modules={curriculum} lessonHref="/admin/lessons/{id}" canDelete />
+        </Card>
+      </div>
       <Card title={w.details}><CourseForm action={updateCourse.bind(null, course.id)} course={course} ai={ai} kind={kind} linkable={courseOptions} linked={linked} /></Card>
       <div className="flex justify-end"><DeleteButton action={deleteCourse.bind(null, course.id)} label={w.remove} /></div>
     </>
