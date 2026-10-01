@@ -5,16 +5,19 @@ export type CurrencyInfo = {
   gateway: "stripe" | "paystack" | "transactpay";
 };
 
-/** Stripe takes the international currencies; Paystack the larger African ones; the rest only through TransactPay. */
+/**
+ * Stripe takes the international currencies and Paystack naira (a Paystack account only takes its own
+ * country's currency, and the academy's is Nigerian). The rest can only be paid through TransactPay.
+ */
 export const CURRENCIES: CurrencyInfo[] = [
   { code: "GBP", name: "British pound", gateway: "stripe" },
   { code: "USD", name: "US dollar", gateway: "stripe" },
   { code: "EUR", name: "Euro", gateway: "stripe" },
   { code: "CAD", name: "Canadian dollar", gateway: "stripe" },
   { code: "NGN", name: "Nigerian naira", gateway: "paystack" },
-  { code: "GHS", name: "Ghanaian cedi", gateway: "paystack" },
-  { code: "KES", name: "Kenyan shilling", gateway: "paystack" },
-  { code: "ZAR", name: "South African rand", gateway: "paystack" },
+  { code: "GHS", name: "Ghanaian cedi", gateway: "transactpay" },
+  { code: "KES", name: "Kenyan shilling", gateway: "transactpay" },
+  { code: "ZAR", name: "South African rand", gateway: "transactpay" },
   { code: "UGX", name: "Ugandan shilling", gateway: "transactpay" },
   { code: "TZS", name: "Tanzanian shilling", gateway: "transactpay" },
   { code: "RWF", name: "Rwandan franc", gateway: "transactpay" },

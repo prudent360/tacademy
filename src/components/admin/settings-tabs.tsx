@@ -158,7 +158,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
           { name: "Stripe", logo: <Logo text="S" color="#635BFF" />, badge: gatewayBadge(stripe, true), text: "GBP · USD · EUR · CAD" },
-          { name: "Paystack", logo: <Logo text="P" color="#0BA4DB" />, badge: gatewayBadge(paystack, true), text: "NGN · GHS · KES · ZAR" },
+          { name: "Paystack", logo: <Logo text="P" color="#0BA4DB" />, badge: gatewayBadge(paystack, true), text: "NGN" },
           { name: "TransactPay", logo: <Logo text="T" color="#1F4ED8" />, badge: transactpayBadge(true), text: transactpay.currencies?.length ? `First for ${transactpay.currencies.join(" · ")}` : "African currencies, detected" },
           { name: "Bank transfer", logo: <span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>, badge: bank.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : <Badge>Off</Badge>, text: bank.enabled ? `${bank.currency}, confirmed by admins` : "Manual confirmation" },
         ].map((g) => (
@@ -193,7 +193,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
         <CopyField label="Webhook endpoint" value={absoluteUrl("/api/webhooks/stripe")} />
       </Section>
 
-      <Section title="Paystack" description="Card, bank transfer and USSD for NGN, GHS, KES and ZAR." icon={<Logo text="P" color="#0BA4DB" />} badge={gatewayBadge(paystack)}
+      <Section title="Paystack" description="Card, bank transfer and USSD for NGN. A Paystack account only takes its own country’s currency, so other African currencies go through TransactPay." icon={<Logo text="P" color="#0BA4DB" />} badge={gatewayBadge(paystack)}
         footer={<>Find your keys in the <a href="https://dashboard.paystack.com/#/settings/developers" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">Paystack Dashboard → Settings → API Keys & Webhooks</a>, and paste the webhook URL there.</>}>
         <Switch label="Accept payments with Paystack" name="paystackEnabled" defaultChecked={paystack.enabled} hint="When off, Paystack currencies aren't offered at checkout." />
         {envNote(paystack, "PAYSTACK_SECRET_KEY")}
