@@ -11,7 +11,7 @@ import { studentId } from "@/lib/utils";
 import { xpForUser } from "@/lib/xp";
 import { count, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { internshipApplications } from "@/db/schema";
+import { instructorApplications, internshipApplications } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const [settings, unread, toGrade, recent] = await Promise.all([getSettings(), unreadCount(user.id), toGradeCount(user), latestNotifications(user.id)]);
   const xp = user.role === "student" ? await xpForUser(user.id, 0) : null;
   const newApplications = user.role === "admin" ? (await (await getDb()).select({ n: count() }).from(internshipApplications).where(eq(internshipApplications.status, "new")))[0]?.n ?? 0 : 0;
+  const newInstructorApplications = user.role === "admin" ? (await (await getDb()).select({ n: count() }).from(instructorApplications).where(eq(instructorApplications.status, "new")))[0]?.n ?? 0 : 0;
 
   return (
     <PortalShell
@@ -32,6 +33,7 @@ export default async function PortalLayout({ children }: { children: React.React
       unread={unread}
       toGrade={toGrade}
       newApplications={newApplications}
+      newInstructorApplications={newInstructorApplications}
       studentId={user.role === "student" ? studentId(user) : undefined}
       xp={xp ? { level: xp.level, total: xp.total, percent: xp.percent, toNext: xp.next - xp.total } : undefined}
       notifications={recent.map((n) => ({ id: n.id, title: n.title, body: n.body, href: n.href, read: Boolean(n.readAt), when: relativeTime(n.createdAt) }))}

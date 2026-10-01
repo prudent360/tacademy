@@ -307,6 +307,48 @@ You're very welcome to apply again for a future intake, and our courses are a gr
 
 The {{siteName}} team`,
   },
+  instructor_application_received: {
+    name: "Instructor application received",
+    description: "Sent to someone straight after they apply to become an instructor.",
+    variables: { expertise: "Data analysis" },
+    subject: "We've received your application to teach",
+    body: `Hi {{name}},
+
+Thanks for applying to teach **{{expertise}}** at {{siteName}}. We've received your application and our team will review it shortly.
+
+If your experience is a good fit, we'll be in touch to arrange a short call, usually within a week. If anything changes in the meantime, just reply to this email.
+
+The {{siteName}} team`,
+  },
+  instructor_application_accepted: {
+    name: "Instructor application accepted",
+    description: "Sent when an admin accepts an instructor application. Includes the link to set a password or sign in.",
+    variables: { accountUrl: "https://example.com/reset-password?token=sample", buttonLabel: "Set up my instructor account" },
+    subject: "Welcome to the {{siteName}} teaching team",
+    body: `Hi {{name}},
+
+Great news: we'd love you to teach with **{{siteName}}**. Your instructor account is ready.
+
+[[{{buttonLabel}}|{{accountUrl}}]]
+
+Once you're in, you'll find your cohorts, the curriculum builder, grading and attendance in one place. We'll be in touch about your first cohort and the next steps.
+
+Welcome aboard,
+The {{siteName}} team`,
+  },
+  instructor_application_rejected: {
+    name: "Instructor application not successful",
+    description: "Sent when an admin decides not to take an instructor application forward.",
+    variables: { expertise: "Data analysis" },
+    subject: "Your application to teach with {{siteName}}",
+    body: `Hi {{name}},
+
+Thank you for applying to teach **{{expertise}}** with {{siteName}}, and for the time you took to tell us about your experience.
+
+We're not able to take your application forward at the moment. Our needs change as new courses and cohorts open, so you're very welcome to apply again in future.
+
+The {{siteName}} team`,
+  },
 } satisfies Record<string, TemplateDef>;
 
 export type TemplateKey = keyof typeof EMAIL_TEMPLATES;

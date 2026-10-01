@@ -20,6 +20,7 @@ export function SiteFooter({ settings }: { settings: Settings }) {
         </div>
         <div className="flex flex-col gap-3">
           <p className="font-display text-base font-bold text-ink">Company</p>
+          <Link href="/teach-with-us" className="text-[15px] text-muted hover:text-accent">Become an instructor</Link>
           <Link href="/contact" className="text-[15px] text-muted hover:text-accent">Contact us</Link>
           <Link href="/privacy" className="text-[15px] text-muted hover:text-accent">Privacy policy</Link>
           <Link href="/terms" className="text-[15px] text-muted hover:text-accent">Terms of use</Link>

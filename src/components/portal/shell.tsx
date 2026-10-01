@@ -19,7 +19,7 @@ const SETTINGS_TABS: [string, string][] = [
   ["reminders", "Reminders"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
 ];
 
-function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number }): NavGroup[] {
+function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number }): NavGroup[] {
   const learning: NavGroup = {
     label: "Learning",
     items: [
@@ -62,7 +62,12 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
   const peopleAndSales: NavGroup = {
     label: "People & sales",
     items: [
-      { href: "/admin/users", label: "People", icon: UsersIcon },
+      {
+        href: "/admin/users", label: "People", icon: UsersIcon, children: [
+          { href: "/admin/users", label: "Everyone", icon: UsersIcon },
+          { href: "/admin/instructor-applications", label: "Instructor applications", icon: ClipboardIcon, badge: counts.newInstructorApplications },
+        ],
+      },
       {
         href: "/admin/payments", label: "Payments", icon: CardIcon, children: [
           { href: "/admin/payments", label: "All payments", icon: CardIcon },
@@ -268,7 +273,7 @@ function StudentIdPill({ id }: { id: string }) {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, newInstructorApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null };
@@ -278,6 +283,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   toGrade: number;
   /** Admins: internship applications waiting for review. */
   newApplications?: number;
+  newInstructorApplications?: number;
   notifications: ShellNotification[];
   /** Shown instead of the date for students. */
   studentId?: string;
@@ -289,7 +295,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   const pathname = usePathname();
   const tab = useSearchParams().get("tab");
   const [drawer, setDrawer] = useState(false);
-  const groups = navFor(role, { unread, toGrade, newApplications });
+  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications });
   // Which groups and dropdowns are open is remembered in this browser; until changed, groups start open and
   // dropdowns open when they hold the current page.
   const storedNav = useSyncExternalStore(subscribeStorage, readNavState, () => null);

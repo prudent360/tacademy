@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CalendarIcon, MailIcon, MessageIcon, PinIcon } from "@/components/icons";
+import { HeroHighlight, PageHero, heroButton } from "@/components/site/page-hero";
 import { getSettings } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Contact Us", description: "Contact the academy about courses, enrolment, payments or student support." };
@@ -15,13 +16,13 @@ export default async function ContactPage() {
   ];
   return (
     <>
-      <section className="border-b border-line bg-[linear-gradient(145deg,#f7f6fb,#fff_55%,#eefaff)]">
-        <div className="mx-auto max-w-[1120px] px-5 py-16 text-center sm:px-8 md:py-24">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[1.5px] text-accent">Contact us</p>
-          <h1 className="mx-auto mt-4 max-w-[760px] font-display text-4xl font-extrabold tracking-[-1.5px] text-ink sm:text-5xl md:text-[58px]">How can we help?</h1>
-          <p className="mx-auto mt-5 max-w-[660px] text-lg leading-8 text-muted">Tell us what you need and we’ll point you in the right direction. We aim to reply within two working days.</p>
-        </div>
-      </section>
+      <PageHero
+        center
+        eyebrow="Contact us"
+        title={<>How can we <HeroHighlight>help?</HeroHighlight></>}
+        lead="Tell us what you need and we’ll point you in the right direction. We aim to reply within two working days."
+        actions={<a href={`mailto:${email}`} className={heroButton.primary}>Email {email}</a>}
+      />
       <section className="mx-auto max-w-[1120px] px-5 py-14 sm:px-8 md:py-20">
         <div className="grid gap-5 md:grid-cols-3">
           {topics.map(({ icon: Icon, title, text, subject }) => (

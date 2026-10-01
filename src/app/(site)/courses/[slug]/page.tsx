@@ -5,6 +5,7 @@ import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ChevronRight,
 import { Markdown } from "@/components/markdown";
 import { CourseArt } from "@/components/site/course-art";
 import { CurriculumRequest } from "@/components/site/curriculum-request";
+import { HeroVisual, PageHero, heroButton } from "@/components/site/page-hero";
 import { Avatar, Badge, ModeBadge, Notice } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
@@ -46,9 +47,8 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const deliveryModes = [...new Set(cohorts.map((cohort) => cohort.deliveryMode))].map((mode) => mode === "virtual" ? "Online" : mode === "physical" ? "In person" : "Hybrid").join(" or ");
   const phoneCountry = visitor.country ?? PHONE_COUNTRY[preferredCurrency ?? settings.currencies[0] ?? ""];
   const photo = course.heroImageUrl;
-  const secondaryButton = photo
-    ? "inline-flex h-12 cursor-pointer items-center rounded-[5px] border border-white/40 bg-white/10 px-6 font-semibold text-white backdrop-blur transition hover:bg-white/20"
-    : "inline-flex h-12 cursor-pointer items-center rounded-[5px] border border-edge-strong bg-white px-6 font-semibold text-ink transition hover:border-accent-muted hover:bg-panel";
+  const open = cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full);
+  const nextStart = cohorts.filter((cohort) => cohort.enrollmentOpen && cohort.startDate).map((cohort) => cohort.startDate!).sort()[0];
   const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
 
   const structuredData = {
@@ -70,44 +70,42 @@ export default async function CoursePage({ params, searchParams }: Props) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
-      <section data-under-header={photo ? "" : undefined} className={photo ? "relative overflow-hidden bg-navy" : "border-b border-line bg-white"}>
-        {photo && (
-          <div aria-hidden="true" className="absolute inset-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo} alt="" fetchPriority="high" className="size-full object-cover object-center" />
-            {/* Dark behind the text on the left, fading into brand purple at the bottom. */}
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,19,64,.92)_0%,rgba(24,19,64,.78)_45%,rgba(24,19,64,.35)_100%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(61,47,184,.75)_100%)]" />
-          </div>
+      <PageHero
+        photo={photo}
+        breadcrumb={<nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5"><Link href={course.kind === "internship" ? "/internships" : "/courses"} className="font-semibold text-white/80 transition hover:text-white">{course.kind === "internship" ? "Internships" : "Courses"}</Link><ChevronRight className="size-4 shrink-0 text-white/40" /><span aria-current="page" className="truncate">{course.title}</span></nav>}
+        eyebrow={course.category || (course.kind === "internship" ? "Internship" : "Course")}
+        title={course.title}
+        lead={course.summary}
+        actions={<>
+          {open ? <Link href={`/enroll?course=${course.slug}`} className={heroButton.primary}>Enrol now <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></Link> : <a href="#cohorts" className={heroButton.primary}>See dates <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></a>}
+          {course.curriculumUrl ? <CurriculumRequest courseId={course.id} courseTitle={course.title} defaultCountry={phoneCountry} className={`${heroButton.secondary} cursor-pointer`} /> : curriculum.length > 0 && <a href="#curriculum" className={heroButton.secondary}>View curriculum</a>}
+        </>}
+        facts={[
+          { icon: ClockIcon, label: "Duration", value: course.durationWeeks ? `${course.durationWeeks} weeks` : "Flexible" },
+          { icon: MonitorIcon, label: "Learning mode", value: deliveryModes || "Live classes" },
+          { icon: LayersIcon, label: "Level", value: course.level },
+          { icon: AwardIcon, label: "Credential", value: course.certificateEnabled ? "Verified certificate" : "Practical outcomes" },
+        ]}
+        aside={photo ? undefined : (
+          <HeroVisual notes={[
+            ...(nextStart ? [{ icon: CalendarIcon, title: `Starts ${formatDateOnly(nextStart)}`, text: open ? "Registration open" : undefined }] : []),
+            ...(course.certificateEnabled ? [{ icon: AwardIcon, title: "Verified certificate", text: "With a QR verification link" }] : []),
+          ]}>
+            {course.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={course.imageUrl} alt="" className="aspect-[16/10] w-full object-cover" />
+            ) : (
+              <CourseArt seed={course.id} className="aspect-[16/10] w-full" />
+            )}
+          </HeroVisual>
         )}
-        <div className={`relative mx-auto grid max-w-[1200px] items-center gap-10 px-5 sm:px-8 ${photo ? "py-16 md:py-24" : "py-12 md:py-16 lg:grid-cols-[1.3fr_1fr]"}`}>
-          <div className={`flex flex-col gap-5 ${photo ? "max-w-[720px]" : ""}`}>
-            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm"><Link href={course.kind === "internship" ? "/internships" : "/courses"} className={`font-semibold transition ${photo ? "text-white/75 hover:text-white" : "text-muted hover:text-accent"}`}>{course.kind === "internship" ? "Internships" : "Courses"}</Link><ChevronRight className={`size-4 shrink-0 ${photo ? "text-white/50" : "text-muted/60"}`} /><span aria-current="page" className={`truncate ${photo ? "text-white/75" : "text-muted"}`}>{course.title}</span></nav>
-            <div className="flex flex-wrap items-center gap-2">{cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full) && <Badge tone="green">Registration open</Badge>}{course.category && <p className={`font-mono text-xs font-medium uppercase tracking-[1.5px] md:text-[13px] ${photo ? "text-cyan-light" : "text-accent"}`}>{course.category}</p>}</div>
-            <h1 className={`font-display text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl ${photo ? "text-white [text-shadow:0_2px_24px_rgba(0,0,0,.35)] lg:text-[58px]" : "text-ink"}`}>{course.title}</h1>
-            <p className={`max-w-[620px] text-lg leading-relaxed ${photo ? "text-white/80" : "text-muted"}`}>{course.summary}</p>
-            <div className={`flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium ${photo ? "text-white/90" : "text-body"}`}><span className="flex items-center gap-2"><LayersIcon className={`size-4 ${photo ? "text-cyan-light" : "text-accent"}`} />{course.level}</span><span className="flex items-center gap-2"><CalendarIcon className={`size-4 ${photo ? "text-cyan-light" : "text-accent"}`} />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span></div>
-            {startingPrice && <div><p className={`text-xs font-semibold uppercase tracking-[1.2px] ${photo ? "text-white/60" : "text-muted"}`}>{startingPrice === "Free" ? "Course fee" : "From"}</p><p className={`mt-1 font-display text-3xl font-bold tracking-tight ${photo ? "text-emerald-400" : "text-ink"}`}>{startingPrice}</p></div>}
-            <div className="flex flex-wrap gap-3">{cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full) ? <Link href={`/enroll?course=${course.slug}`} className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(79,63,215,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Enrol now <ArrowRight className="size-4" /></Link> : <a href="#cohorts" className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(79,63,215,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">See dates <ArrowRight className="size-4" /></a>}{course.curriculumUrl ? <CurriculumRequest courseId={course.id} courseTitle={course.title} defaultCountry={phoneCountry} className={secondaryButton} /> : course.curriculum.length > 0 && <a href="#curriculum" className={secondaryButton}>View curriculum</a>}</div>
-          </div>
-          {!photo && (
-            <div className="overflow-hidden rounded-[5px] border border-edge shadow-[0_24px_60px_-38px_rgba(24,19,64,.4)]">
-              {course.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={course.imageUrl} alt="" className="aspect-[16/10] w-full object-cover" />
-              ) : (
-                <CourseArt seed={course.id} className="aspect-[16/10] w-full" />
-              )}
-            </div>
-          )}
+      >
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/80">
+          {open && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-300/25"><span className="size-1.5 rounded-full bg-emerald-300" />Registration open</span>}
+          {startingPrice && <span><span className="text-white/55">{startingPrice === "Free" ? "Course fee" : "From"} </span><strong className="font-display text-2xl font-bold text-white">{startingPrice}</strong></span>}
+          <span className="flex items-center gap-1.5"><CalendarIcon className="size-4 text-cyan-light" />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span>
         </div>
-        <div className="relative mx-auto grid max-w-[1200px] grid-cols-2 border-x border-t border-edge bg-white sm:grid-cols-4">
-          <div className="flex items-center gap-3 border-b border-r border-edge px-4 py-4 sm:border-b-0 md:px-6"><ClockIcon className="size-5 shrink-0 text-accent" /><span><span className="block text-xs text-muted">Duration</span><span className="font-semibold text-ink">{course.durationWeeks ? `${course.durationWeeks} weeks` : "Flexible"}</span></span></div>
-          <div className="flex items-center gap-3 border-b border-edge px-4 py-4 sm:border-b-0 sm:border-r md:px-6"><MonitorIcon className="size-5 shrink-0 text-accent" /><span><span className="block text-xs text-muted">Learning mode</span><span className="font-semibold text-ink">{deliveryModes || "Live classes"}</span></span></div>
-          <div className="flex items-center gap-3 border-r border-edge px-4 py-4 md:px-6"><CardIcon className="size-5 shrink-0 text-accent" /><span><span className="block text-xs text-muted">Payment</span><span className="font-semibold text-ink">{cohorts.some((cohort) => cohort.depositPercent) ? "Deposit available" : "Secure checkout"}</span></span></div>
-          <div className="flex items-center gap-3 px-4 py-4 md:px-6"><AwardIcon className="size-5 shrink-0 text-accent" /><span><span className="block text-xs text-muted">Credential</span><span className="font-semibold text-ink">{course.certificateEnabled ? "Verified certificate" : "Practical outcomes"}</span></span></div>
-        </div>
-      </section>
+      </PageHero>
 
       <nav aria-label="Course sections" className="sticky top-[68px] z-20 border-y border-edge bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-[1200px] gap-1 overflow-x-auto px-5 sm:px-8">{courseNav.map((item) => <a key={item.href} href={item.href} className="shrink-0 border-b-2 border-transparent px-3 py-3.5 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent">{item.label}</a>)}</div></nav>
 

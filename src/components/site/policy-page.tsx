@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Settings } from "@/db/schema";
 import { ArrowRight, MailIcon } from "@/components/icons";
+import { PageHero } from "./page-hero";
 
 export type PolicySection = {
   id: string;
@@ -27,16 +28,11 @@ export function PolicyPage({
   const readMinutes = Math.max(3, Math.ceil(sections.length * 0.6));
   return (
     <>
-      <section className="border-b border-line bg-[linear-gradient(145deg,#f7f6fb,#fff_55%,#eefaff)]">
-        <div className="mx-auto max-w-[1120px] px-5 py-14 sm:px-8 md:py-20">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[1.5px] text-accent">{eyebrow}</p>
-          <h1 className="mt-4 max-w-[820px] font-display text-4xl font-extrabold tracking-[-1.5px] text-ink sm:text-5xl md:text-[58px] md:leading-[1.05]">{title}</h1>
-          <p className="mt-5 max-w-[760px] text-lg leading-8 text-muted">{summary}</p>
-          <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-            <span>Last updated: {updated}</span><span aria-hidden="true">·</span><span>About {readMinutes} min read</span><span aria-hidden="true">·</span><span>{sections.length} sections</span>
-          </div>
+      <PageHero eyebrow={eyebrow} title={title} lead={summary}>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/60">
+          <span>Last updated: {updated}</span><span aria-hidden="true">·</span><span>About {readMinutes} min read</span><span aria-hidden="true">·</span><span>{sections.length} sections</span>
         </div>
-      </section>
+      </PageHero>
 
       <div className="mx-auto grid max-w-[1120px] gap-12 px-5 py-14 sm:px-8 md:py-20 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="lg:sticky lg:top-36 lg:self-start">

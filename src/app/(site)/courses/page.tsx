@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { BookIcon } from "@/components/icons";
+import { AwardIcon, BookIcon, CalendarIcon, MonitorIcon } from "@/components/icons";
+import { HeroHighlight, PageHero } from "@/components/site/page-hero";
+import { formatDateOnly } from "@/lib/time";
 import { CourseCard } from "@/components/site/course-card";
 import { EmptyState } from "@/components/ui";
 import { withCohorts } from "@/lib/catalog";
@@ -37,16 +39,25 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     const q = params.toString();
     return q ? `/courses?${q}` : "/courses";
   };
+  const nextStart = all.flatMap((c) => c.cohorts.filter((co) => co.enrollmentOpen && co.startDate).map((co) => co.startDate!)).sort()[0];
   const pill = (active: boolean) => `flex h-10 items-center rounded-full border px-4 text-sm font-semibold ${active ? "border-accent bg-accent text-white" : "border-edge-strong bg-white text-body hover:border-accent hover:text-accent"}`;
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-5 py-14 sm:px-8 md:py-20">
-      <div className="flex flex-col gap-3">
-        <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-accent md:text-[13px]">Courses</p>
-        <h1 className="font-display text-4xl font-bold tracking-tight text-ink md:text-5xl">Find your next course</h1>
-        <p className="max-w-[620px] text-lg text-muted">Every course runs in cohorts with a set timetable, taught live online, in person, or a mix of both.</p>
-        {query && <p className="text-sm font-semibold text-accent">Showing results for “{q.trim()}” · <Link href="/courses" className="underline underline-offset-4">Clear search</Link></p>}
-      </div>
+    <>
+    <PageHero
+      eyebrow="Courses"
+      title={<>Find your next <HeroHighlight>course</HeroHighlight></>}
+      lead="Every course runs in cohorts with a set timetable, taught live online, in person, or a mix of both."
+      facts={[
+        { icon: BookIcon, label: "Courses", value: `${all.length} to choose from` },
+        { icon: MonitorIcon, label: "Formats", value: "Online, in person, hybrid" },
+        { icon: CalendarIcon, label: "Next start", value: nextStart ? formatDateOnly(nextStart) : "New dates soon" },
+        { icon: AwardIcon, label: "On completion", value: "Verified certificate" },
+      ]}
+    >
+      {query && <p className="text-sm font-semibold text-cyan-light">Showing results for “{q.trim()}” · <Link href="/courses" className="underline underline-offset-4">Clear search</Link></p>}
+    </PageHero>
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-5 py-12 sm:px-8 md:py-16">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap gap-2" aria-label="Format">
           {FILTERS.map((f) => <Link key={f} href={href({ mode: f })} className={pill(mode === f)}>{f === "all" ? "All formats" : MODE_LABEL[f]}</Link>)}
@@ -66,5 +77,6 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         <EmptyState icon={BookIcon} title="No courses match">Try a different format or topic, or check back soon for new cohorts.</EmptyState>
       )}
     </div>
+    </>
   );
 }

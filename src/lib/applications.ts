@@ -14,3 +14,9 @@ export const MODE_LABELS: Record<StudyMode, string> = { remote: "Remote", in_per
 export const STATUS_LABELS: Record<ApplicationStatus, string> = { new: "New", shortlisted: "Shortlisted", accepted: "Accepted", rejected: "Not successful" };
 export const STATUS_TONE: Record<ApplicationStatus, "accent" | "cyan" | "green" | "neutral"> = { new: "accent", shortlisted: "cyan", accepted: "green", rejected: "neutral" };
 export const MOTIVATION_MAX = 500;
+
+/** Answer options for the "Become an instructor" form. */
+export const YEARS_EXPERIENCE = ["1–2 years", "3–5 years", "6–10 years", "10+ years"] as const;
+export const TEACHING_EXPERIENCE = ["I haven't taught before", "I've mentored or coached people", "I've run classes or workshops", "I teach or train professionally"] as const;
+export const AVAILABILITY = ["Weekday evenings", "Weekends", "Weekday daytime", "Flexible"] as const;
+export const TOPICS_MAX = 800;

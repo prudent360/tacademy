@@ -263,6 +263,39 @@ export const internshipApplications = pgTable("internship_applications", {
 
 export type InternshipApplication = typeof internshipApplications.$inferSelect;
 
+/** Applications from the public "Become an instructor" form. Accepting one creates (or upgrades) an instructor account. */
+export const instructorApplications = pgTable("instructor_applications", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  /** ISO 3166 alpha-2. */
+  country: text("country").notNull(),
+  city: text("city").notNull().default(""),
+  currentRole: text("current_role").notNull().default(""),
+  expertise: text("expertise").notNull().default(""),
+  yearsExperience: text("years_experience").notNull().default(""),
+  teachingExperience: text("teaching_experience").notNull().default(""),
+  mode: text("mode").$type<StudyMode>().notNull().default("either"),
+  availability: text("availability").notNull().default(""),
+  /** What they'd like to teach, and to whom. */
+  topics: text("topics").notNull().default(""),
+  linkedinUrl: text("linkedin_url"),
+  portfolioUrl: text("portfolio_url"),
+  cvUrl: text("cv_url"),
+  heardFrom: text("heard_from").notNull().default(""),
+  consentAt: timestamp("consent_at", { withTimezone: true }).notNull(),
+  status: text("status").$type<ApplicationStatus>().notNull().default("new"),
+  adminNotes: text("admin_notes").notNull().default(""),
+  /** The account created or upgraded when the application was accepted. */
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  decidedById: integer("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("instructor_applications_status_idx").on(t.status, t.createdAt), index("instructor_applications_email_idx").on(t.email)]);
+
+export type InstructorApplication = typeof instructorApplications.$inferSelect;
+
 /**
  * Courses linked to an internship programme: graduates of any of them join the internship's
  * "free for graduates" intakes without paying. With none linked, any course graduate qualifies.

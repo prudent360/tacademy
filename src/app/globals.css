@@ -273,3 +273,23 @@ body:has([data-no-footer]) .course-advisor { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .showcase-float, .showcase-bob, .showcase-fill, .showcase-ring, .showcase-rows > * { animation: none; opacity: 1; }
 }
+
+/* Inner-page heroes (components/site/page-hero.tsx): text rises in, the brand outline drifts, the eyebrow dot pulses. */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes hero-drift {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(2.5deg); }
+}
+@keyframes hero-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(49, 196, 240, .65); }
+  100% { box-shadow: 0 0 0 7px rgba(49, 196, 240, 0); }
+}
+.hero-rise { animation: hero-rise .75s cubic-bezier(.2, .7, .2, 1) both; }
+.hero-motif { animation: hero-drift 14s ease-in-out infinite; }
+.hero-dot { animation: hero-pulse 1.8s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise, .hero-motif, .hero-dot { animation: none; }
+}

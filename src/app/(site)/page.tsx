@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ProductShowcase } from "@/components/site/product-showcase";
 import { HowItWorks } from "@/components/site/how-it-works";
 import Image from "next/image";
-import { ArrowRight, BuildingIcon, CheckIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
+import { ArrowRight, AwardIcon, BuildingIcon, CheckIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon, VideoIcon } from "@/components/icons";
+import { MarkMotif } from "@/components/site/page-hero";
 import { CourseCard } from "@/components/site/course-card";
 import { ModeBadge } from "@/components/ui";
 import { isFree, withCohorts } from "@/lib/catalog";
@@ -89,12 +90,24 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
 
-      {/* Hero: centred text above a curved row of photos. */}
-      <section data-under-header className="relative overflow-hidden bg-white">
+      {/* Hero: centred text above a curved row of photos, on a soft lavender wash with the brand mark drifting at the edges. */}
+      <section data-under-header className="relative isolate overflow-hidden bg-white">
+        <div aria-hidden="true" className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_12%_0%,rgba(79,63,215,.16),transparent_62%),radial-gradient(820px_500px_at_92%_8%,rgba(49,196,240,.18),transparent_60%),linear-gradient(180deg,#f1efff_0%,#f8f7fd_52%,#ffffff_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(rgba(79,63,215,.18)_1px,transparent_1.2px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_55%_45%_at_50%_28%,#000_15%,transparent_75%)]" />
+          <MarkMotif tone="light" className="hero-motif absolute -left-28 top-24 size-[420px] max-lg:hidden" />
+          <MarkMotif tone="light" className="hero-motif absolute -right-24 -top-6 size-[360px] [animation-delay:-7s] max-md:hidden" />
+        </div>
+        {/* Small notes floating either side of the headline on wide screens. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 mx-auto hidden h-[560px] max-w-[1320px] xl:block">
+          <span className="showcase-bob absolute left-6 top-[430px] flex items-center gap-2.5 rounded-[5px] bg-white px-3.5 py-2.5 text-[13px] font-bold text-ink shadow-[0_18px_40px_-18px_rgba(24,19,64,.45)] ring-1 ring-edge"><span className="flex size-8 items-center justify-center rounded-[5px] bg-accent-soft text-accent"><VideoIcon className="size-4" /></span>Live classes, online or in person</span>
+          <span className="showcase-bob absolute right-6 top-[395px] flex items-center gap-2.5 rounded-[5px] bg-white px-3.5 py-2.5 text-[13px] font-bold text-ink shadow-[0_18px_40px_-18px_rgba(24,19,64,.45)] ring-1 ring-edge [animation-delay:1.2s]"><span className="flex size-8 items-center justify-center rounded-[5px] bg-cyan-soft text-cyan-ink"><AwardIcon className="size-4" /></span>Verified certificates</span>
+          <span className="showcase-bob absolute right-24 top-[495px] flex items-center gap-2.5 rounded-[5px] bg-white px-3.5 py-2.5 text-[13px] font-bold text-ink shadow-[0_18px_40px_-18px_rgba(24,19,64,.45)] ring-1 ring-edge [animation-delay:2.4s]"><span className="flex size-8 items-center justify-center rounded-[5px] bg-emerald-50 text-emerald-700"><CheckIcon className="size-4" /></span>Feedback on real projects</span>
+        </div>
         <div className="mx-auto flex max-w-[1200px] flex-col items-center px-5 pt-14 text-center sm:px-8 md:pt-20">
           {/* The live next start date when a cohort is open, otherwise the eyebrow text from Settings. */}
           {next ? (
-            <Link href={`/enroll?cohort=${next.cohort.id}`} className="group flex items-center gap-2.5 rounded-full border border-edge bg-panel py-1.5 pl-2 pr-3.5 text-sm font-medium text-body transition hover:border-accent-muted hover:bg-white">
+            <Link href={`/enroll?cohort=${next.cohort.id}`} className="hero-rise group flex items-center gap-2.5 rounded-full border border-edge bg-white/80 py-1.5 pl-2 pr-3.5 text-sm font-medium text-body transition hover:border-accent-muted hover:bg-white">
               <span className="relative flex size-6 items-center justify-center rounded-full bg-white shadow-sm" aria-hidden="true">
                 <span className="absolute size-2 animate-ping rounded-full bg-accent/40 motion-reduce:hidden" />
                 <span className="relative size-2 rounded-full bg-accent" />
@@ -103,20 +116,20 @@ export default async function HomePage() {
               <ArrowRight className="size-3.5 text-accent transition group-hover:translate-x-0.5" />
             </Link>
           ) : settings.heroEyebrow && (
-            <p className="flex items-center gap-2 rounded-full border border-edge bg-panel px-3.5 py-1.5 text-sm font-medium text-body">
+            <p className="hero-rise flex items-center gap-2 rounded-full border border-edge bg-white/80 px-3.5 py-1.5 text-sm font-medium text-body">
               <CheckIcon className="size-4 text-accent" /> {settings.heroEyebrow}
             </p>
           )}
-          <h1 className="mt-6 max-w-[920px] text-balance font-display text-[40px] font-extrabold leading-[1.05] tracking-[-1.5px] text-ink sm:text-[54px] lg:text-[68px] lg:tracking-[-2.5px]">
+          <h1 style={{ animationDelay: "100ms" }} className="hero-rise mt-6 max-w-[920px] text-balance font-display text-[40px] font-extrabold leading-[1.05] tracking-[-1.5px] text-ink sm:text-[54px] lg:text-[68px] lg:tracking-[-2.5px]">
             {/* Words wrapped in *asterisks* in Settings are highlighted. */}
-            {(settings.heroTitle || settings.siteName).split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <span key={i} className="text-accent">{part}</span> : part))}
+            {(settings.heroTitle || settings.siteName).split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <span key={i} className="bg-[linear-gradient(100deg,#4f3fd7_0%,#6e61e3_45%,#1fa9d6_100%)] bg-clip-text text-transparent">{part}</span> : part))}
           </h1>
-          {settings.heroSubtitle && <p className="mt-5 max-w-[620px] text-pretty text-lg leading-relaxed text-muted md:text-[19px]">{settings.heroSubtitle}</p>}
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          {settings.heroSubtitle && <p style={{ animationDelay: "180ms" }} className="hero-rise mt-5 max-w-[620px] text-pretty text-lg leading-relaxed text-muted md:text-[19px]">{settings.heroSubtitle}</p>}
+          <div style={{ animationDelay: "260ms" }} className="hero-rise mt-8 flex flex-wrap justify-center gap-3">
             <Link href="/courses" className="flex h-13 items-center gap-2 rounded-full bg-ink px-7 text-base font-semibold text-white shadow-[0_14px_30px_-14px_rgba(24,19,64,.8)] transition hover:-translate-y-0.5 hover:bg-accent">
               Browse courses <ArrowRight className="size-[18px]" />
             </Link>
-            <a href="#formats" className="flex h-13 items-center rounded-full border-[1.5px] border-ink/80 px-7 text-base font-semibold text-ink transition hover:border-accent hover:text-accent">How we teach</a>
+            <a href="#formats" className="flex h-13 items-center rounded-full border-[1.5px] border-ink/80 bg-white/70 px-7 text-base font-semibold text-ink transition hover:border-accent hover:text-accent">How we teach</a>
           </div>
         </div>
 
