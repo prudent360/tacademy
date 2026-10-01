@@ -119,14 +119,14 @@ export function PanelEmpty({ icon: IconComponent, children, action }: { icon: Ic
 }
 
 /** Minimal server-rendered bar chart. */
-export function BarChart({ data, format = (v) => String(v), tone = "purple", height = 180 }: { data: { label: string; value: number }[]; format?: (v: number) => string; tone?: "purple" | "cyan"; height?: number }) {
+export function BarChart({ data, format = (v) => String(v), tone = "purple", height = 180, highlightLast = true }: { data: { label: string; value: number }[]; format?: (v: number) => string; tone?: "purple" | "cyan"; height?: number; /** Fade every bar but the last (e.g. the current month). */ highlightLast?: boolean }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const color = tone === "purple" ? "bg-accent" : "bg-cyan";
   return (
     <div className="flex items-end gap-2 sm:gap-3" style={{ height }}>
       {data.map((d, i) => {
         const h = Math.max(d.value > 0 ? 4 : 2, Math.round((d.value / max) * (height - 44)));
-        const last = i === data.length - 1;
+        const last = !highlightLast || i === data.length - 1;
         return (
         <div key={d.label} className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
             <span className={`truncate text-[11px] font-semibold ${last ? "text-ink" : "text-muted"}`}>{d.value > 0 ? format(d.value) : ""}</span>

@@ -128,7 +128,7 @@ export default async function HomePage() {
               return (
                 <div
                   key={`${src}-${i}`}
-                  className={`hero-arc-tile relative aspect-[4/3] w-[68vw] max-w-[340px] shrink-0 overflow-hidden rounded-xl border border-white/80 bg-panel shadow-sm sm:w-[38vw] md:w-[24vw] ${Math.abs(offset) === 2 ? "hidden md:block" : ""}`}
+                  className={`hero-arc-tile relative aspect-[4/3] w-[68vw] max-w-[340px] shrink-0 overflow-hidden rounded-[5px] border border-white/80 bg-panel shadow-sm sm:w-[38vw] md:w-[24vw] ${Math.abs(offset) === 2 ? "hidden md:block" : ""}`}
                   style={{ "--arc": offset, "--depth": Math.abs(offset) } as React.CSSProperties}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -170,8 +170,8 @@ export default async function HomePage() {
           <SectionHeading eyebrow="How we teach" title="Online, in person, or both" subtitle="Every cohort has a clear timetable. Each class is either live online or in our training space, and you always know which." />
           <div className="grid gap-5 md:grid-cols-3">
             {FORMATS.map(({ icon: Icon, tone, title, text, points }) => (
-              <div key={title} className="group flex flex-col gap-4 rounded-[20px] border border-edge bg-panel p-6 transition hover:-translate-y-1 hover:border-accent-muted hover:bg-white hover:shadow-[0_18px_45px_-24px_rgba(24,19,64,.35)] md:p-7">
-                <span className={`flex size-12 items-center justify-center rounded-xl ${tone}`}><Icon className="size-6" /></span>
+              <div key={title} className="group flex flex-col gap-4 rounded-[5px] border border-edge bg-panel p-6 transition hover:-translate-y-1 hover:border-accent-muted hover:bg-white hover:shadow-[0_18px_45px_-24px_rgba(24,19,64,.35)] md:p-7">
+                <span className={`flex size-12 items-center justify-center rounded-[5px] ${tone}`}><Icon className="size-6" /></span>
                 <h3 className="font-display text-xl font-bold text-ink">{title}</h3>
                 <p className="text-[15px] leading-relaxed text-muted">{text}</p>
                 <ul className="mt-auto flex flex-col gap-2 border-t border-line pt-4">
@@ -209,7 +209,7 @@ export default async function HomePage() {
           <div className="mx-auto flex max-w-[1200px] flex-col gap-12 px-5 py-20 sm:px-8 md:py-24">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <SectionHeading align="left" eyebrow="Courses" title="Career-ready skills, taught by practitioners" />
-              <Link href="/courses" className="flex h-11 items-center gap-2 rounded-lg border border-edge-strong bg-white px-5 font-semibold text-ink hover:bg-page">All courses <ArrowRight className="size-4" /></Link>
+              <Link href="/courses" className="flex h-11 items-center gap-2 rounded-[5px] border border-edge-strong bg-white px-5 font-semibold text-ink hover:bg-page">All courses <ArrowRight className="size-4" /></Link>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {featured.map((course) => <CourseCard key={course.id} course={course} currencies={currencies} />)}
@@ -221,7 +221,7 @@ export default async function HomePage() {
       {/* Internship programme: a compact banner. */}
       <section aria-labelledby="internship-heading" className="border-t border-line bg-white">
         <div className="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 md:py-20">
-          <div className="relative flex flex-col gap-7 overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#211a5c_0%,#3d2fb8_100%)] px-7 py-9 text-white md:px-12 md:py-10 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative flex flex-col gap-7 overflow-hidden rounded-[5px] bg-[linear-gradient(120deg,#211a5c_0%,#3d2fb8_100%)] px-7 py-9 text-white md:px-12 md:py-10 lg:flex-row lg:items-center lg:justify-between">
             <div aria-hidden="true" className="absolute -right-20 -top-24 size-72 rounded-full bg-white/10 blur-2xl" />
             <div className="relative flex flex-col gap-3">
               <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-cyan-light">Internship programme</p>
@@ -234,8 +234,8 @@ export default async function HomePage() {
               </ul>
             </div>
             <div className="relative flex shrink-0 flex-wrap gap-3">
-              <Link href="/internships/apply" className="flex h-12 items-center gap-2 rounded-xl bg-white px-6 font-semibold text-accent transition hover:-translate-y-0.5 hover:bg-accent-soft">Apply now <ArrowRight className="size-4" /></Link>
-              <Link href="/internships" className="flex h-12 items-center rounded-xl border-[1.5px] border-white/40 px-6 font-semibold text-white transition hover:border-white hover:bg-white/10">See programmes</Link>
+              <Link href="/internships/apply" className="flex h-12 items-center gap-2 rounded-[5px] bg-white px-6 font-semibold text-accent transition hover:-translate-y-0.5 hover:bg-accent-soft">Apply now <ArrowRight className="size-4" /></Link>
+              <Link href="/internships" className="flex h-12 items-center rounded-[5px] border-[1.5px] border-white/40 px-6 font-semibold text-white transition hover:border-white hover:bg-white/10">See programmes</Link>
             </div>
           </div>
         </div>
@@ -262,7 +262,7 @@ export default async function HomePage() {
         <section className="border-t border-line">
           <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-5 py-20 sm:px-8 md:py-24">
             <SectionHeading align="left" eyebrow="Upcoming cohorts" title="Next start dates" />
-            <ul className="flex flex-col divide-y divide-edge overflow-hidden rounded-[14px] border border-edge bg-white">
+            <ul className="flex flex-col divide-y divide-edge overflow-hidden rounded-[5px] border border-edge bg-white">
               {upcoming.map(({ cohort, course }) => {
                 const left = cohort.capacity ? Math.max(0, cohort.capacity - (taken.get(cohort.id) ?? 0)) : null;
                 const priceCurrency = [...currencies, ...Object.keys(cohort.prices)].find((c) => (cohort.prices[c] ?? 0) > 0);
@@ -272,7 +272,7 @@ export default async function HomePage() {
                 return (
                   <li key={cohort.id}>
                     <Link href={`/courses/${course.slug}#cohort-${cohort.id}`} className="flex flex-wrap items-center gap-x-6 gap-y-3 p-5 hover:bg-panel md:flex-nowrap md:px-6">
-                      <div className="flex size-16 shrink-0 flex-col items-center justify-center rounded-xl bg-accent-soft text-accent">
+                      <div className="flex size-16 shrink-0 flex-col items-center justify-center rounded-[5px] bg-accent-soft text-accent">
                         <span className="font-display text-2xl font-bold leading-none">{cohort.startDate ? Number(d) : "–"}</span>
                         <span className="font-mono text-[11px] uppercase tracking-wider">{month}</span>
                       </div>
@@ -303,7 +303,7 @@ export default async function HomePage() {
             <SectionHeading eyebrow="Student stories" title="What our students say" />
             <div className="grid gap-5 md:grid-cols-3">
               {settings.testimonials.map((t) => (
-                <figure key={t.name} className="relative flex flex-col gap-5 overflow-hidden rounded-[20px] border border-edge bg-panel p-6 transition hover:-translate-y-1 hover:bg-white hover:shadow-[0_18px_45px_-24px_rgba(24,19,64,.3)] md:p-7">
+                <figure key={t.name} className="relative flex flex-col gap-5 overflow-hidden rounded-[5px] border border-edge bg-panel p-6 transition hover:-translate-y-1 hover:bg-white hover:shadow-[0_18px_45px_-24px_rgba(24,19,64,.3)] md:p-7">
                   <span aria-hidden="true" className="absolute right-5 top-1 font-display text-7xl font-bold leading-none text-accent/10">&ldquo;</span>
                   <div className="flex gap-1 text-accent" aria-label="5 out of 5 stars">{[0, 1, 2, 3, 4].map((i) => <span key={i} aria-hidden="true">★</span>)}</div>
                   <blockquote className="relative text-[16px] leading-relaxed text-body">&ldquo;{t.quote}&rdquo;</blockquote>
@@ -329,7 +329,7 @@ export default async function HomePage() {
               <SectionHeading align="left" eyebrow="FAQ" title="Questions, answered" />
               {settings.supportEmail && <p className="text-[15px] text-muted">Still unsure? Email <a href={`mailto:${settings.supportEmail}`} className="font-semibold text-accent hover:text-accent-dark">{settings.supportEmail}</a>.</p>}
             </div>
-            <div className="flex flex-col divide-y divide-edge rounded-[14px] border border-edge bg-white">
+            <div className="flex flex-col divide-y divide-edge rounded-[5px] border border-edge bg-white">
               {settings.faqs.map((f) => (
                 <details key={f.question} className="group px-5 md:px-6">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 font-display text-[17px] font-bold text-ink">

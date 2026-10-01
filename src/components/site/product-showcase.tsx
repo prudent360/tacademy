@@ -236,7 +236,7 @@ export function ProductShowcase() {
             const active = i === index;
             return (
               <li key={`${audience}-${view.title}`}>
-                <button type="button" onClick={() => setIndex(i)} aria-current={active ? "true" : undefined} className={`flex w-full cursor-pointer flex-col gap-1.5 rounded-[14px] border p-4 text-left transition sm:p-5 ${active ? "border-edge bg-white shadow-[0_20px_45px_-30px_rgba(24,19,64,.45)]" : "border-transparent hover:bg-panel"}`}>
+                <button type="button" onClick={() => setIndex(i)} aria-current={active ? "true" : undefined} className={`flex w-full cursor-pointer flex-col gap-1.5 rounded-[5px] border p-4 text-left transition sm:p-5 ${active ? "border-edge bg-white shadow-[0_20px_45px_-30px_rgba(24,19,64,.45)]" : "border-transparent hover:bg-panel"}`}>
                   <span className={`font-display text-lg font-bold ${active ? "text-accent" : "text-ink"}`}>{view.title}</span>
                   <span className={`text-[15px] leading-relaxed text-muted ${active ? "" : "line-clamp-1 lg:line-clamp-none"}`}>{view.text}</span>
                   {active && (
@@ -251,7 +251,7 @@ export function ProductShowcase() {
           })}
         </ol>
 
-        <div className="relative order-first flex items-center justify-center overflow-hidden rounded-[24px] border border-accent/10 bg-[linear-gradient(135deg,#f1efff_0%,#eefafe_100%)] px-4 py-10 sm:py-12 lg:order-none">
+        <div className="relative order-first flex items-center justify-center overflow-hidden rounded-[5px] border border-accent/10 bg-[linear-gradient(135deg,#f1efff_0%,#eefafe_100%)] px-4 py-10 sm:py-12 lg:order-none">
           <div aria-hidden="true" className="absolute left-1/2 top-1/2 size-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/60" />
           {/* Drawn at 520×400 and scaled down on narrow screens; the outer box reserves the scaled size. */}
           <div aria-hidden="true" className="relative h-[231px] w-[300px] sm:h-[400px] sm:w-[520px]">

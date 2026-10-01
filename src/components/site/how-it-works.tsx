@@ -91,7 +91,7 @@ export function HowItWorks({ steps }: { steps: Step[] }) {
           const active = i === index;
           return (
             <li key={step.title}>
-              <button type="button" onClick={() => setIndex(i)} aria-current={active ? "step" : undefined} className={`flex w-full cursor-pointer gap-4 rounded-[14px] border p-5 text-left transition ${active ? "border-edge bg-white shadow-[0_20px_45px_-30px_rgba(24,19,64,.45)]" : "border-transparent hover:bg-white/60"}`}>
+              <button type="button" onClick={() => setIndex(i)} aria-current={active ? "step" : undefined} className={`flex w-full cursor-pointer gap-4 rounded-[5px] border p-5 text-left transition ${active ? "border-edge bg-white shadow-[0_20px_45px_-30px_rgba(24,19,64,.45)]" : "border-transparent hover:bg-white/60"}`}>
                 <span className={`flex size-10 shrink-0 items-center justify-center rounded-full font-mono text-sm font-semibold transition ${active ? "bg-accent text-white" : "bg-accent-soft text-accent"}`}>0{i + 1}</span>
                 <span className="flex min-w-0 grow flex-col gap-1.5">
                   <span className="font-display text-lg font-bold text-ink">{step.title}</span>
@@ -109,7 +109,7 @@ export function HowItWorks({ steps }: { steps: Step[] }) {
         })}
       </ol>
 
-      <div className="relative order-first flex items-center justify-center overflow-hidden rounded-[24px] border border-accent/10 bg-[#f1efff] px-6 py-12 sm:py-16 lg:order-none">
+      <div className="relative order-first flex items-center justify-center overflow-hidden rounded-[5px] border border-accent/10 bg-[#f1efff] px-6 py-12 sm:py-16 lg:order-none">
         <div aria-hidden="true" className="absolute left-1/2 top-1/2 size-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70" />
         <div aria-hidden="true" className="absolute left-1/2 top-1/2 size-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent/15" />
         {/* Drawn at 420×320 and scaled down on narrow screens; the outer box reserves the scaled size. */}
