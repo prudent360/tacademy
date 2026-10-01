@@ -28,7 +28,7 @@ export function CohortForm({ action, cohort, instructors, assigned, currencies, 
       <Textarea label="Venue" name="venue" defaultValue={cohort?.venue} rows={2} hint="Required for in-person and hybrid cohorts; used as the default for in-person classes." />
       <fieldset className="flex flex-col gap-3 rounded-lg border border-edge bg-panel p-4">
         <legend className="px-1 text-sm font-semibold text-ink">Price</legend>
-        <p className="text-[13px] text-muted">Set a price in each currency you accept. Students choose the currency at checkout: GBP/USD/EUR/CAD are charged via Stripe, NGN/GHS/KES/ZAR via Paystack (or NGN via TransactPay when it’s switched on), and UGX/TZS/RWF/XOF/XAF by mobile money via pawaPay (use whole amounts for these). Leave every price empty to make the cohort free.</p>
+        <p className="text-[13px] text-muted">Set a price in each currency you accept. Students choose the currency at checkout: GBP/USD/EUR/CAD are charged via Stripe, NGN/GHS/KES/ZAR via Paystack, and any currency TransactPay takes goes through TransactPay first when it’s switched on. UGX/TZS/RWF/XOF/XAF can only be paid through TransactPay. Leave every price empty to make the cohort free.</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {shown.map((c) => (
             <Input key={c.code} label={c.code} name={`price-${c.code}`} inputMode="decimal" placeholder="0" defaultValue={toMajorInput(cohort?.prices[c.code])} hint={c.name} />

@@ -1,6 +1,6 @@
 # Tekskillup Academy
 
-An online academy for cohort-based courses that mix **live online** and **in-person** classes, with assignments, instructor feedback, branded emails, Stripe, Paystack and pawaPay (mobile money) payments, and automatic reminders.
+An online academy for cohort-based courses that mix **live online** and **in-person** classes, with assignments, instructor feedback, branded emails, Stripe, Paystack and TransactPay payments, and automatic reminders.
 
 Built with Next.js 16 (App Router), Tailwind CSS v4 and Drizzle ORM on Postgres (Neon in production, embedded PGlite locally). Designed to deploy on Vercel.
 
@@ -33,7 +33,7 @@ Each cohort has a price per currency. Students choose the country they live in w
 
 - **GBP, USD, EUR, CAD** → Stripe Checkout
 - **NGN, GHS, KES, ZAR** → Paystack
-- **UGX, TZS, RWF, XOF, XAF** → pawaPay mobile money. NGN, GHS and KES students can also choose **Mobile money** instead of Paystack. XOF and XAF students pick the country their wallet is in. Mobile money amounts are charged in whole units.
+- **TransactPay**, when switched on, goes first for every currency the account takes (detected automatically), with Paystack or Stripe as the backup. **UGX, TZS, RWF, XOF, XAF** can only be paid this way.
 
 The student's place is confirmed by the gateway's **webhook** (and double-checked when they return to the site), then they get an enrolment email and a receipt. Turn on **bank transfer** in Settings → Payments to let students pay by transfer: they get your account details and a reference, and you click **Confirm** under Payments when the money arrives. Cash and other offline payments can be recorded with **Payments → Record payment**. Switch any gateway off, or between test and live mode, in Settings → Payments. Leave every price empty to make a cohort free.
 
@@ -87,11 +87,11 @@ Long text fields (course descriptions, lesson content, assignment instructions, 
    - `ADMIN_EMAIL`, `ADMIN_PASSWORD` (10+ characters), `ADMIN_NAME`
    - `NEXT_PUBLIC_SITE_URL`: your domain, e.g. `https://academy.example.com`
    - `CRON_SECRET`: any long random string
-   - Payment and email keys can be entered later in **Admin → Settings → Payments / Email** (stored encrypted). The environment variables `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `PAYSTACK_SECRET_KEY`, `PAWAPAY_API_TOKEN`, `RESEND_API_KEY` and `EMAIL_FROM` still work as a fallback.
+   - Payment and email keys can be entered later in **Admin → Settings → Payments / Email** (stored encrypted). The environment variables `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `PAYSTACK_SECRET_KEY`, `TRANSACTPAY_SECRET_KEY`, `RESEND_API_KEY` and `EMAIL_FROM` still work as a fallback.
 4. **Webhooks:**
    - Stripe → Developers → Webhooks: endpoint `https://YOUR-DOMAIN/api/webhooks/stripe`, events `checkout.session.completed` and `checkout.session.async_payment_succeeded`. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
    - Paystack → Settings → API Keys & Webhooks: webhook URL `https://YOUR-DOMAIN/api/webhooks/paystack`.
-   - pawaPay → System configuration → Callback URLs: deposit callback `https://YOUR-DOMAIN/api/webhooks/pawapay`. The callback only triggers a status check against pawaPay's API, so signed callbacks are optional.
+   - TransactPay → Settings → API Keys & Webhooks: webhook URL `https://YOUR-DOMAIN/api/webhooks/transactpay`. The webhook only triggers a status check against TransactPay's API.
 5. Deploy. The build runs migrations and the seed (`vercel-build`), which creates your admin account. Sample courses are loaded only on the first deploy, and you can edit or delete them.
 6. Sign in, open **Settings** to set your branding, contact details, timezone and currencies, then invite instructors under **People**.
 

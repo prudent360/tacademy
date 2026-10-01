@@ -1,38 +1,26 @@
 export type CurrencyInfo = {
   code: string;
   name: string;
-  /** The gateway for "Pay online". */
-  gateway: "stripe" | "paystack" | "pawapay";
-  /** Countries (ISO 3166 alpha-3) where pawaPay takes mobile money in this currency. */
-  mobileMoney?: string[];
+  /** The gateway for "Pay online". TransactPay-only currencies can be paid only when the TransactPay account takes them. */
+  gateway: "stripe" | "paystack" | "transactpay";
 };
 
-/** Stripe takes cards; Paystack settles the larger African currencies; pawaPay takes mobile money. */
+/** Stripe takes the international currencies; Paystack the larger African ones; the rest only through TransactPay. */
 export const CURRENCIES: CurrencyInfo[] = [
   { code: "GBP", name: "British pound", gateway: "stripe" },
   { code: "USD", name: "US dollar", gateway: "stripe" },
   { code: "EUR", name: "Euro", gateway: "stripe" },
   { code: "CAD", name: "Canadian dollar", gateway: "stripe" },
-  { code: "NGN", name: "Nigerian naira", gateway: "paystack", mobileMoney: ["NGA"] },
-  { code: "GHS", name: "Ghanaian cedi", gateway: "paystack", mobileMoney: ["GHA"] },
-  { code: "KES", name: "Kenyan shilling", gateway: "paystack", mobileMoney: ["KEN"] },
+  { code: "NGN", name: "Nigerian naira", gateway: "paystack" },
+  { code: "GHS", name: "Ghanaian cedi", gateway: "paystack" },
+  { code: "KES", name: "Kenyan shilling", gateway: "paystack" },
   { code: "ZAR", name: "South African rand", gateway: "paystack" },
-  { code: "UGX", name: "Ugandan shilling", gateway: "pawapay", mobileMoney: ["UGA"] },
-  { code: "TZS", name: "Tanzanian shilling", gateway: "pawapay", mobileMoney: ["TZA"] },
-  { code: "RWF", name: "Rwandan franc", gateway: "pawapay", mobileMoney: ["RWA"] },
-  { code: "XOF", name: "West African CFA franc", gateway: "pawapay", mobileMoney: ["SEN", "CIV", "BEN", "BFA"] },
-  { code: "XAF", name: "Central African CFA franc", gateway: "pawapay", mobileMoney: ["CMR", "COG", "GAB"] },
+  { code: "UGX", name: "Ugandan shilling", gateway: "transactpay" },
+  { code: "TZS", name: "Tanzanian shilling", gateway: "transactpay" },
+  { code: "RWF", name: "Rwandan franc", gateway: "transactpay" },
+  { code: "XOF", name: "West African CFA franc", gateway: "transactpay" },
+  { code: "XAF", name: "Central African CFA franc", gateway: "transactpay" },
 ];
-
-export const MOBILE_MONEY_COUNTRIES: Record<string, string> = {
-  NGA: "Nigeria", GHA: "Ghana", KEN: "Kenya", UGA: "Uganda", TZA: "Tanzania", RWA: "Rwanda",
-  SEN: "Senegal", CIV: "Côte d'Ivoire", BEN: "Benin", BFA: "Burkina Faso", CMR: "Cameroon", COG: "Republic of the Congo", GAB: "Gabon",
-};
-
-/** Countries a currency can be paid from by mobile money; empty when pawaPay doesn't cover it. */
-export function mobileMoneyCountries(currency: string): string[] {
-  return currencyInfo(currency)?.mobileMoney ?? [];
-}
 
 export const CURRENCY_CODES = CURRENCIES.map((c) => c.code);
 

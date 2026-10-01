@@ -30,8 +30,7 @@ const detailsSchema = z.object({
   cohortId: z.coerce.number().int().positive("Choose a course and cohort."),
   currency: z.string().trim().max(3),
   plan: z.enum(["full", "deposit", "registration"]).catch("full"),
-  method: z.enum(["online", "mobile", "bank"]).catch("online"),
-  mobileCountry: z.string().trim().max(3).catch(""),
+  method: z.enum(["online", "bank"]).catch("online"),
   discountCode: z.string().trim().max(40).catch(""),
 });
 
@@ -101,7 +100,7 @@ export async function enrol(_state: EnrolState, formData: FormData): Promise<Enr
   const plan: EnrolPlan = availablePlans(cohort, details.currency).includes(details.plan) ? details.plan : "full";
   const result = details.method === "bank"
     ? await startBankTransfer(user, course, cohort, plan, details.discountCode)
-    : await startCheckout(user, course, cohort, details.currency, { plan, discountCode: details.discountCode, method: details.method === "mobile" ? "mobile" : "card", country: details.mobileCountry });
+    : await startCheckout(user, course, cohort, details.currency, { plan, discountCode: details.discountCode });
   if ("error" in result) return { error: result.error };
   await rememberCheckout(result.reference);
   redirect(result.url);

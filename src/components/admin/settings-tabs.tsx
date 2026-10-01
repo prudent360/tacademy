@@ -69,7 +69,16 @@ function ModePicker({ name, value }: { name: string; value: "test" | "live" }) {
 
 // ---------- General ----------
 
-export function GeneralTab({ s }: { s: Settings }) {
+export async function GeneralTab({ s }: { s: Settings }) {
+  const [stripe, paystack, transactpay, bank] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("transactpay"), bankTransferConfig()]);
+  // Only gateways that are switched on and have keys, so the labels match what students can actually use.
+  const ready = (cfg: ResolvedGateway) => cfg.enabled && Boolean(cfg.secretKey);
+  const takenBy = (code: string) => [
+    transactpay.enabled && transactpay.currencies?.includes(code) ? "TransactPay" : "",
+    CURRENCIES.find((c) => c.code === code)?.gateway === "stripe" && ready(stripe) ? "Stripe" : "",
+    CURRENCIES.find((c) => c.code === code)?.gateway === "paystack" && ready(paystack) ? "Paystack" : "",
+    bank.enabled && bank.currency === code ? "Bank transfer" : "",
+  ].filter(Boolean);
   return (
     <ActionForm action={saveGeneral} className="flex flex-col gap-6">
       <Section title="Academy details" description="Shown across the website, emails and receipts.">
@@ -93,7 +102,7 @@ export function GeneralTab({ s }: { s: Settings }) {
             {CURRENCIES.map((c) => (
               <label key={c.code} className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-edge-strong px-3.5 text-sm font-semibold has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent">
                 <input type="checkbox" name="currencies" value={c.code} defaultChecked={s.currencies.includes(c.code)} className="size-4 accent-accent" />
-                {c.code} <span className="font-normal text-muted">{[{ stripe: "Stripe", paystack: "Paystack", pawapay: "pawaPay" }[c.gateway], c.gateway !== "pawapay" && c.mobileMoney ? "pawaPay" : ""].filter(Boolean).join(" · ")}</span>
+                {c.code} {takenBy(c.code).length ? <span className="font-normal text-muted">{takenBy(c.code).join(" · ")}</span> : <span className="font-normal text-amber-700">No gateway on</span>}
               </label>
             ))}
           </div>
@@ -136,7 +145,7 @@ export function BrandingTab({ s }: { s: Settings }) {
 // ---------- Payments ----------
 
 export async function PaymentsTab({ s }: { s: Settings }) {
-  const [stripe, paystack, pawapay, transactpay, bank] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("pawapay"), gatewayConfig("transactpay"), bankTransferConfig()]);
+  const [stripe, paystack, transactpay, bank] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("transactpay"), bankTransferConfig()]);
   // TransactPay needs three keys; until all are there, naira stays with Paystack.
   const transactpayBadge = (compact = false) => transactpay.enabled && transactpay.secretKey && (!transactpay.publicKey || !transactpay.encryptionKey)
     ? <Badge tone="red"><AlertIcon className="size-3.5" /> {compact ? "Keys missing" : "Add the public and encryption keys"}</Badge>
@@ -151,7 +160,6 @@ export async function PaymentsTab({ s }: { s: Settings }) {
           { name: "Stripe", logo: <Logo text="S" color="#635BFF" />, badge: gatewayBadge(stripe, true), text: "GBP · USD · EUR · CAD" },
           { name: "Paystack", logo: <Logo text="P" color="#0BA4DB" />, badge: gatewayBadge(paystack, true), text: "NGN · GHS · KES · ZAR" },
           { name: "TransactPay", logo: <Logo text="T" color="#1F4ED8" />, badge: transactpayBadge(true), text: transactpay.currencies?.length ? `First for ${transactpay.currencies.join(" · ")}` : "African currencies, detected" },
-          { name: "pawaPay", logo: <Logo text="M" color="#12A150" />, badge: gatewayBadge(pawapay, true), text: "Mobile money · 8 currencies" },
           { name: "Bank transfer", logo: <span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>, badge: bank.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : <Badge>Off</Badge>, text: bank.enabled ? `${bank.currency}, confirmed by admins` : "Manual confirmation" },
         ].map((g) => (
           <div key={g.name} className="flex items-center gap-3 rounded-[14px] border border-edge bg-white p-4">
@@ -229,7 +237,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
           <p className="text-sm font-semibold text-ink">Currencies TransactPay takes ({transactpay.mode} mode)</p>
           <p className="text-sm text-body">
             {transactpay.currencies?.length
-              ? <>{transactpay.currencies.join(", ")}. These go through TransactPay first; everything else (and anything TransactPay can&apos;t start) uses Paystack, Stripe or pawaPay as usual. Checked {new Date(transactpay.checkedAt!).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: s.timezone })}.</>
+              ? <>{transactpay.currencies.join(", ")}. These go through TransactPay first; everything else (and anything TransactPay can&apos;t start) uses Paystack or Stripe as usual. Checked {new Date(transactpay.checkedAt!).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: s.timezone })}.</>
               : transactpay.secretKey && transactpay.publicKey && transactpay.encryptionKey
                 ? "Not checked yet. Save or check again to find out."
                 : "Save your keys and we'll ask TransactPay which currencies your account takes (NGN, GHS, KES, UGX…). There's no list to look up, so this starts a small test order in each currency; they're never paid."}
@@ -237,25 +245,6 @@ export async function PaymentsTab({ s }: { s: Settings }) {
           {transactpay.secretKey && transactpay.publicKey && transactpay.encryptionKey && <TransactpayCheckButton />}
         </div>
         <CopyField label="Webhook URL" value={absoluteUrl("/api/webhooks/transactpay")} />
-      </Section>
-
-      <Section title="pawaPay" description="Mobile money (MTN, Airtel, Orange, M-Pesa, Wave and more) in NGN, GHS, KES, UGX, TZS, RWF, XOF and XAF." icon={<Logo text="M" color="#12A150" />} badge={gatewayBadge(pawapay)}
-        footer={<>Create API tokens in the <a href="https://dashboard.pawapay.io" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">pawaPay Dashboard → System configuration → API tokens</a> (the sandbox has its own dashboard and token). Paste the callback URL under System configuration → Callback URLs, for deposits.</>}>
-        <Switch label="Accept mobile money with pawaPay" name="pawapayEnabled" defaultChecked={pawapay.enabled} hint="Offered as “Mobile money” at checkout. UGX, TZS, RWF, XOF and XAF can only be paid this way." />
-        {envNote(pawapay, "PAWAPAY_API_TOKEN")}
-        <ModePicker name="pawapayMode" value={pawapay.mode} />
-        {pawapay.mode === "live" && <Notice tone="amber"><strong>Live mode:</strong> real mobile money payments will be taken.</Notice>}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="flex flex-col gap-4 rounded-xl border border-edge p-4">
-            <p className="text-xs font-semibold uppercase tracking-[1px] text-muted">Sandbox</p>
-            <SecretInput label="API token" name="pawapayTestSecretKey" masked={maskSecret(saved.pawapay?.testSecretKey)} placeholder="eyJ…" />
-          </div>
-          <div className="flex flex-col gap-4 rounded-xl border border-edge p-4">
-            <p className="text-xs font-semibold uppercase tracking-[1px] text-muted">Live</p>
-            <SecretInput label="API token" name="pawapayLiveSecretKey" masked={maskSecret(saved.pawapay?.liveSecretKey)} placeholder="eyJ…" />
-          </div>
-        </div>
-        <CopyField label="Deposit callback URL" value={absoluteUrl("/api/webhooks/pawapay")} />
       </Section>
 
       <Section title="Bank transfer" description="Students get your account details and a payment reference; you confirm under Payments when the money arrives." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>}>

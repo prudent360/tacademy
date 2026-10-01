@@ -7,7 +7,7 @@ import { ArrowLeft } from "@/components/icons";
 import { PhoneInput } from "@/components/phone-input";
 import type { DeliveryMode, PriceMap } from "@/db/schema";
 import { COUNTRIES, countryByCode, countryInSentence, currencyForCountry, flag } from "@/lib/countries";
-import { currencyInfo, formatMoney, MOBILE_MONEY_COUNTRIES } from "@/lib/money";
+import { currencyInfo, formatMoney } from "@/lib/money";
 import { availablePlans, PLAN_LABEL, quote, type EnrolPlan } from "@/lib/pricing";
 import { MODE_LABEL, QUALIFICATIONS } from "@/lib/utils";
 
@@ -28,25 +28,24 @@ export type EnrolCohort = {
   registrationFees: PriceMap;
   depositPercent: number | null;
   registrationOnly: boolean;
-  /** Currencies this cohort can be paid in, and how. online: card via `provider` · mobile: pawaPay countries. */
-  currencies: { code: string; online: boolean; provider: OnlineProvider; mobile: string[]; bank: boolean }[];
+  /** Currencies this cohort can be paid in, and how. online: via `provider` · bank: direct transfer. */
+  currencies: { code: string; online: boolean; provider?: OnlineProvider; bank: boolean }[];
 };
 
-type Method = "online" | "mobile" | "bank";
-export type OnlineProvider = "stripe" | "paystack" | "pawapay" | "transactpay";
+type Method = "online" | "bank";
+export type OnlineProvider = "stripe" | "paystack" | "transactpay";
 
 /** How "Pay online" is described for each provider. */
 const ONLINE_LABEL: Record<OnlineProvider, { short: string; long: string }> = {
   stripe: { short: "Card via Stripe", long: "Secure card payment via Stripe" },
   paystack: { short: "Paystack (card, bank transfer, USSD)", long: "Card, bank transfer or USSD via Paystack" },
   transactpay: { short: "TransactPay (card, bank transfer, OPay)", long: "Card, bank transfer or OPay via TransactPay" },
-  pawapay: { short: "Mobile money via pawaPay", long: "Mobile money via pawaPay" },
 };
 
 type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; qualification: string; country: string };
 
-const METHOD_LABEL = (method: Method, provider: OnlineProvider) =>
-  method === "online" ? ONLINE_LABEL[provider].short : method === "mobile" ? "Mobile money via pawaPay" : "Direct bank transfer";
+const METHOD_LABEL = (method: Method, provider: OnlineProvider | undefined) =>
+  method === "online" && provider ? ONLINE_LABEL[provider].short : method === "online" ? "Pay online" : "Direct bank transfer";
 
 const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#8b8598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10 read-only:bg-panel read-only:text-muted";
 
@@ -103,19 +102,14 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
   const [planChoice, setPlan] = useState<EnrolPlan>("full");
   const plan = plans.includes(planChoice) ? planChoice : "full";
   const [methodChoice, setMethod] = useState<Method>("online");
-  const methods: Method[] = currency ? (["online", "mobile", "bank"] as const).filter((m) => (m === "mobile" ? currency.mobile.length > 0 : currency[m])) : [];
+  const methods: Method[] = currency ? (["online", "bank"] as const).filter((m) => currency[m]) : [];
   const method = methods.includes(methodChoice) ? methodChoice : methods[0] ?? "online";
-  // The mobile money wallet defaults to the student's country, then their phone number's.
-  const [walletChoice, setWallet] = useState("");
-  const mobileCountries = currency?.mobile ?? [];
-  const mobileCountry = [walletChoice, countryByCode(country)?.iso3, countryByCode(phoneCountry)?.iso3].find((c) => c && mobileCountries.includes(c)) ?? mobileCountries[0] ?? "";
   const countryName = countryInSentence(country);
 
   function chooseCountry(code: string) {
     setCountryCode(code);
     if (countryByCode(code)) setPhoneCountry(code);
     setCurrency("");
-    setWallet("");
     setShowCurrencies(false);
   }
   // A discount code is checked when "Apply" is pressed, so the saving shows before paying. It's checked again at payment.
@@ -166,7 +160,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
     startTransition(() => formAction(formData));
   }
 
-  const payLabel = !cohort ? "Choose a cohort" : cohort.free ? "Confirm my place" : method === "bank" ? `Get transfer details · ${money(q?.dueNow ?? 0)}` : method === "mobile" ? `Pay ${money(q?.dueNow ?? 0)} with mobile money` : `Pay ${money(q?.dueNow ?? 0)}`;
+  const payLabel = !cohort ? "Choose a cohort" : cohort.free ? "Confirm my place" : method === "bank" ? `Get transfer details · ${money(q?.dueNow ?? 0)}` : `Pay ${money(q?.dueNow ?? 0)}`;
 
   return (
     <div ref={top} className="grid scroll-mt-24 items-start gap-6 lg:grid-cols-[1.45fr_1fr]">
@@ -295,22 +289,13 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
             {cohort && !cohort.free && currency && methods.length > 1 && (
               <fieldset className="flex flex-col gap-2.5">
                 <legend className="mb-2 text-sm font-medium text-ink">Payment method</legend>
-                <div className={`grid gap-2.5 ${methods.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-                  {currency.online && <Choice name="methodChoice" value="online" checked={method === "online"} onChange={() => setMethod("online")}><span className="font-semibold text-ink">Pay online</span><span className="text-sm text-muted">{ONLINE_LABEL[currency.provider].long}</span></Choice>}
-                  {currency.mobile.length > 0 && <Choice name="methodChoice" value="mobile" checked={method === "mobile"} onChange={() => setMethod("mobile")}><span className="font-semibold text-ink">Mobile money</span><span className="text-sm text-muted">MTN, Airtel, Orange, M-Pesa and more via pawaPay</span></Choice>}
+                <div className={`grid gap-2.5 sm:grid-cols-2`}>
+                  {currency.online && <Choice name="methodChoice" value="online" checked={method === "online"} onChange={() => setMethod("online")}><span className="font-semibold text-ink">Pay online</span><span className="text-sm text-muted">{currency.provider ? ONLINE_LABEL[currency.provider].long : "Secure online payment"}</span></Choice>}
                   {currency.bank && <Choice name="methodChoice" value="bank" checked={method === "bank"} onChange={() => setMethod("bank")}><span className="font-semibold text-ink">Direct bank transfer</span><span className="text-sm text-muted">Confirmed once we receive it</span></Choice>}
                 </div>
               </fieldset>
             )}
             <input type="hidden" name="method" value={method} />
-
-            {cohort && !cohort.free && method === "mobile" && (mobileCountries.length > 1 ? (
-              <Field label="Mobile money account country" htmlFor={`${id}-mm-country`} required>
-                <select id={`${id}-mm-country`} name="mobileCountry" value={mobileCountry} onChange={(e) => setWallet(e.target.value)} className={`${inputClass} cursor-pointer`}>
-                  {mobileCountries.map((c) => <option key={c} value={c}>{MOBILE_MONEY_COUNTRIES[c] ?? c}</option>)}
-                </select>
-              </Field>
-            ) : <input type="hidden" name="mobileCountry" value={mobileCountry} />)}
 
             {cohort && !cohort.free && (
               <Field label="Discount code" htmlFor={`${id}-discount`}>
@@ -382,7 +367,6 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
               {q.registrationFee > 0 && <div className="flex justify-between gap-4 text-sm"><span className="text-white/65">+ Registration fee</span><span>{money(q.registrationFee)}</span></div>}
               <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-white/10 pt-3"><span className="font-semibold">Total</span><span className="font-display text-3xl font-bold text-emerald-400">{money(q.dueNow)}</span></div>
               {q.later > 0 && <p className="text-xs text-white/55">{money(q.later)} tuition balance due later.</p>}
-              {method === "mobile" && <p className="text-xs text-white/55">You&apos;ll confirm the payment on your phone.</p>}
             </div>
           </>
         )}

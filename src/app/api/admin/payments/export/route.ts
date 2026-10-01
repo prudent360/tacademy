@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { listPayments, parsePaymentFilters } from "@/lib/admin-payments";
 
-const GATEWAY = { stripe: "Stripe", paystack: "Paystack", transactpay: "TransactPay", pawapay: "Mobile money (pawaPay)", manual: "Bank transfer / offline", test: "Test" } as const;
+const GATEWAY = { stripe: "Stripe", paystack: "Paystack", transactpay: "TransactPay", manual: "Bank transfer / offline", test: "Test" } as const;
 
 function csv(value: string | number | null | undefined): string {
   const s = String(value ?? "");
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const { rows } = await listPayments(parsePaymentFilters(params), { limit: 10_000, offset: 0 });
   const header = ["Date", "Paid at", "Reference", "Student", "Email", "Description", "Amount", "Currency", "Status", "Gateway"];
   const lines = rows.map(({ payment: p, user: u }) => [
-    p.createdAt.toISOString(), p.paidAt?.toISOString() ?? "", p.reference, u.name, u.email, p.description, (p.amount / 100).toFixed(2), p.currency, p.status, GATEWAY[p.gateway],
+    p.createdAt.toISOString(), p.paidAt?.toISOString() ?? "", p.reference, u.name, u.email, p.description, (p.amount / 100).toFixed(2), p.currency, p.status, GATEWAY[p.gateway] ?? p.gateway,
   ].map(csv).join(","));
   return new Response([header.map(csv).join(","), ...lines].join("\r\n"), {
     headers: {

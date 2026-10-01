@@ -19,7 +19,7 @@ export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 
 export const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
-export type Gateway = "stripe" | "paystack" | "pawapay" | "transactpay" | "manual" | "test";
+export type Gateway = "stripe" | "paystack" | "transactpay" | "manual" | "test";
 /** full: all tuition now · deposit: part of the tuition now · registration: registration fee only · balance: the rest later. */
 export type PaymentPlan = "full" | "deposit" | "registration" | "balance";
 
@@ -95,7 +95,7 @@ export type GatewaySettings = {
   liveCheckedAt?: string;
 };
 export type BankTransferSettings = { enabled: boolean; accountName: string; bankName: string; accountNumber: string; sortCode: string; currency: string; instructions: string };
-export type PaymentSettings = { stripe: GatewaySettings; paystack: GatewaySettings; pawapay: GatewaySettings; transactpay?: GatewaySettings; bank: BankTransferSettings };
+export type PaymentSettings = { stripe: GatewaySettings; paystack: GatewaySettings; transactpay?: GatewaySettings; bank: BankTransferSettings };
 export type EmailDriver = "resend" | "smtp" | "log";
 /** smtpPassword and apiKey are stored encrypted. */
 export type EmailSettings = {

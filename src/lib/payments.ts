@@ -1,5 +1,5 @@
 import "server-only";
-import { constants, createPublicKey, publicEncrypt, randomBytes, randomUUID } from "node:crypto";
+import { constants, createPublicKey, publicEncrypt, randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { getDb } from "@/db";
@@ -7,8 +7,8 @@ import { discountCodes, enrollments, payments, users, type Cohort, type Course, 
 import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
-import { countryByCode, mobileMoneyCountryForDial } from "./countries";
-import { CURRENCIES, CURRENCY_CODES, formatMoney, gatewayFor, mobileMoneyCountries } from "./money";
+import { countryByCode } from "./countries";
+import { CURRENCIES, CURRENCY_CODES, formatMoney, gatewayFor } from "./money";
 import { notify } from "./notify";
 import { PART_PAYMENT_PLANS, quote, type EnrolPlan } from "./pricing";
 import { absoluteUrl } from "./site";
@@ -32,38 +32,28 @@ export function testPaymentsAllowed(): boolean {
   return process.env.NODE_ENV !== "production" && !process.env.VERCEL;
 }
 
-export type PayMethod = "card" | "mobile";
-
-/**
- * Currencies students can pay in right now, by method (gateway enabled, and keys set or test mode available).
- * card: Stripe or Paystack · mobile: pawaPay mobile money.
- */
-export async function payableMethods(): Promise<Record<PayMethod, string[]>> {
-  const [stripeCfg, paystackCfg, pawapayCfg, providers] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), gatewayConfig("pawapay"), onlineProviders()]);
-  const ok = (cfg: typeof stripeCfg) => cfg.enabled && (Boolean(cfg.secretKey) || testPaymentsAllowed());
-  return {
-    card: CURRENCY_CODES.filter((code) => {
-      const g = providers[code];
-      // TransactPay only takes over when it's ready, so it counts as available whenever it's chosen.
-      return g === "transactpay" || (g !== "pawapay" && ok(g === "stripe" ? stripeCfg : paystackCfg));
-    }),
-    mobile: ok(pawapayCfg) ? CURRENCY_CODES.filter((code) => mobileMoneyCountries(code).length > 0) : [],
-  };
-}
-
 /** The African currencies TransactPay might take; which ones it does depends on the account (see detectTransactpayCurrencies). */
 export const TRANSACTPAY_CANDIDATES = CURRENCIES.filter((c) => c.gateway !== "stripe").map((c) => c.code);
 
+export type OnlineProvider = "stripe" | "paystack" | "transactpay";
+
 /**
  * Who handles "Pay online" in each currency. TransactPay comes first for every currency it was found to accept
- * on the account; otherwise the usual provider from lib/money.ts (Stripe, Paystack or pawaPay). Without keys,
- * local development sends naira to TransactPay's simulated checkout.
+ * on the account; otherwise the usual provider from lib/money.ts (Stripe or Paystack). Currencies only
+ * TransactPay could take are left out when it doesn't. Without keys, local development sends naira to
+ * TransactPay's simulated checkout.
  */
-export async function onlineProviders(): Promise<Record<string, "stripe" | "paystack" | "pawapay" | "transactpay">> {
+export async function onlineProviders(): Promise<Partial<Record<string, OnlineProvider>>> {
   const tp = await gatewayConfig("transactpay");
   const keyed = hasKeys("transactpay", tp);
   const takes = !tp.enabled ? [] : keyed ? tp.currencies ?? [] : testPaymentsAllowed() ? ["NGN"] : [];
-  return Object.fromEntries(CURRENCY_CODES.map((code) => [code, takes.includes(code) ? "transactpay" : gatewayFor(code)]));
+  const providers: Partial<Record<string, OnlineProvider>> = {};
+  for (const code of CURRENCY_CODES) {
+    const usual = gatewayFor(code);
+    if (takes.includes(code)) providers[code] = "transactpay";
+    else if (usual !== "transactpay") providers[code] = usual;
+  }
+  return providers;
 }
 
 /** A country for each currency, for TransactPay's test orders. */
@@ -99,10 +89,15 @@ export async function detectTransactpayCurrencies(keys?: { publicKey: string; en
   return { currencies };
 }
 
-/** Currencies students can pay in online by any method. */
+/** Currencies students can pay in online right now (gateway enabled, and keys set or test mode available). */
 export async function payableCurrencies(): Promise<string[]> {
-  const { card, mobile } = await payableMethods();
-  return CURRENCY_CODES.filter((code) => card.includes(code) || mobile.includes(code));
+  const [stripeCfg, paystackCfg, providers] = await Promise.all([gatewayConfig("stripe"), gatewayConfig("paystack"), onlineProviders()]);
+  const ok = (cfg: typeof stripeCfg) => cfg.enabled && (Boolean(cfg.secretKey) || testPaymentsAllowed());
+  return CURRENCY_CODES.filter((code) => {
+    const provider = providers[code];
+    // TransactPay is only chosen when it's ready, so it counts as available whenever it's chosen.
+    return provider === "transactpay" || (provider === "stripe" && ok(stripeCfg)) || (provider === "paystack" && ok(paystackCfg));
+  });
 }
 
 const stripeClients = new Map<string, Stripe>();
@@ -120,19 +115,6 @@ async function paystack<T>(secretKey: string, path: string, init?: RequestInit):
   const data = (await response.json()) as { status: boolean; message: string; data: T };
   if (!response.ok || !data.status) throw new Error(`Paystack: ${data.message ?? response.status}`);
   return data.data;
-}
-
-/** pawaPay's API; sandbox and live use separate tokens. */
-async function pawapay<T>(cfg: { secretKey: string; mode: "test" | "live" }, path: string, init?: RequestInit): Promise<T> {
-  const base = cfg.mode === "live" ? "https://api.pawapay.io" : "https://api.sandbox.pawapay.io";
-  const response = await fetch(`${base}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${cfg.secretKey}`, "Content-Type": "application/json", ...init?.headers },
-    cache: "no-store",
-  });
-  const data = (await response.json().catch(() => ({}))) as T & { failureReason?: { failureCode: string; failureMessage: string } };
-  if (!response.ok || data.failureReason) throw new Error(`pawaPay: ${data.failureReason?.failureCode ?? response.status} ${data.failureReason?.failureMessage ?? ""}`.trim());
-  return data;
 }
 
 const TRANSACTPAY_API = "https://payment-api-service.transactpay.ai";
@@ -166,17 +148,6 @@ async function transactpay<T>(path: string, apiKey: string, body: unknown): Prom
   return data;
 }
 
-/** Francophone markets get pawaPay's payment page in French. */
-const FRENCH_COUNTRIES = ["SEN", "CIV", "BEN", "BFA", "CMR", "COG", "GAB"];
-
-/**
- * Most mobile money providers only accept whole amounts (no cents), so mobile money payments are
- * rounded to whole units before they're recorded.
- */
-function wholeUnits(minor: number): number {
-  return Math.round(minor / 100) * 100;
-}
-
 function newReference(): string {
   return `TSU-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`;
 }
@@ -192,22 +163,15 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
   registrationFee?: number;
   discountCodeId?: number | null;
   description: string;
-  method?: PayMethod;
-  /** pawaPay country (ISO alpha-3); needed when a currency spans several countries. */
-  country?: string;
   /** Set when retrying after TransactPay couldn't start the payment, to use the usual provider instead. */
   skipTransactpay?: boolean;
 }): Promise<{ url: string; reference: string } | { error: string }> {
-  const { originalAmount, paymentPlan, registrationFee = 0, discountCodeId, description } = details;
-  const provider = details.skipTransactpay ? gatewayFor(currency) : (await onlineProviders())[currency] ?? gatewayFor(currency);
-  const gateway = details.method === "mobile" || provider === "pawapay" ? "pawapay" : provider;
-  const countries = mobileMoneyCountries(currency);
-  const country = gateway !== "pawapay" ? undefined : details.country && countries.includes(details.country) ? details.country : countries.length === 1 ? countries[0] : undefined;
-  if (gateway === "pawapay" && !countries.length) return { error: `Mobile money isn't available in ${currency}. Please choose another option.` };
-  if (gateway === "pawapay" && !country) return { error: "Choose the country your mobile money account is registered in." };
-  const amount = gateway === "pawapay" ? wholeUnits(details.amount) : details.amount;
+  const { amount, originalAmount, paymentPlan, registrationFee = 0, discountCodeId, description } = details;
+  const usual = gatewayFor(currency);
+  const gateway = details.skipTransactpay ? (usual !== "transactpay" ? usual : undefined) : (await onlineProviders())[currency];
+  if (!gateway) return { error: `Online payments in ${currency} aren't available right now. Please choose another option.` };
   const cfg = await gatewayConfig(gateway);
-  if (!cfg.enabled) return { error: `${gateway === "pawapay" ? "Mobile money payments are" : `Payments in ${currency} are`} currently switched off. Please choose another option.` };
+  if (!cfg.enabled) return { error: `Payments in ${currency} are currently switched off. Please choose another option.` };
   const configured = hasKeys(gateway, cfg);
   if (!configured && !testPaymentsAllowed()) return { error: `Online payments in ${currency} aren't set up yet. Please contact us to enrol.` };
 
@@ -231,27 +195,6 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
       });
       await db.update(payments).set({ providerId: session.id }).where(eq(payments.reference, reference));
       return { url: session.url!, reference };
-    }
-
-    if (gateway === "pawapay") {
-      // pawaPay needs a UUID; our reference travels in the metadata. Shown on the customer's phone: 4–22 letters, digits and spaces.
-      const depositId = randomUUID();
-      const statement = (await getSettings()).siteName.replace(/[^A-Za-z0-9 ]/g, "").trim().slice(0, 22).trim();
-      const { redirectUrl } = await pawapay<{ redirectUrl: string }>(cfg, "/v2/paymentpage", {
-        method: "POST",
-        body: JSON.stringify({
-          depositId,
-          returnUrl,
-          amountDetails: { amount: String(amount / 100), currency },
-          country,
-          language: FRENCH_COUNTRIES.includes(country!) ? "FR" : "EN",
-          reason: description.slice(0, 50),
-          ...(statement.length >= 4 ? { customerMessage: statement } : {}),
-          metadata: [{ reference }],
-        }),
-      });
-      await db.update(payments).set({ providerId: depositId }).where(eq(payments.reference, reference));
-      return { url: redirectUrl, reference };
     }
 
     if (gateway === "transactpay") {
@@ -281,9 +224,9 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
     console.error("Checkout failed", error);
     await db.update(payments).set({ status: "failed" }).where(eq(payments.reference, reference));
     // TransactPay comes first but isn't the only option: when it can't start a payment, the usual card
-    // provider (Paystack or Stripe) takes over if it's set up. Mobile-money-only currencies can't fall back here.
+    // provider (Paystack or Stripe) takes over if it's set up. TransactPay-only currencies have no backup.
     const backup = gatewayFor(currency);
-    if (gateway === "transactpay" && backup !== "pawapay" && (await gatewayConfig(backup)).enabled && ((await gatewayConfigured(backup)) || testPaymentsAllowed())) {
+    if (gateway === "transactpay" && backup !== "transactpay" && (await gatewayConfig(backup)).enabled && ((await gatewayConfigured(backup)) || testPaymentsAllowed())) {
       return beginOnlinePayment(user, course, cohort, currency, { ...details, skipTransactpay: true });
     }
     return { error: "We couldn't start the payment. Please try again in a moment." };
@@ -297,7 +240,7 @@ function planNote(plan: EnrolPlan, cohort: Cohort, registrationFee: number): str
 
 /**
  * Creates a pending payment and returns the URL to send the student to:
- * Stripe Checkout, Paystack's or pawaPay's payment page, or the local test checkout.
+ * Stripe Checkout, Paystack's or TransactPay's payment page, or the local test checkout.
  */
 /** A discount code that can be used right now: active, not expired and not used up. */
 export async function findDiscount(code: string): Promise<DiscountCode | { error: string }> {
@@ -307,7 +250,7 @@ export async function findDiscount(code: string): Promise<DiscountCode | { error
   return discount;
 }
 
-export async function startCheckout(user: User, course: Course, cohort: Cohort, currency: string, options: { plan?: EnrolPlan; discountCode?: string; method?: PayMethod; country?: string } = {}): Promise<{ url: string; reference: string } | { error: string }> {
+export async function startCheckout(user: User, course: Course, cohort: Cohort, currency: string, options: { plan?: EnrolPlan; discountCode?: string } = {}): Promise<{ url: string; reference: string } | { error: string }> {
   const plan = options.plan ?? "full";
   const base = quote(cohort, currency, plan);
   if (!base.dueNow) return { error: "This cohort isn't sold in that currency." };
@@ -317,7 +260,7 @@ export async function startCheckout(user: User, course: Course, cohort: Cohort, 
   const q = quote(cohort, currency, plan, discount?.percentOff ?? 0);
   const paymentPlan = q.later > 0 ? plan : "full";
   const description = `${describePurchase(course, cohort)}${planNote(paymentPlan, cohort, q.registrationFee)}${discount ? ` · ${discount.code}` : ""}`;
-  return beginOnlinePayment(user, course, cohort, currency, { amount: q.dueNow, originalAmount: q.tuitionPrice, paymentPlan, registrationFee: q.registrationFee, discountCodeId: discount?.id, description, method: options.method, country: options.country });
+  return beginOnlinePayment(user, course, cohort, currency, { amount: q.dueNow, originalAmount: q.tuitionPrice, paymentPlan, registrationFee: q.registrationFee, discountCodeId: discount?.id, description });
 }
 
 export type PaymentBalance = { total: number; paid: number; remaining: number; currency: string };
@@ -345,11 +288,7 @@ export async function startBalanceCheckout(user: User, course: Course, cohort: C
   if (!balance.remaining) return { error: "This cohort has already been paid in full." };
   const db = await getDb();
   await db.update(payments).set({ status: "failed" }).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.currency, currency), eq(payments.paymentPlan, "balance"), eq(payments.status, "pending")));
-  // Card where it's available, otherwise mobile money from the student's country (or their phone number's).
-  const method: PayMethod = (await payableMethods()).card.includes(currency) ? "card" : "mobile";
   return beginOnlinePayment(user, course, cohort, currency, {
-    method,
-    country: countryByCode(user.country)?.iso3 ?? mobileMoneyCountryForDial(user.phone.split(" ")[0]),
     amount: balance.remaining,
     originalAmount: balance.total,
     paymentPlan: "balance",
@@ -395,20 +334,11 @@ export async function verifyPayment(reference: string): Promise<Payment | null> 
   if (!payment || payment.status === "paid") return payment ?? null;
 
   try {
-    const cfg = payment.gateway === "stripe" || payment.gateway === "paystack" || payment.gateway === "pawapay" || payment.gateway === "transactpay" ? await gatewayConfig(payment.gateway) : null;
+    const cfg = payment.gateway === "stripe" || payment.gateway === "paystack" || payment.gateway === "transactpay" ? await gatewayConfig(payment.gateway) : null;
     if (payment.gateway === "stripe" && payment.providerId && cfg?.secretKey) {
       const session = await stripe(cfg.secretKey).checkout.sessions.retrieve(payment.providerId);
       if (session.payment_status === "paid" && session.amount_total === payment.amount && session.currency?.toUpperCase() === payment.currency) {
         await fulfilPayment(reference);
-      }
-    } else if (payment.gateway === "pawapay" && payment.providerId && cfg?.secretKey) {
-      const found = await pawapay<{ status: "FOUND" | "NOT_FOUND"; data?: { status: string; amount: string; currency: string } }>(cfg, `/v2/deposits/${encodeURIComponent(payment.providerId)}`);
-      const deposit = found.status === "FOUND" ? found.data : undefined;
-      if (deposit?.status === "COMPLETED" && Math.round(Number(deposit.amount) * 100) === payment.amount && deposit.currency === payment.currency) {
-        await fulfilPayment(reference);
-      } else if (deposit?.status === "FAILED" || (!deposit && Date.now() - new Date(payment.createdAt).getTime() > 20 * 60_000)) {
-        // A deposit pawaPay never saw means the payment page expired (after 15 minutes) unused.
-        await db.update(payments).set({ status: "failed" }).where(and(eq(payments.reference, reference), eq(payments.status, "pending")));
       }
     } else if (payment.gateway === "transactpay" && cfg?.secretKey) {
       // Our reference is TransactPay's order reference. Verifying uses the secret key and needs no encryption.
@@ -502,7 +432,7 @@ export async function fulfilPayment(reference: string): Promise<void> {
       reference: payment.reference,
       description: payment.description,
       paidAt: new Intl.DateTimeFormat("en-GB", { timeZone: settings.timezone, day: "numeric", month: "short", year: "numeric" }).format(payment.paidAt ?? new Date()),
-      gateway: { stripe: "Card (Stripe)", paystack: "Paystack", transactpay: "TransactPay", pawapay: "Mobile money (pawaPay)", manual: "Recorded by the academy", test: "Test payment" }[payment.gateway],
+      gateway: { stripe: "Card (Stripe)", paystack: "Paystack", transactpay: "TransactPay", manual: "Recorded by the academy", test: "Test payment" }[payment.gateway] ?? payment.gateway,
       paymentsUrl: absoluteUrl("/dashboard/payments"),
     },
   }]);

@@ -132,7 +132,7 @@ function checkTransactpayKey(value: FormDataEntryValue | null, label: string): s
 
 const DEFAULT_GATEWAY_FOR_TRANSACTPAY: GatewaySettings = { enabled: false, mode: "test", testPublicKey: "", testSecretKey: "", livePublicKey: "", liveSecretKey: "" };
 
-function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "pawapay" | "transactpay", existing: Partial<GatewaySettings> | undefined): GatewaySettings {
+function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "transactpay", existing: Partial<GatewaySettings> | undefined): GatewaySettings {
   return {
     enabled: formData.get(`${prefix}Enabled`) === "on",
     mode: formData.get(`${prefix}Mode`) === "live" ? "live" : "test",
@@ -169,8 +169,6 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
     checkKey(formData.get("paystackLiveSecretKey"), ["sk_live_"], "Paystack live secret key"),
     checkKey(formData.get("paystackTestPublicKey"), ["pk_test_"], "Paystack test public key"),
     checkKey(formData.get("paystackLivePublicKey"), ["pk_live_"], "Paystack live public key"),
-    checkKey(formData.get("pawapayTestSecretKey"), ["eyJ"], "The pawaPay sandbox API token"),
-    checkKey(formData.get("pawapayLiveSecretKey"), ["eyJ"], "The pawaPay live API token"),
     checkTransactpayKey(formData.get("transactpayTestEncryptionKey"), "The TransactPay test encryption key"),
     checkTransactpayKey(formData.get("transactpayLiveEncryptionKey"), "The TransactPay live encryption key"),
   ].filter(Boolean);
@@ -193,7 +191,6 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
   }
   const stripe = gatewayFrom(formData, "stripe", current.stripe);
   const paystack = gatewayFrom(formData, "paystack", current.paystack);
-  const pawapay = gatewayFrom(formData, "pawapay", current.pawapay);
   const transactpay = gatewayFrom(formData, "transactpay", current.transactpay);
   // Keep what was found on the account, unless the keys for that mode changed.
   const before = current.transactpay;
@@ -214,7 +211,7 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
       note = ` TransactPay takes: ${checked.currencies.join(", ")}.`;
     }
   }
-  await update({ payment: { stripe, paystack, pawapay, transactpay, bank } });
+  await update({ payment: { stripe, paystack, transactpay, bank } });
   return note.startsWith(" But") ? { error: `Payment settings saved.${note}` } : { ok: `Payment settings saved.${note}` };
 }
 

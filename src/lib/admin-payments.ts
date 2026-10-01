@@ -8,7 +8,7 @@ export type PaymentFilters = { status?: PaymentStatus; gateway?: Gateway; q?: st
 export function parsePaymentFilters(params: { status?: string; gateway?: string; q?: string }): PaymentFilters {
   return {
     status: PAYMENT_STATUSES.find((s) => s === params.status),
-    gateway: (["stripe", "paystack", "pawapay", "manual", "test"] as const).find((g) => g === params.gateway),
+    gateway: (["stripe", "paystack", "transactpay", "manual", "test"] as const).find((g) => g === params.gateway),
     q: params.q?.trim() || undefined,
   };
 }

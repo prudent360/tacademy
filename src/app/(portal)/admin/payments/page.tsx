@@ -22,7 +22,6 @@ const GATEWAY = {
   stripe: { label: "Stripe", color: "#635BFF", short: "S" },
   paystack: { label: "Paystack", color: "#0BA4DB", short: "P" },
   transactpay: { label: "TransactPay", color: "#1F4ED8", short: "T" },
-  pawapay: { label: "pawaPay", color: "#12A150", short: "M" },
   manual: { label: "Bank / offline", color: "#19112E", short: "B" },
   test: { label: "Test", color: "#8b8598", short: "T" },
 } as const;
@@ -58,7 +57,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
     <>
       <PageHeader
         title="Payments"
-        description="Card and mobile money payments confirm automatically through Stripe, Paystack, TransactPay and pawaPay. Confirm bank transfers here once the money arrives."
+        description="Online payments confirm automatically through Stripe, Paystack and TransactPay. Confirm bank transfers here once the money arrives."
         actions={<>
           <a href={`/api/admin/payments/export${exportQs ? `?${exportQs}` : ""}`} className={buttonClass.secondary}><DownloadIcon className="size-4" /> Export CSV</a>
           <ModalButton label="Record payment" title="Record an offline payment" icon={<PlusIcon className="size-4" />}>
@@ -103,7 +102,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
         ]}
         right={
           <div className="flex flex-wrap gap-1.5 lg:border-l lg:border-line lg:pl-3">
-            {(["stripe", "paystack", "pawapay", "manual"] as const).map((g) => (
+            {(["stripe", "paystack", "transactpay", "manual"] as const).map((g) => (
               <Link key={g} href={url({ gateway: filters.gateway === g ? undefined : g })} className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-semibold ${filters.gateway === g ? "border-accent bg-accent-soft text-accent" : "border-edge text-muted hover:text-ink"}`}>
                 <span className="size-2 rounded-full" style={{ background: GATEWAY[g].color }} /> {GATEWAY[g].label}
               </Link>
@@ -118,7 +117,8 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
             <thead><tr><th>Date & reference</th><th>Student</th><th>Description</th><th>Amount</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
             <tbody>
               {rows.map(({ payment: p, user: u }) => {
-                const g = GATEWAY[p.gateway];
+                // Older records can name a gateway that has since been removed.
+                const g = GATEWAY[p.gateway] ?? { label: p.gateway, color: "#8b8598", short: "?" };
                 return (
                   <tr key={p.id}>
                     <td className="whitespace-nowrap"><span className="block text-body">{formatDateTime(p.paidAt ?? p.createdAt, settings.timezone, { zone: false })}</span><span className="font-mono text-[11px] text-muted">{p.reference}</span></td>
