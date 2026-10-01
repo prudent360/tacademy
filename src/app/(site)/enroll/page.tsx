@@ -57,7 +57,7 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
       <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
         <Image src="/images/enrol-classroom.webp" alt="" fill priority sizes="100vw" className="object-cover object-[center_30%]" />
         {/* Darkens the photo behind the heading, then fades into brand purple behind the form. */}
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.82)_0%,rgba(25,17,46,.68)_30%,rgba(58,24,130,.85)_58%,#5a24b8_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(24,19,64,.82)_0%,rgba(24,19,64,.68)_30%,rgba(35,24,130,.85)_58%,#3d2fb8_100%)]" />
       </div>
       <div className="relative mx-auto max-w-[1200px] px-5 pb-20 pt-14 sm:px-8 md:pt-20">
         <h1 className="mx-auto max-w-[720px] text-center [text-shadow:0_2px_24px_rgba(0,0,0,.35)] font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-white md:text-[56px]">Start your journey into tech</h1>

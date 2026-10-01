@@ -58,7 +58,7 @@ export default async function LessonPage({ params }: { params: Promise<{ id: str
         {found.lesson.summary && <p className="text-lg leading-relaxed text-muted">{found.lesson.summary}</p>}
         {video ? (
           <div className="flex flex-col gap-2">
-            <div className="relative aspect-video w-full overflow-hidden rounded-[5px] bg-navy shadow-[0_18px_40px_-28px_rgba(25,17,46,.6)]">
+            <div className="relative aspect-video w-full overflow-hidden rounded-[5px] bg-navy shadow-[0_18px_40px_-28px_rgba(24,19,64,.6)]">
               <iframe src={video.embedUrl} title={`Video: ${found.lesson.title}`} className="absolute inset-0 size-full border-0" loading="lazy" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />
             </div>
             {video.provider !== "bunny" && <a href={found.lesson.videoUrl!} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1.5 text-sm font-semibold text-muted hover:text-accent">Open video in a new tab <ExternalIcon className="size-3.5" /></a>}

@@ -47,7 +47,7 @@ type Prefill = { firstName: string; lastName: string; email: string; dial: strin
 const METHOD_LABEL = (method: Method, provider: OnlineProvider | undefined) =>
   method === "online" && provider ? ONLINE_LABEL[provider].short : method === "online" ? "Pay online" : "Direct bank transfer";
 
-const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#8b8598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10 read-only:bg-panel read-only:text-muted";
+const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10 read-only:bg-panel read-only:text-muted";
 
 function Field({ label, htmlFor, required, children, className = "" }: { label: string; htmlFor: string; required?: boolean; children: React.ReactNode; className?: string }) {
   return (
@@ -204,7 +204,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
           </Field>
           {!signedIn && <p className="text-sm text-muted">Already a student? <Link href="/login?next=/enroll" className="font-semibold text-accent hover:text-accent-dark">Sign in</Link> to enrol with your account.</p>}
           <div className="border-t border-line pt-6">
-            <button type="submit" className="flex h-13 w-full cursor-pointer items-center justify-center rounded-[8px] bg-accent text-[16px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(113,52,217,.9)] transition hover:bg-accent-dark">Next</button>
+            <button type="submit" className="flex h-13 w-full cursor-pointer items-center justify-center rounded-[8px] bg-accent text-[16px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(79,63,215,.9)] transition hover:bg-accent-dark">Next</button>
           </div>
         </div>
 
@@ -332,7 +332,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
 
             <div className="flex flex-col-reverse gap-3 border-t border-line pt-6 sm:flex-row">
               <button type="button" onClick={() => setStep(1)} className="flex h-13 cursor-pointer items-center justify-center gap-2 rounded-[8px] border border-edge-strong px-6 font-semibold text-ink hover:bg-page"><ArrowLeft className="size-4" /> Back</button>
-              <button type="submit" disabled={pending || !cohort} className="flex h-13 grow cursor-pointer items-center justify-center rounded-[8px] bg-accent text-[16px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(113,52,217,.9)] transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="submit" disabled={pending || !cohort} className="flex h-13 grow cursor-pointer items-center justify-center rounded-[8px] bg-accent text-[16px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(79,63,215,.9)] transition hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60">
                 {pending ? "Please wait…" : payLabel}
               </button>
             </div>
@@ -340,7 +340,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
         )}
       </form>
 
-      <aside aria-label="Summary" className="flex flex-col gap-5 rounded-[24px] bg-[#16101f] p-6 text-white shadow-[0_30px_80px_-40px_rgba(0,0,0,.8)] sm:p-8 lg:sticky lg:top-24">
+      <aside aria-label="Summary" className="flex flex-col gap-5 rounded-[24px] bg-[#12101f] p-6 text-white shadow-[0_30px_80px_-40px_rgba(0,0,0,.8)] sm:p-8 lg:sticky lg:top-24">
         <h2 className="font-display text-2xl font-bold text-emerald-400">Summary</h2>
         <div className="flex flex-col gap-2.5">
           <p className="text-xs font-semibold uppercase tracking-[1.2px] text-white/55">Enrolment details</p>

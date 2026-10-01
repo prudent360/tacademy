@@ -76,8 +76,8 @@ export default async function CoursePage({ params, searchParams }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photo} alt="" fetchPriority="high" className="size-full object-cover object-center" />
             {/* Dark behind the text on the left, fading into brand purple at the bottom. */}
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(25,17,46,.92)_0%,rgba(25,17,46,.78)_45%,rgba(25,17,46,.35)_100%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(90,36,184,.75)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(24,19,64,.92)_0%,rgba(24,19,64,.78)_45%,rgba(24,19,64,.35)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(61,47,184,.75)_100%)]" />
           </div>
         )}
         <div className={`relative mx-auto grid max-w-[1200px] items-center gap-10 px-5 sm:px-8 ${photo ? "py-16 md:py-24" : "py-12 md:py-16 lg:grid-cols-[1.3fr_1fr]"}`}>
@@ -88,10 +88,10 @@ export default async function CoursePage({ params, searchParams }: Props) {
             <p className={`max-w-[620px] text-lg leading-relaxed ${photo ? "text-white/80" : "text-muted"}`}>{course.summary}</p>
             <div className={`flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium ${photo ? "text-white/90" : "text-body"}`}><span className="flex items-center gap-2"><LayersIcon className={`size-4 ${photo ? "text-cyan-light" : "text-accent"}`} />{course.level}</span><span className="flex items-center gap-2"><CalendarIcon className={`size-4 ${photo ? "text-cyan-light" : "text-accent"}`} />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span></div>
             {startingPrice && <div><p className={`text-xs font-semibold uppercase tracking-[1.2px] ${photo ? "text-white/60" : "text-muted"}`}>{startingPrice === "Free" ? "Course fee" : "From"}</p><p className={`mt-1 font-display text-3xl font-bold tracking-tight ${photo ? "text-emerald-400" : "text-ink"}`}>{startingPrice}</p></div>}
-            <div className="flex flex-wrap gap-3">{cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full) ? <Link href={`/enroll?course=${course.slug}`} className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Enrol now <ArrowRight className="size-4" /></Link> : <a href="#cohorts" className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">See dates <ArrowRight className="size-4" /></a>}{course.curriculumUrl ? <CurriculumRequest courseId={course.id} courseTitle={course.title} defaultCountry={phoneCountry} className={secondaryButton} /> : course.curriculum.length > 0 && <a href="#curriculum" className={secondaryButton}>View curriculum</a>}</div>
+            <div className="flex flex-wrap gap-3">{cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full) ? <Link href={`/enroll?course=${course.slug}`} className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(79,63,215,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Enrol now <ArrowRight className="size-4" /></Link> : <a href="#cohorts" className="inline-flex h-12 items-center gap-2 rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(79,63,215,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">See dates <ArrowRight className="size-4" /></a>}{course.curriculumUrl ? <CurriculumRequest courseId={course.id} courseTitle={course.title} defaultCountry={phoneCountry} className={secondaryButton} /> : course.curriculum.length > 0 && <a href="#curriculum" className={secondaryButton}>View curriculum</a>}</div>
           </div>
           {!photo && (
-            <div className="overflow-hidden rounded-[5px] border border-edge shadow-[0_24px_60px_-38px_rgba(25,17,46,.4)]">
+            <div className="overflow-hidden rounded-[5px] border border-edge shadow-[0_24px_60px_-38px_rgba(24,19,64,.4)]">
               {course.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={course.imageUrl} alt="" className="aspect-[16/10] w-full object-cover" />
@@ -209,7 +209,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
           {cohorts.map((cohort) => {
             const enrolled = myCohortIds.has(cohort.id);
             return (
-              <div key={cohort.id} id={`cohort-${cohort.id}`} className="flex scroll-mt-36 flex-col gap-4 rounded-[5px] border border-edge bg-white p-5 transition hover:border-accent-muted hover:shadow-[0_18px_40px_-30px_rgba(25,17,46,.4)] target:border-accent target:ring-2 target:ring-accent/20 md:p-6">
+              <div key={cohort.id} id={`cohort-${cohort.id}`} className="flex scroll-mt-36 flex-col gap-4 rounded-[5px] border border-edge bg-white p-5 transition hover:border-accent-muted hover:shadow-[0_18px_40px_-30px_rgba(24,19,64,.4)] target:border-accent target:ring-2 target:ring-accent/20 md:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex flex-col gap-0.5">
                     <p className="font-display text-lg font-bold text-ink">{cohort.name}</p>

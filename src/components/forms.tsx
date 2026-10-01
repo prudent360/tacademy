@@ -89,7 +89,7 @@ export function DeleteButton({ action, label = "Delete" }: { action: () => Promi
   );
 }
 
-const inputClass = "w-full rounded-[5px] border border-edge-strong bg-white px-3.5 py-2.5 text-[15px] text-ink shadow-[0_1px_2px_rgba(25,17,46,.02)] transition placeholder:text-[#8b8598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
+const inputClass = "w-full rounded-[5px] border border-edge-strong bg-white px-3.5 py-2.5 text-[15px] text-ink shadow-[0_1px_2px_rgba(24,19,64,.02)] transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
 
 type FieldProps = { label: string; name: string; hint?: string; className?: string };
 
@@ -163,7 +163,7 @@ export function FileField({ label, name, current, accept = "image/*", hint, remo
           <Checkbox label="Remove" name={removeName} />
         </div>
       )}
-      <input id={id} type="file" name={name} accept={accept} className="text-sm text-body file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-accent hover:file:bg-[#e6dafa]" />
+      <input id={id} type="file" name={name} accept={accept} className="text-sm text-body file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-accent hover:file:bg-[#dddafa]" />
       <p className="text-[13px] text-muted">{hint ?? (isImage ? "JPG, PNG, WebP, GIF or AVIF, up to 4 MB." : "PDF, Office, image, ZIP or text file, up to 4 MB.")}</p>
     </div>
   );

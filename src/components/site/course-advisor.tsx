@@ -11,7 +11,7 @@ export function CourseAdvisor() {
   return (
     <div className="course-advisor fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
-        <section aria-label="Course advisor" className="flex w-[calc(100vw-2rem)] max-w-[380px] flex-col gap-3 rounded-[16px] border border-edge bg-white p-4 shadow-[0_30px_80px_-30px_rgba(25,17,46,.55)]">
+        <section aria-label="Course advisor" className="flex w-[calc(100vw-2rem)] max-w-[380px] flex-col gap-3 rounded-[16px] border border-edge bg-white p-4 shadow-[0_30px_80px_-30px_rgba(24,19,64,.55)]">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="font-display text-base font-bold text-ink">Find your course</p>
@@ -27,7 +27,7 @@ export function CourseAdvisor() {
           />
         </section>
       )}
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex h-12 cursor-pointer items-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-white shadow-[0_14px_32px_-12px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex h-12 cursor-pointer items-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-white shadow-[0_14px_32px_-12px_rgba(79,63,215,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">
         {open ? <XIcon className="size-4" /> : <SparkIcon className="size-4" />} {open ? "Close" : "Find your course"}
       </button>
     </div>

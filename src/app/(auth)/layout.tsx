@@ -10,7 +10,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const settings = await getSettings();
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-white sm:bg-[#e9eaf0] sm:px-6 sm:py-10">
-      <div className="grid w-full max-w-[1120px] overflow-hidden bg-white sm:rounded-[20px] sm:shadow-[0_40px_90px_-40px_rgba(25,17,46,.35)] lg:min-h-[660px] lg:grid-cols-2">
+      <div className="grid w-full max-w-[1120px] overflow-hidden bg-white sm:rounded-[20px] sm:shadow-[0_40px_90px_-40px_rgba(24,19,64,.35)] lg:min-h-[660px] lg:grid-cols-2">
         <div className="flex min-w-0 flex-col justify-center px-6 py-10 sm:px-14 lg:px-20">
           <div className="mx-auto flex w-full max-w-[380px] flex-col gap-7">
             <Brand settings={settings} />

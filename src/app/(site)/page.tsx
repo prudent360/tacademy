@@ -113,7 +113,7 @@ export default async function HomePage() {
           </h1>
           {settings.heroSubtitle && <p className="mt-5 max-w-[620px] text-pretty text-lg leading-relaxed text-muted md:text-[19px]">{settings.heroSubtitle}</p>}
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/courses" className="flex h-13 items-center gap-2 rounded-full bg-ink px-7 text-base font-semibold text-white shadow-[0_14px_30px_-14px_rgba(25,17,46,.8)] transition hover:-translate-y-0.5 hover:bg-accent">
+            <Link href="/courses" className="flex h-13 items-center gap-2 rounded-full bg-ink px-7 text-base font-semibold text-white shadow-[0_14px_30px_-14px_rgba(24,19,64,.8)] transition hover:-translate-y-0.5 hover:bg-accent">
               Browse courses <ArrowRight className="size-[18px]" />
             </Link>
             <a href="#formats" className="flex h-13 items-center rounded-full border-[1.5px] border-ink/80 px-7 text-base font-semibold text-ink transition hover:border-accent hover:text-accent">How we teach</a>
@@ -170,7 +170,7 @@ export default async function HomePage() {
           <SectionHeading eyebrow="How we teach" title="Online, in person, or both" subtitle="Every cohort has a clear timetable. Each class is either live online or in our training space, and you always know which." />
           <div className="grid gap-5 md:grid-cols-3">
             {FORMATS.map(({ icon: Icon, tone, title, text, points }) => (
-              <div key={title} className="group flex flex-col gap-4 rounded-[20px] border border-edge bg-panel p-6 transition hover:-translate-y-1 hover:border-accent-muted hover:bg-white hover:shadow-[0_18px_45px_-24px_rgba(25,17,46,.35)] md:p-7">
+              <div key={title} className="group flex flex-col gap-4 rounded-[20px] border border-edge bg-panel p-6 transition hover:-translate-y-1 hover:border-accent-muted hover:bg-white hover:shadow-[0_18px_45px_-24px_rgba(24,19,64,.35)] md:p-7">
                 <span className={`flex size-12 items-center justify-center rounded-xl ${tone}`}><Icon className="size-6" /></span>
                 <h3 className="font-display text-xl font-bold text-ink">{title}</h3>
                 <p className="text-[15px] leading-relaxed text-muted">{text}</p>
@@ -188,7 +188,7 @@ export default async function HomePage() {
       {/* Instructor-led learning */}
       <section className="border-t border-line bg-panel">
         <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 py-20 sm:px-8 md:py-24 lg:grid-cols-[1.08fr_.92fr] lg:gap-16">
-          <div className="relative overflow-hidden rounded-[5px] border border-edge bg-white p-2 shadow-[0_20px_55px_-36px_rgba(25,17,46,.45)]">
+          <div className="relative overflow-hidden rounded-[5px] border border-edge bg-white p-2 shadow-[0_20px_55px_-36px_rgba(24,19,64,.45)]">
             <Image src="/images/academy-instructor-support.webp" width={1440} height={960} sizes="(max-width: 1024px) 100vw, 52vw" alt="An instructor supporting Black African and White adult learners during a hands-on computer workshop" className="aspect-[3/2] w-full rounded-[3px] object-cover" />
           </div>
           <div className="flex flex-col gap-5">
@@ -221,7 +221,7 @@ export default async function HomePage() {
       {/* Internship programme: a compact banner. */}
       <section aria-labelledby="internship-heading" className="border-t border-line bg-white">
         <div className="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 md:py-20">
-          <div className="relative flex flex-col gap-7 overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#2b1a5c_0%,#5a24b8_100%)] px-7 py-9 text-white md:px-12 md:py-10 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative flex flex-col gap-7 overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#211a5c_0%,#3d2fb8_100%)] px-7 py-9 text-white md:px-12 md:py-10 lg:flex-row lg:items-center lg:justify-between">
             <div aria-hidden="true" className="absolute -right-20 -top-24 size-72 rounded-full bg-white/10 blur-2xl" />
             <div className="relative flex flex-col gap-3">
               <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-cyan-light">Internship programme</p>
@@ -303,7 +303,7 @@ export default async function HomePage() {
             <SectionHeading eyebrow="Student stories" title="What our students say" />
             <div className="grid gap-5 md:grid-cols-3">
               {settings.testimonials.map((t) => (
-                <figure key={t.name} className="relative flex flex-col gap-5 overflow-hidden rounded-[20px] border border-edge bg-panel p-6 transition hover:-translate-y-1 hover:bg-white hover:shadow-[0_18px_45px_-24px_rgba(25,17,46,.3)] md:p-7">
+                <figure key={t.name} className="relative flex flex-col gap-5 overflow-hidden rounded-[20px] border border-edge bg-panel p-6 transition hover:-translate-y-1 hover:bg-white hover:shadow-[0_18px_45px_-24px_rgba(24,19,64,.3)] md:p-7">
                   <span aria-hidden="true" className="absolute right-5 top-1 font-display text-7xl font-bold leading-none text-accent/10">&ldquo;</span>
                   <div className="flex gap-1 text-accent" aria-label="5 out of 5 stars">{[0, 1, 2, 3, 4].map((i) => <span key={i} aria-hidden="true">★</span>)}</div>
                   <blockquote className="relative text-[16px] leading-relaxed text-body">&ldquo;{t.quote}&rdquo;</blockquote>

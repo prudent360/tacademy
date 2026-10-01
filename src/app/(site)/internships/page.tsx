@@ -29,7 +29,7 @@ export default async function InternshipsPage() {
         <p className="font-mono text-xs font-medium uppercase tracking-[1.5px] text-accent md:text-[13px]">Internships</p>
         <h1 className="font-display text-4xl font-bold tracking-tight text-ink md:text-5xl">Put your skills to work</h1>
         <p className="max-w-[640px] text-lg text-muted">Our internship programmes give you supervised, real-world experience. Graduates of our courses join free; anyone else can join by paying the programme fee.</p>
-        <div className="pt-2"><Link href="/internships/apply" className="inline-flex h-12 items-center rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(113,52,217,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Apply now</Link></div>
+        <div className="pt-2"><Link href="/internships/apply" className="inline-flex h-12 items-center rounded-[5px] bg-accent px-6 font-semibold text-white shadow-[0_10px_24px_-14px_rgba(79,63,215,.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark">Apply now</Link></div>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         {POINTS.map(({ icon: Icon, title, text }) => (

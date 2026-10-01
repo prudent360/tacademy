@@ -22,8 +22,8 @@ const GATEWAY = {
   stripe: { label: "Stripe", color: "#635BFF", short: "S" },
   paystack: { label: "Paystack", color: "#0BA4DB", short: "P" },
   transactpay: { label: "TransactPay", color: "#1F4ED8", short: "T" },
-  manual: { label: "Bank / offline", color: "#19112E", short: "B" },
-  test: { label: "Test", color: "#8b8598", short: "T" },
+  manual: { label: "Bank / offline", color: "#181340", short: "B" },
+  test: { label: "Test", color: "#878598", short: "T" },
 } as const;
 
 type Search = { status?: string; gateway?: string; q?: string; page?: string };
@@ -118,7 +118,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
             <tbody>
               {rows.map(({ payment: p, user: u }) => {
                 // Older records can name a gateway that has since been removed.
-                const g = GATEWAY[p.gateway] ?? { label: p.gateway, color: "#8b8598", short: "?" };
+                const g = GATEWAY[p.gateway] ?? { label: p.gateway, color: "#878598", short: "?" };
                 return (
                   <tr key={p.id}>
                     <td className="whitespace-nowrap"><span className="block text-body">{formatDateTime(p.paidAt ?? p.createdAt, settings.timezone, { zone: false })}</span><span className="font-mono text-[11px] text-muted">{p.reference}</span></td>

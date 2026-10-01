@@ -11,7 +11,7 @@ const bar = (width: string, tone = "bg-line") => <span className={`block h-1.5 r
 /** A small app window: the main picture in each view. */
 function Window({ label, className = "", children }: { label: string; className?: string; children: React.ReactNode }) {
   return (
-    <div className={`absolute overflow-hidden rounded-[14px] bg-white shadow-[0_30px_70px_-30px_rgba(25,17,46,.45)] ring-1 ring-black/5 ${className}`}>
+    <div className={`absolute overflow-hidden rounded-[14px] bg-white shadow-[0_30px_70px_-30px_rgba(24,19,64,.45)] ring-1 ring-black/5 ${className}`}>
       <div className="flex items-center gap-1.5 border-b border-line px-3.5 py-2.5">
         <span className="size-2 rounded-full bg-red-400" /><span className="size-2 rounded-full bg-amber-400" /><span className="size-2 rounded-full bg-emerald-400" />
         <span className="ml-auto text-[10px] font-semibold text-muted">{label}</span>
@@ -25,7 +25,7 @@ function Window({ label, className = "", children }: { label: string; className?
 function Float({ className, delay = 0, children }: { className: string; delay?: number; children: React.ReactNode }) {
   return (
     <div className={`showcase-float absolute ${className}`} style={{ animationDelay: `${delay}ms` }}>
-      <div className="showcase-bob flex items-center gap-2 rounded-[12px] bg-white px-3 py-2 text-[11px] font-bold text-ink shadow-[0_16px_34px_-14px_rgba(25,17,46,.5)] ring-1 ring-black/5" style={{ animationDelay: `${delay + 600}ms` }}>{children}</div>
+      <div className="showcase-bob flex items-center gap-2 rounded-[12px] bg-white px-3 py-2 text-[11px] font-bold text-ink shadow-[0_16px_34px_-14px_rgba(24,19,64,.5)] ring-1 ring-black/5" style={{ animationDelay: `${delay + 600}ms` }}>{children}</div>
     </div>
   );
 }
@@ -34,7 +34,7 @@ function Fill({ pct, tone = "bg-accent" }: { pct: number; tone?: string }) {
   return <span className="block h-1.5 overflow-hidden rounded-full bg-accent-soft"><span className="showcase-fill block h-full origin-left rounded-full" style={{ width: `${pct}%` }}><span className={`block size-full rounded-full ${tone}`} /></span></span>;
 }
 
-const card = "rounded-[10px] bg-white p-3 shadow-[0_1px_2px_rgba(25,17,46,.06)]";
+const card = "rounded-[10px] bg-white p-3 shadow-[0_1px_2px_rgba(24,19,64,.06)]";
 
 const STUDENT_VIEWS: View[] = [
   {
@@ -45,7 +45,7 @@ const STUDENT_VIEWS: View[] = [
         <div className="flex items-center justify-between">
           <span className="flex flex-col gap-1"><span className="text-[13px] font-bold text-ink">Good evening, Ada</span><span className="text-[10px] text-muted">Data Analytics with Power BI</span></span>
           <span className="relative flex size-12 items-center justify-center">
-            <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90"><circle cx="18" cy="18" r="15" fill="none" stroke="#eee7fb" strokeWidth="3.5" /><circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" className="showcase-ring text-accent" strokeDasharray="94.2" style={{ ["--ring-to" as string]: "30" }} /></svg>
+            <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90"><circle cx="18" cy="18" r="15" fill="none" stroke="#e9e7fb" strokeWidth="3.5" /><circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" className="showcase-ring text-accent" strokeDasharray="94.2" style={{ ["--ring-to" as string]: "30" }} /></svg>
             <span className="text-[11px] font-bold text-accent">Lv 4</span>
           </span>
         </div>
@@ -69,7 +69,7 @@ const STUDENT_VIEWS: View[] = [
     text: "Watch lessons at your own pace, then check what you've learned with quick quizzes.",
     scene: <>
       <Window label="Week 2: Data modelling" className="left-[30px] top-[36px] w-[300px]">
-        <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[10px] bg-[linear-gradient(135deg,#2b1a5c,#5a24b8)]">
+        <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[10px] bg-[linear-gradient(135deg,#211a5c,#3d2fb8)]">
           <PlayIcon className="size-10 text-white/90" />
           <span className="absolute bottom-2 left-2 right-2"><span className="block h-1 overflow-hidden rounded-full bg-white/25"><span className="showcase-fill block h-full w-[45%] origin-left rounded-full bg-white" /></span></span>
         </div>
@@ -115,7 +115,7 @@ const STUDENT_VIEWS: View[] = [
     title: "Certificates",
     text: "Finish the course and get a certificate employers can verify with a QR code.",
     scene: <>
-      <div className="absolute left-[60px] top-[44px] flex w-[400px] flex-col items-center gap-1.5 rounded-[6px] bg-white px-8 py-7 text-center shadow-[0_30px_70px_-30px_rgba(25,17,46,.45)] ring-1 ring-black/5">
+      <div className="absolute left-[60px] top-[44px] flex w-[400px] flex-col items-center gap-1.5 rounded-[6px] bg-white px-8 py-7 text-center shadow-[0_30px_70px_-30px_rgba(24,19,64,.45)] ring-1 ring-black/5">
         <div className="pointer-events-none absolute inset-2 rounded-[4px] border border-accent/25" />
         <AwardIcon className="size-7 text-accent" />
         <p className="font-display text-[17px] font-bold text-ink">Certificate of Completion</p>
@@ -224,7 +224,7 @@ export function ProductShowcase() {
     <div ref={root} className="flex flex-col gap-8">
       <div role="tablist" aria-label="Who it's for" className="mx-auto flex rounded-full bg-accent-soft p-1">
         {(["students", "instructors"] as const).map((a) => (
-          <button key={a} type="button" role="tab" aria-selected={audience === a} onClick={() => choose(a)} className={`h-10 cursor-pointer rounded-full px-5 text-sm font-semibold transition ${audience === a ? "bg-white text-accent shadow-[0_4px_14px_-6px_rgba(113,52,217,.5)]" : "text-body hover:text-ink"}`}>
+          <button key={a} type="button" role="tab" aria-selected={audience === a} onClick={() => choose(a)} className={`h-10 cursor-pointer rounded-full px-5 text-sm font-semibold transition ${audience === a ? "bg-white text-accent shadow-[0_4px_14px_-6px_rgba(79,63,215,.5)]" : "text-body hover:text-ink"}`}>
             For {a}
           </button>
         ))}
@@ -236,7 +236,7 @@ export function ProductShowcase() {
             const active = i === index;
             return (
               <li key={`${audience}-${view.title}`}>
-                <button type="button" onClick={() => setIndex(i)} aria-current={active ? "true" : undefined} className={`flex w-full cursor-pointer flex-col gap-1.5 rounded-[14px] border p-4 text-left transition sm:p-5 ${active ? "border-edge bg-white shadow-[0_20px_45px_-30px_rgba(25,17,46,.45)]" : "border-transparent hover:bg-panel"}`}>
+                <button type="button" onClick={() => setIndex(i)} aria-current={active ? "true" : undefined} className={`flex w-full cursor-pointer flex-col gap-1.5 rounded-[14px] border p-4 text-left transition sm:p-5 ${active ? "border-edge bg-white shadow-[0_20px_45px_-30px_rgba(24,19,64,.45)]" : "border-transparent hover:bg-panel"}`}>
                   <span className={`font-display text-lg font-bold ${active ? "text-accent" : "text-ink"}`}>{view.title}</span>
                   <span className={`text-[15px] leading-relaxed text-muted ${active ? "" : "line-clamp-1 lg:line-clamp-none"}`}>{view.text}</span>
                   {active && (
@@ -251,7 +251,7 @@ export function ProductShowcase() {
           })}
         </ol>
 
-        <div className="relative order-first flex items-center justify-center overflow-hidden rounded-[24px] border border-accent/10 bg-[linear-gradient(135deg,#f4efff_0%,#eefafe_100%)] px-4 py-10 sm:py-12 lg:order-none">
+        <div className="relative order-first flex items-center justify-center overflow-hidden rounded-[24px] border border-accent/10 bg-[linear-gradient(135deg,#f1efff_0%,#eefafe_100%)] px-4 py-10 sm:py-12 lg:order-none">
           <div aria-hidden="true" className="absolute left-1/2 top-1/2 size-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/60" />
           {/* Drawn at 520×400 and scaled down on narrow screens; the outer box reserves the scaled size. */}
           <div aria-hidden="true" className="relative h-[231px] w-[300px] sm:h-[400px] sm:w-[520px]">

@@ -27,7 +27,7 @@ export default async function ApplyPage() {
       <div aria-hidden="true" className="absolute inset-0">
         <div className="sticky top-0 h-[100dvh] overflow-hidden">
           <Image src="/images/internship-classroom.webp" alt="" fill priority sizes="100vw" className="object-cover object-[center_30%]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(25,17,46,.82)_0%,rgba(43,26,92,.72)_45%,rgba(90,36,184,.8)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(24,19,64,.82)_0%,rgba(33,26,92,.72)_45%,rgba(61,47,184,.8)_100%)]" />
         </div>
       </div>
       <div className="relative mx-auto flex max-w-[860px] flex-col gap-10 px-5 pb-20 pt-14 sm:px-8 md:pt-20">

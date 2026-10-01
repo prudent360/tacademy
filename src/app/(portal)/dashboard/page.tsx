@@ -117,7 +117,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
       <Panel title="Your XP" icon={SparkIcon}>
         <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
           <div className="flex items-center gap-4">
-            <span className="flex size-16 shrink-0 flex-col items-center justify-center rounded-full bg-accent text-white shadow-[0_10px_24px_-12px_rgba(113,52,217,.9)]">
+            <span className="flex size-16 shrink-0 flex-col items-center justify-center rounded-full bg-accent text-white shadow-[0_10px_24px_-12px_rgba(79,63,215,.9)]">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-white/75">Level</span>
               <span className="font-display text-2xl font-bold leading-none">{xp.level}</span>
             </span>
@@ -140,7 +140,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
       </Panel>
 
       {(nextLearning || due[0] || next) && (
-        <Link href={nextLearning ? `/dashboard/cohorts/${nextLearning.cohortId}/learn/${nextLearning.lesson.id}` : due[0] ? `/dashboard/assignments/${due[0].assignment.id}` : `/dashboard/cohorts/${next!.session.cohortId}`} className="group flex items-center justify-between gap-5 rounded-[5px] border border-accent-muted/50 bg-[linear-gradient(100deg,#f4edff,#eefcff)] p-5 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_16px_35px_-28px_rgba(113,52,217,.75)]">
+        <Link href={nextLearning ? `/dashboard/cohorts/${nextLearning.cohortId}/learn/${nextLearning.lesson.id}` : due[0] ? `/dashboard/assignments/${due[0].assignment.id}` : `/dashboard/cohorts/${next!.session.cohortId}`} className="group flex items-center justify-between gap-5 rounded-[5px] border border-accent-muted/50 bg-[linear-gradient(100deg,#efedff,#eefcff)] p-5 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_16px_35px_-28px_rgba(79,63,215,.75)]">
           <span className="flex min-w-0 flex-col gap-1"><span className="text-xs font-bold uppercase tracking-[1.2px] text-accent">Continue learning</span><span className="truncate font-display text-lg font-bold text-ink">{nextLearning?.lesson.title ?? due[0]?.assignment.title ?? next!.session.title}</span><span className="truncate text-sm text-muted">{nextLearning ? `${nextLearning.courseModule.title} · ${nextLearning.lesson.estimatedMinutes} min` : due[0] ? `${due[0].course.title} · ${STATE_LABEL[due[0].state].label}` : `${next!.course.title} · ${formatSessionRange(next!.session.startsAt, next!.session.endsAt, tz)}`}</span></span>
           <span className="shrink-0 font-semibold text-accent transition group-hover:translate-x-1">Continue →</span>
         </Link>

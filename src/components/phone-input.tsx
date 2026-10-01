@@ -33,7 +33,7 @@ export function PhoneInput({ id, defaultCountry = "GB", defaultValue, placeholde
         </select>
       </div>
       <input type="hidden" name="dialCode" value={country.dial} />
-      <input id={id} name="phone" type="tel" required maxLength={30} autoComplete="tel-national" defaultValue={defaultValue} placeholder={placeholder ?? country.example ?? "Phone number"} className="h-full min-w-0 grow bg-transparent pr-3.5 text-[15px] text-ink placeholder:text-[#8b8598] focus:outline-none" />
+      <input id={id} name="phone" type="tel" required maxLength={30} autoComplete="tel-national" defaultValue={defaultValue} placeholder={placeholder ?? country.example ?? "Phone number"} className="h-full min-w-0 grow bg-transparent pr-3.5 text-[15px] text-ink placeholder:text-[#878598] focus:outline-none" />
     </div>
   );
 }

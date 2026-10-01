@@ -11,8 +11,8 @@ const theme = EditorView.theme({
   "&": { fontSize: "14px", backgroundColor: "#fff" },
   "&.cm-focused": { outline: "none" },
   ".cm-content": { fontFamily: "var(--font-mono, ui-monospace, monospace)", padding: "10px 0" },
-  ".cm-gutters": { backgroundColor: "#faf9fd", borderRight: "1px solid #ece9f3", color: "#9a93a8" },
-  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "#f6f2ff" },
+  ".cm-gutters": { backgroundColor: "#f9f9fd", borderRight: "1px solid #eae9f3", color: "#9593a8" },
+  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "#f3f2ff" },
 });
 
 /** A SQL editor with highlighting and table/column suggestions. Ctrl/Cmd+Enter runs the query. */

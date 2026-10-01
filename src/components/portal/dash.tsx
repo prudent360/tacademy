@@ -2,15 +2,15 @@ import Link from "next/link";
 import { ArrowRight, type Icon } from "@/components/icons";
 
 const BANNER_TONES = {
-  student: "from-[#19112e] via-[#332251] to-[#7134d9]",
+  student: "from-[#181340] via-[#272251] to-[#4f3fd7]",
   instructor: "from-[#10233a] via-[#183b55] to-[#0a6d8c]",
-  admin: "from-[#19112e] via-[#35205d] to-[#7134d9]",
+  admin: "from-[#181340] via-[#26205d] to-[#4f3fd7]",
 } as const;
 
 /** Role-aware welcome banner at the top of each dashboard. */
 export function GreetingBanner({ title, subtitle, children, aside, tone = "student" }: { title: string; subtitle?: React.ReactNode; children?: React.ReactNode; aside?: React.ReactNode; tone?: keyof typeof BANNER_TONES }) {
   return (
-    <section className={`portal-hero relative overflow-hidden rounded-[5px] bg-gradient-to-br ${BANNER_TONES[tone]} p-6 text-white shadow-[0_24px_70px_-36px_rgba(25,17,46,.75)] md:p-8`}>
+    <section className={`portal-hero relative overflow-hidden rounded-[5px] bg-gradient-to-br ${BANNER_TONES[tone]} p-6 text-white shadow-[0_24px_70px_-36px_rgba(24,19,64,.75)] md:p-8`}>
       <div aria-hidden="true" className="portal-hero-orb absolute -right-12 -top-24 size-72 rounded-full bg-white/10 blur-2xl" />
       <div aria-hidden="true" className="absolute -bottom-32 left-1/3 size-64 rounded-full bg-cyan/10 blur-3xl" />
       <svg aria-hidden="true" viewBox="-22 -1 44 44" className="pointer-events-none absolute -right-10 -top-10 size-64 opacity-[0.07]">
@@ -60,8 +60,8 @@ export function StatTile({ label, value, icon: IconComponent, tone = "purple", h
       </span>
     </>
   );
-  const cls = "stat-tile relative flex items-center gap-4 overflow-hidden rounded-[5px] border border-edge bg-white p-5 shadow-[0_1px_2px_rgba(25,17,46,.03)]";
-  return href ? <Link href={href} className={`${cls} group transition duration-200 hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_16px_40px_-24px_rgba(25,17,46,.4)]`}>{body}</Link> : <div className={cls}>{body}</div>;
+  const cls = "stat-tile relative flex items-center gap-4 overflow-hidden rounded-[5px] border border-edge bg-white p-5 shadow-[0_1px_2px_rgba(24,19,64,.03)]";
+  return href ? <Link href={href} className={`${cls} group transition duration-200 hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_16px_40px_-24px_rgba(24,19,64,.4)]`}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
 export function ProgressBar({ value, max = 100, tone = "purple", label, detail }: { value: number; max?: number; tone?: "purple" | "cyan" | "green" | "amber"; label?: React.ReactNode; detail?: React.ReactNode }) {
@@ -84,7 +84,7 @@ export function ProgressBar({ value, max = 100, tone = "purple", label, detail }
 
 export function QuickAction({ href, icon: IconComponent, title, text, tone = "purple" }: { href: string; icon: Icon; title: string; text: string; tone?: TileTone }) {
   return (
-    <Link href={href} className="group flex items-center gap-4 rounded-[5px] border border-edge bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:border-accent-muted hover:bg-accent-soft/35 hover:shadow-[0_12px_30px_-22px_rgba(25,17,46,.45)]">
+    <Link href={href} className="group flex items-center gap-4 rounded-[5px] border border-edge bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:border-accent-muted hover:bg-accent-soft/35 hover:shadow-[0_12px_30px_-22px_rgba(24,19,64,.45)]">
       <span className={`flex size-11 shrink-0 items-center justify-center rounded-[5px] transition duration-200 group-hover:scale-105 ${TILE_TONES[tone].icon}`}><IconComponent className="size-5" /></span>
       <span className="flex min-w-0 grow flex-col">
         <span className="font-semibold text-ink">{title}</span>
@@ -98,7 +98,7 @@ export function QuickAction({ href, icon: IconComponent, title, text, tone = "pu
 /** A panel with a title row and optional "View all" link. */
 export function Panel({ title, href, linkLabel = "View all", children, className = "", icon: IconComponent, padded = true }: { title: string; href?: string; linkLabel?: string; children: React.ReactNode; className?: string; icon?: Icon; padded?: boolean }) {
   return (
-    <section className={`portal-panel flex flex-col rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(25,17,46,.025)] ${className}`}>
+    <section className={`portal-panel flex flex-col rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(24,19,64,.025)] ${className}`}>
       <div className="flex items-center justify-between gap-3 px-5 pb-1 pt-5 md:px-6 md:pt-6">
         <h2 className="flex items-center gap-2 font-display text-[17px] font-bold text-ink">{IconComponent && <IconComponent className="size-[18px] text-accent" />}{title}</h2>
         {href && <Link href={href} className="flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent-dark">{linkLabel} <ArrowRight className="size-3.5" /></Link>}

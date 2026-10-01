@@ -9,7 +9,7 @@ const bar = (width: string, tone = "bg-line") => <span className={`block h-1.5 r
 
 function Window({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="w-[270px] overflow-hidden rounded-[12px] bg-white shadow-[0_28px_60px_-24px_rgba(10,5,30,.65)]">
+    <div className="w-[270px] overflow-hidden rounded-[12px] bg-white shadow-[0_28px_60px_-24px_rgba(8,5,30,.65)]">
       <div className="flex items-center gap-1.5 border-b border-line px-3 py-2.5">
         <span className="size-2 rounded-full bg-red-400" /><span className="size-2 rounded-full bg-amber-400" /><span className="size-2 rounded-full bg-emerald-400" />
         <span className="ml-auto text-[10px] font-semibold text-muted">{label}</span>
@@ -20,7 +20,7 @@ function Window({ label, children }: { label: string; children: React.ReactNode 
 }
 
 function Chip({ className, children }: { className: string; children: React.ReactNode }) {
-  return <div className={`absolute flex items-center gap-2 rounded-full bg-white px-3 py-2 text-[11px] font-bold text-ink shadow-[0_14px_30px_-12px_rgba(10,5,30,.55)] ${className}`}>{children}</div>;
+  return <div className={`absolute flex items-center gap-2 rounded-full bg-white px-3 py-2 text-[11px] font-bold text-ink shadow-[0_14px_30px_-12px_rgba(8,5,30,.55)] ${className}`}>{children}</div>;
 }
 
 /** One small picture per step, drawn at 420×320. */
@@ -29,7 +29,7 @@ const SCENES: React.ReactNode[] = [
   <>
     <Window label="Courses">
       {[{ tone: "bg-accent", picked: true }, { tone: "bg-cyan", picked: false }, { tone: "bg-amber-400", picked: false }].map((c, i) => (
-        <div key={i} className={`flex items-center gap-2.5 rounded-md bg-white p-2.5 ${c.picked ? "ring-2 ring-accent" : "shadow-[0_1px_2px_rgba(25,17,46,.06)]"}`}>
+        <div key={i} className={`flex items-center gap-2.5 rounded-md bg-white p-2.5 ${c.picked ? "ring-2 ring-accent" : "shadow-[0_1px_2px_rgba(24,19,64,.06)]"}`}>
           <span className={`size-8 shrink-0 rounded-md ${c.tone}`} />
           <span className="flex grow flex-col gap-1.5">{bar(i === 1 ? "w-20" : "w-24", "bg-edge-strong")}{bar("w-14")}</span>
           {c.picked && <span className="flex size-5 items-center justify-center rounded-full bg-accent text-white"><CheckIcon className="size-3" /></span>}
@@ -91,7 +91,7 @@ export function HowItWorks({ steps }: { steps: Step[] }) {
           const active = i === index;
           return (
             <li key={step.title}>
-              <button type="button" onClick={() => setIndex(i)} aria-current={active ? "step" : undefined} className={`flex w-full cursor-pointer gap-4 rounded-[14px] border p-5 text-left transition ${active ? "border-edge bg-white shadow-[0_20px_45px_-30px_rgba(25,17,46,.45)]" : "border-transparent hover:bg-white/60"}`}>
+              <button type="button" onClick={() => setIndex(i)} aria-current={active ? "step" : undefined} className={`flex w-full cursor-pointer gap-4 rounded-[14px] border p-5 text-left transition ${active ? "border-edge bg-white shadow-[0_20px_45px_-30px_rgba(24,19,64,.45)]" : "border-transparent hover:bg-white/60"}`}>
                 <span className={`flex size-10 shrink-0 items-center justify-center rounded-full font-mono text-sm font-semibold transition ${active ? "bg-accent text-white" : "bg-accent-soft text-accent"}`}>0{i + 1}</span>
                 <span className="flex min-w-0 grow flex-col gap-1.5">
                   <span className="font-display text-lg font-bold text-ink">{step.title}</span>
@@ -109,7 +109,7 @@ export function HowItWorks({ steps }: { steps: Step[] }) {
         })}
       </ol>
 
-      <div className="relative order-first flex items-center justify-center overflow-hidden rounded-[24px] border border-accent/10 bg-[#f4efff] px-6 py-12 sm:py-16 lg:order-none">
+      <div className="relative order-first flex items-center justify-center overflow-hidden rounded-[24px] border border-accent/10 bg-[#f1efff] px-6 py-12 sm:py-16 lg:order-none">
         <div aria-hidden="true" className="absolute left-1/2 top-1/2 size-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/70" />
         <div aria-hidden="true" className="absolute left-1/2 top-1/2 size-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent/15" />
         {/* Drawn at 420×320 and scaled down on narrow screens; the outer box reserves the scaled size. */}

@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 /** Renders Markdown written by staff (course pages, assignments, feedback). Raw HTML is not rendered. */
 export function Markdown({ children, size = "base" }: { children: string; size?: "base" | "lg" }) {
   return (
-    <div className={`prose prose-slate max-w-none text-body leading-relaxed prose-headings:font-display prose-headings:tracking-tight prose-headings:text-ink prose-a:text-accent prose-a:font-medium hover:prose-a:text-accent-dark prose-code:rounded prose-code:bg-accent-soft prose-code:px-1 prose-code:py-0.5 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-navy prose-pre:text-[#ece8f7] [&_pre_code]:rounded-none [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit ${size === "lg" ? "prose-lg" : ""}`}>
+    <div className={`prose prose-slate max-w-none text-body leading-relaxed prose-headings:font-display prose-headings:tracking-tight prose-headings:text-ink prose-a:text-accent prose-a:font-medium hover:prose-a:text-accent-dark prose-code:rounded prose-code:bg-accent-soft prose-code:px-1 prose-code:py-0.5 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-navy prose-pre:text-[#eae8f7] [&_pre_code]:rounded-none [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit ${size === "lg" ? "prose-lg" : ""}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

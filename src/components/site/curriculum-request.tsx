@@ -6,7 +6,7 @@ import { CheckCircleIcon, DownloadIcon, XIcon } from "@/components/icons";
 import { PhoneInput } from "@/components/phone-input";
 
 
-const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#8b8598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
+const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
 
 function Label({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return <label htmlFor={htmlFor} className="text-sm font-medium text-ink">{children} <span className="text-red-600" aria-hidden="true">*</span></label>;

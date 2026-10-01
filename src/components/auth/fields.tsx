@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { EyeIcon, EyeOffIcon, LockIcon, MailIcon } from "@/components/icons";
 
-const field = "h-12 w-full rounded-[8px] border border-edge bg-panel pl-11 pr-3.5 text-[15px] text-ink transition placeholder:text-[#8b8598] hover:border-accent-muted focus:border-accent focus:bg-white focus:outline-none focus:ring-4 focus:ring-accent/10";
+const field = "h-12 w-full rounded-[8px] border border-edge bg-panel pl-11 pr-3.5 text-[15px] text-ink transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:bg-white focus:outline-none focus:ring-4 focus:ring-accent/10";
 
 /** Email input with a leading icon, for the sign-in and account pages. */
 export function EmailField({ label = "Email address", name = "email", autoComplete = "username" }: { label?: string; name?: string; autoComplete?: string }) {

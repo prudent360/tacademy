@@ -10,7 +10,7 @@ import { QUALIFICATIONS } from "@/lib/utils";
 
 export type ApplicationIntake = { id: number; label: string };
 
-const input = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#8b8598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
+const input = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
 
 function Field({ label, htmlFor, required, hint, children }: { label: string; htmlFor?: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
@@ -159,7 +159,7 @@ export function ApplicationForm({ programmes, intakes, defaultCountry }: { progr
       </div>
 
       <div aria-live="polite" className="empty:hidden">{!pending && state?.error && <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{state.error}</p>}</div>
-      <button type="submit" disabled={pending} className="flex h-13 w-full cursor-pointer items-center justify-center rounded-[8px] bg-accent text-[16px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(113,52,217,.9)] transition hover:bg-accent-dark disabled:cursor-wait disabled:opacity-70">
+      <button type="submit" disabled={pending} className="flex h-13 w-full cursor-pointer items-center justify-center rounded-[8px] bg-accent text-[16px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(79,63,215,.9)] transition hover:bg-accent-dark disabled:cursor-wait disabled:opacity-70">
         {pending ? "Sending your application…" : "Submit application"}
       </button>
     </form>

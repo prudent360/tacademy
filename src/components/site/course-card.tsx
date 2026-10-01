@@ -10,7 +10,7 @@ export function CourseCard({ course, currencies }: { course: CourseSummary; curr
   const price = fromPrice(course.cohorts.filter((c) => c.enrollmentOpen), currencies);
   const modes = [...new Set(course.cohorts.map((c) => c.deliveryMode))];
   return (
-    <Link href={`/courses/${course.slug}`} className="group flex flex-col overflow-hidden rounded-[20px] border border-edge bg-white transition duration-300 hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_20px_48px_-22px_rgba(25,17,46,0.4)]">
+    <Link href={`/courses/${course.slug}`} className="group flex flex-col overflow-hidden rounded-[20px] border border-edge bg-white transition duration-300 hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_20px_48px_-22px_rgba(24,19,64,0.4)]">
       <div className="relative aspect-[16/9] overflow-hidden bg-accent-soft">
         {course.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

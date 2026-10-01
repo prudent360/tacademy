@@ -29,7 +29,6 @@ export default async function PortalLayout({ children }: { children: React.React
       user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl }}
       siteName={settings.siteName}
       logoUrl={settings.logoUrl}
-      logoDarkUrl={settings.logoDarkUrl}
       unread={unread}
       toGrade={toGrade}
       newApplications={newApplications}

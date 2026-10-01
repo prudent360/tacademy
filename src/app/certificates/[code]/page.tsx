@@ -26,7 +26,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
     .where(and(eq(certificates.code, code), isNull(certificates.revokedAt)));
   if (!row) notFound();
   const settings = await getSettings();
-  const qr = await QRCode.toDataURL(absoluteUrl(`/certificates/${row.certificate.code}`), { width: 180, margin: 1, color: { dark: "#19112e", light: "#ffffff" } });
+  const qr = await QRCode.toDataURL(absoluteUrl(`/certificates/${row.certificate.code}`), { width: 180, margin: 1, color: { dark: "#181340", light: "#ffffff" } });
   const issued = formatDateOnly(row.certificate.issuedAt.toISOString().slice(0, 10));
   const details: [string, string][] = [
     ["Issued to", row.student.name],
@@ -43,7 +43,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
       </div>
 
       {/* The landscape A4 layout from small tablets up (and when printing); on phones it grows to fit its content instead of being cropped. */}
-      <article className="certificate-sheet relative mx-auto flex max-w-[1120px] flex-col items-center justify-center overflow-hidden border border-edge bg-white px-6 py-10 text-center shadow-[0_24px_70px_-35px_rgba(25,17,46,.35)] sm:aspect-[1.414/1] sm:px-10 sm:py-12">
+      <article className="certificate-sheet relative mx-auto flex max-w-[1120px] flex-col items-center justify-center overflow-hidden border border-edge bg-white px-6 py-10 text-center shadow-[0_24px_70px_-35px_rgba(24,19,64,.35)] sm:aspect-[1.414/1] sm:px-10 sm:py-12">
         <div className="absolute inset-2 border border-accent/30 sm:inset-4" />
         <div className="absolute inset-3.5 border border-cyan/25 sm:inset-7" />
         <BrandMark className="relative size-10 sm:size-14" />

@@ -47,7 +47,7 @@ export function LearningShowcase({ className = "px-10 py-14" }: { className?: st
             <Icon className={`size-6 ${tone}`} />
           </span>
         ))}
-        <div className="absolute left-[190px] top-[62px] w-[220px] overflow-hidden rounded-[10px] bg-white shadow-[0_24px_50px_-20px_rgba(10,5,30,.6)]">
+        <div className="absolute left-[190px] top-[62px] w-[220px] overflow-hidden rounded-[10px] bg-white shadow-[0_24px_50px_-20px_rgba(8,5,30,.6)]">
           <div className="flex items-center gap-1.5 border-b border-line px-3 py-2.5">
             <span className="size-2 rounded-full bg-red-400" /><span className="size-2 rounded-full bg-amber-400" /><span className="size-2 rounded-full bg-emerald-400" />
             <span className="ml-auto h-1.5 w-12 rounded-full bg-line" />
@@ -58,7 +58,7 @@ export function LearningShowcase({ className = "px-10 py-14" }: { className?: st
               <span className="h-1.5 w-10 rounded-full bg-line" />
             </div>
             {ROWS.map((row) => (
-              <div key={row.initials} className="flex items-center gap-2.5 rounded-md bg-white p-2 shadow-[0_1px_2px_rgba(25,17,46,.06)]">
+              <div key={row.initials} className="flex items-center gap-2.5 rounded-md bg-white p-2 shadow-[0_1px_2px_rgba(24,19,64,.06)]">
                 <span className={`flex size-7 items-center justify-center rounded-full text-[10px] font-bold ${row.tone}`}>{row.initials}</span>
                 <span className="flex flex-col gap-1.5"><span className={`h-1.5 rounded-full bg-edge-strong ${row.widths[0]}`} /><span className={`h-1.5 rounded-full bg-line ${row.widths[1]}`} /></span>
               </div>

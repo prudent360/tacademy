@@ -4,7 +4,7 @@
  * `tone="mono"` draws everything in the current text colour.
  */
 export function BrandMark({ className = "size-9", tone = "primary" }: { className?: string; tone?: "primary" | "reversed" | "mono" }) {
-  const main = tone === "primary" ? "#7134D9" : tone === "reversed" ? "#FFFFFF" : "currentColor";
+  const main = tone === "primary" ? "#4F3FD7" : tone === "reversed" ? "#FFFFFF" : "currentColor";
   const highlight = tone === "mono" ? "currentColor" : "#31C4F0";
   return (
     <svg viewBox="-22 -1 44 44" aria-hidden="true" className={className}>

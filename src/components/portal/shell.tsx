@@ -173,7 +173,7 @@ function NotificationMenu({ items, unread, markAllRead }: { items: ShellNotifica
         {unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-white">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-[14px] border border-edge bg-white shadow-[0_24px_48px_-16px_rgba(25,17,46,0.3)]">
+        <div className="absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-[14px] border border-edge bg-white shadow-[0_24px_48px_-16px_rgba(24,19,64,0.3)]">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <p className="font-display font-bold text-ink">Notifications</p>
             {unread > 0 && <button type="button" onClick={async () => { await markAllRead(); }} className="cursor-pointer text-xs font-semibold text-accent hover:text-accent-dark">Mark all read</button>}
@@ -209,7 +209,7 @@ function UserMenu({ user, studentId, logout }: { user: { name: string; email: st
         <Avatar name={user.name} src={user.avatarUrl} className="size-9" />
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-60 overflow-hidden rounded-[14px] border border-edge bg-white p-1.5 shadow-[0_24px_48px_-16px_rgba(25,17,46,0.3)]">
+        <div className="absolute right-0 top-12 z-50 w-60 overflow-hidden rounded-[14px] border border-edge bg-white p-1.5 shadow-[0_24px_48px_-16px_rgba(24,19,64,0.3)]">
           <div className="border-b border-line px-3 py-2.5">
             <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
             <p className="truncate text-xs text-muted">{ROLE_LABEL[user.role]} · {user.email}</p>
@@ -237,7 +237,7 @@ function LevelBadge({ xp }: { xp: { level: number; total: number; percent: numbe
       <span className="relative flex size-9 shrink-0 items-center justify-center">
         <svg viewBox="0 0 36 36" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
           <defs>
-            <linearGradient id="level-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#7134d9" /><stop offset="100%" stopColor="#22c3d6" /></linearGradient>
+            <linearGradient id="level-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#4f3fd7" /><stop offset="100%" stopColor="#22c3d6" /></linearGradient>
           </defs>
           <circle cx="18" cy="18" r={radius} fill="none" stroke="currentColor" strokeWidth="3" className="text-accent-soft" />
           <circle cx="18" cy="18" r={radius} fill="none" stroke="url(#level-ring)" strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - filled / 100)} className="transition-[stroke-dashoffset] duration-700" />
@@ -268,13 +268,12 @@ function StudentIdPill({ id }: { id: string }) {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl, unread, toGrade, newApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null };
   siteName: string;
   logoUrl: string | null;
-  logoDarkUrl: string | null;
   unread: number;
   toGrade: number;
   /** Admins: internship applications waiting for review. */
@@ -307,26 +306,20 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
   const [first, ...rest] = siteName.split(" ");
 
   const sidebar = (
-    <aside className="flex h-full w-[276px] flex-col border-r border-white/[.06] bg-[linear-gradient(180deg,#19112e_0%,#21163a_55%,#171025_100%)] text-white shadow-[18px_0_50px_-38px_rgba(25,17,46,.8)]">
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
+    <aside className="flex h-full w-[276px] flex-col border-r border-edge bg-white text-ink shadow-[12px_0_40px_-36px_rgba(24,19,64,.35)]">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-line px-5">
         <Link href={home} className="flex items-center gap-2.5" onClick={() => setDrawer(false)}>
-          {logoDarkUrl ? (
+          {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoDarkUrl} alt={siteName} className="h-11 w-auto max-w-[210px] object-contain" />
-          ) : logoUrl ? (
-            // A logo made for light backgrounds goes on a white tile so it stays readable.
-            <span className="rounded-lg bg-white px-2.5 py-1.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoUrl} alt={siteName} className="h-8 w-auto max-w-[190px] object-contain" />
-            </span>
+            <img src={logoUrl} alt={siteName} className="h-11 w-auto max-w-[210px] object-contain" />
           ) : (
             <>
-              <BrandMark className="size-8" tone="reversed" />
-              <span className="font-display text-lg font-extrabold tracking-[-0.4px]">{first}{rest.length > 0 && <span className="ml-1 font-semibold text-white/60">{rest.join(" ")}</span>}</span>
+              <BrandMark className="size-8" />
+              <span className="font-display text-lg font-extrabold tracking-[-0.4px] text-ink">{first}{rest.length > 0 && <span className="ml-1 font-semibold text-accent">{rest.join(" ")}</span>}</span>
             </>
           )}
         </Link>
-        <button type="button" onClick={() => setDrawer(false)} className="flex size-9 items-center justify-center rounded-lg hover:bg-white/10 lg:hidden" aria-label="Close menu"><XIcon /></button>
+        <button type="button" onClick={() => setDrawer(false)} className="flex size-9 items-center justify-center rounded-lg text-muted hover:bg-panel hover:text-ink lg:hidden" aria-label="Close menu"><XIcon /></button>
       </div>
       <nav aria-label="Portal" className="portal-nav-scroll flex grow flex-col gap-2 overflow-y-auto px-3 py-5">
         {groups.map((group) => {
@@ -334,13 +327,13 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
           const open = isOpen(`group:${group.label}`, true);
           const groupCount = group.items.reduce((total, item) => total + (item.badge ?? 0) + (item.children ?? []).reduce((sum, child) => sum + (child.badge ?? 0), 0), 0);
           return (
-          <section key={group.label} className="border-b border-white/[.06] pb-2 last:border-0">
+          <section key={group.label} className="border-b border-line pb-2 last:border-0">
             <button
               type="button"
               aria-expanded={open}
               aria-controls={`portal-group-${group.label.toLowerCase().replace(/\s+/g, "-")}`}
               onClick={() => toggleNav(`group:${group.label}`, open)}
-              className={`group flex w-full cursor-pointer items-center gap-2 rounded-[5px] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[1.6px] transition hover:bg-white/[.05] hover:text-white ${containsActive ? "text-cyan-light" : "text-white/45"}`}
+              className={`group flex w-full cursor-pointer items-center gap-2 rounded-[5px] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[1.6px] transition hover:bg-panel hover:text-ink ${containsActive ? "text-accent" : "text-muted/80"}`}
             >
               <span className="grow">{group.label}</span>
               {groupCount > 0 && <span className="flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[9px] tracking-normal text-white">{groupCount > 99 ? "99+" : groupCount}</span>}
@@ -364,16 +357,16 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
                       aria-expanded={expanded}
                       aria-controls={listId}
                       onClick={() => toggleNav(itemKey, expanded)}
-                      className={`group relative flex h-10 w-full cursor-pointer items-center gap-3 rounded-[5px] px-3 text-left text-sm font-medium transition duration-200 ${active ? "text-white" : "text-white/65 hover:bg-white/[0.07] hover:text-white"}`}
+                      className={`group relative flex h-10 w-full cursor-pointer items-center gap-3 rounded-[5px] px-3 text-left text-sm font-medium transition duration-200 ${active ? "text-accent" : "text-body hover:bg-panel hover:text-ink"}`}
                     >
-                      <IconComponent className={`size-[18px] ${active ? "text-cyan" : ""}`} />
+                      <IconComponent className={`size-[18px] ${active ? "text-accent" : "text-muted group-hover:text-ink"}`} />
                       <span className="grow">{item.label}</span>
                       {!expanded && childBadges > 0 && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-white">{childBadges > 99 ? "99+" : childBadges}</span>}
-                      <ChevronDown className={`size-4 text-white/50 transition-transform duration-200 ${expanded ? "rotate-0" : "-rotate-90"}`} />
+                      <ChevronDown className={`size-4 text-muted transition-transform duration-200 ${expanded ? "rotate-0" : "-rotate-90"}`} />
                     </button>
                     <div id={listId} className={`sidebar-group-grid ${expanded ? "is-open" : ""}`}>
                       <div className="min-h-0">
-                        <div className="ml-[21px] flex flex-col gap-0.5 border-l border-white/10 py-0.5 pl-3">
+                        <div className="ml-[21px] flex flex-col gap-0.5 border-l border-line py-0.5 pl-3">
                           {item.children.map((child) => {
                             const childActive = isActive(pathname, tab, child);
                             return (
@@ -382,9 +375,9 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
                                 href={child.href}
                                 onClick={() => setDrawer(false)}
                                 aria-current={childActive ? "page" : undefined}
-                                className={`flex h-9 items-center gap-2 rounded-[5px] px-3 text-[13px] font-medium transition ${childActive ? "bg-white/[0.12] text-white" : "text-white/60 hover:bg-white/[0.07] hover:text-white"}`}
+                                className={`flex h-9 items-center gap-2 rounded-[5px] px-3 text-[13px] font-medium transition ${childActive ? "bg-accent-soft font-semibold text-accent" : "text-muted hover:bg-panel hover:text-ink"}`}
                               >
-                                <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${childActive ? "bg-cyan" : "bg-white/25"}`} />
+                                <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${childActive ? "bg-accent" : "bg-edge-strong"}`} />
                                 {child.label}
                                 {Boolean(child.badge) && <span className="ml-auto rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-white">{child.badge! > 99 ? "99+" : child.badge}</span>}
                               </Link>
@@ -402,10 +395,10 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
                   href={item.href}
                   onClick={() => setDrawer(false)}
                   aria-current={active ? "page" : undefined}
-                  className={`group relative flex h-10 items-center gap-3 rounded-[5px] px-3 text-sm font-medium transition duration-200 ${active ? "bg-white/[0.12] text-white shadow-[inset_0_1px_rgba(255,255,255,.06)]" : "text-white/65 hover:translate-x-0.5 hover:bg-white/[0.07] hover:text-white"}`}
+                  className={`group relative flex h-10 items-center gap-3 rounded-[5px] px-3 text-sm font-medium transition duration-200 ${active ? "bg-accent-soft font-semibold text-accent" : "text-body hover:translate-x-0.5 hover:bg-panel hover:text-ink"}`}
                 >
-                  {active && <span className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-cyan" aria-hidden="true" />}
-                  <IconComponent className={`size-[18px] ${active ? "text-cyan" : ""}`} />
+                  {active && <span className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-accent" aria-hidden="true" />}
+                  <IconComponent className={`size-[18px] ${active ? "text-accent" : "text-muted group-hover:text-ink"}`} />
                   {item.label}
                   {Boolean(item.badge) && <span className="ml-auto rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-white">{item.badge! > 99 ? "99+" : item.badge}</span>}
                 </Link>
@@ -418,16 +411,16 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
           );
         })}
       </nav>
-      <div className="shrink-0 border-t border-white/10 p-4">
+      <div className="shrink-0 border-t border-line p-4">
         <div className="flex items-center gap-3 px-1 pb-3">
-          <Avatar name={user.name} src={user.avatarUrl} className="size-10 ring-2 ring-white/10" />
+          <Avatar name={user.name} src={user.avatarUrl} className="size-10 ring-2 ring-edge" />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{user.name}</p>
-            <p className="truncate text-xs text-white/50">{ROLE_LABEL[role]}</p>
+            <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
+            <p className="truncate text-xs text-muted">{ROLE_LABEL[role]}</p>
           </div>
         </div>
         <form action={logout}>
-          <button type="submit" className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-sm font-medium text-red-300 hover:bg-red-500/10"><LogoutIcon className="size-[18px]" /> Sign out</button>
+          <button type="submit" className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-sm font-medium text-red-600 hover:bg-red-50"><LogoutIcon className="size-[18px]" /> Sign out</button>
         </form>
       </div>
     </aside>
@@ -447,7 +440,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
       )}
 
       <div className="lg:pl-[276px]">
-        <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between gap-3 border-b border-edge/80 bg-white/85 px-4 shadow-[0_1px_12px_rgba(25,17,46,.035)] backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between gap-3 border-b border-edge/80 bg-white/85 px-4 shadow-[0_1px_12px_rgba(24,19,64,.035)] backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setDrawer(true)} className="flex size-10 items-center justify-center rounded-lg text-ink hover:bg-page lg:hidden" aria-label="Open menu"><MenuIcon /></button>
             <Link href={home} className="flex items-center gap-2 lg:hidden" aria-label={`${siteName} home`}><BrandMark className="size-8" /></Link>
@@ -467,7 +460,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
       </div>
 
       {/* Mobile bottom tab bar */}
-      <nav aria-label="Quick" className="fixed inset-x-0 bottom-0 z-40 flex border-t border-edge bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(25,17,46,0.08)] backdrop-blur-xl lg:hidden">
+      <nav aria-label="Quick" className="fixed inset-x-0 bottom-0 z-40 flex border-t border-edge bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(24,19,64,0.08)] backdrop-blur-xl lg:hidden">
         {bottom.map((item) => {
           const active = isActive(pathname, tab, item);
           const IconComponent = item.icon;

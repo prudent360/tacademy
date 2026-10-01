@@ -25,7 +25,7 @@ export default async function ContactPage() {
       <section className="mx-auto max-w-[1120px] px-5 py-14 sm:px-8 md:py-20">
         <div className="grid gap-5 md:grid-cols-3">
           {topics.map(({ icon: Icon, title, text, subject }) => (
-            <a key={title} href={`mailto:${email}?subject=${encodeURIComponent(subject)}`} className="group flex flex-col rounded-[20px] border border-edge bg-white p-6 transition hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_18px_45px_-24px_rgba(25,17,46,.35)]">
+            <a key={title} href={`mailto:${email}?subject=${encodeURIComponent(subject)}`} className="group flex flex-col rounded-[20px] border border-edge bg-white p-6 transition hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_18px_45px_-24px_rgba(24,19,64,.35)]">
               <span className="flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent"><Icon className="size-6" /></span>
               <h2 className="mt-5 font-display text-xl font-bold text-ink">{title}</h2><p className="mt-2 grow text-[15px] leading-6 text-muted">{text}</p><span className="mt-5 flex items-center gap-2 text-sm font-semibold text-accent">Email the team <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
             </a>

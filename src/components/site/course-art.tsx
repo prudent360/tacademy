@@ -1,9 +1,9 @@
 /** Generated cover art for courses without an image, varied by id so cards don't look identical. */
 const PALETTES = [
-  { bg: "#f1eafc", a: "#7134d9", b: "#b495ee", c: "#31c4f0" },
-  { bg: "#19112e", a: "#8e5ce6", b: "#b495ee", c: "#31c4f0" },
-  { bg: "#e4f7fd", a: "#31c4f0", b: "#8fdff7", c: "#7134d9" },
-  { bg: "#2b2147", a: "#31c4f0", b: "#8e5ce6", c: "#f1eafc" },
+  { bg: "#edecfb", a: "#4f3fd7", b: "#a69ef0", c: "#31c4f0" },
+  { bg: "#181340", a: "#6e61e3", b: "#a69ef0", c: "#31c4f0" },
+  { bg: "#e4f7fd", a: "#31c4f0", b: "#8fdff7", c: "#4f3fd7" },
+  { bg: "#252147", a: "#31c4f0", b: "#6e61e3", c: "#edecfb" },
 ];
 
 export function CourseArt({ seed, className }: { seed: number; className?: string }) {

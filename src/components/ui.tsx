@@ -24,7 +24,7 @@ export function PageHeader({ title, description, actions, back }: { title: strin
 
 export function Card({ children, className = "", title, action, padded = true, id }: { children: React.ReactNode; className?: string; title?: string; action?: React.ReactNode; padded?: boolean; id?: string }) {
   return (
-    <section id={id} className={`rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(25,17,46,.025)] ${className}`}>
+    <section id={id} className={`rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(24,19,64,.025)] ${className}`}>
       {title && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4 md:px-6">
           <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
@@ -97,7 +97,7 @@ export function EmptyState({ title, children, action, icon: IconComponent }: { t
 
 export function StatCard({ label, value, hint, icon: IconComponent }: { label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: Icon }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[5px] border border-edge bg-white p-5 shadow-[0_1px_2px_rgba(25,17,46,.025)] transition duration-200 hover:-translate-y-0.5 hover:border-accent-muted hover:shadow-[0_14px_34px_-24px_rgba(25,17,46,.4)]">
+    <div className="flex flex-col gap-2 rounded-[5px] border border-edge bg-white p-5 shadow-[0_1px_2px_rgba(24,19,64,.025)] transition duration-200 hover:-translate-y-0.5 hover:border-accent-muted hover:shadow-[0_14px_34px_-24px_rgba(24,19,64,.4)]">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold text-muted">{label}</p>
         {IconComponent && <IconComponent className="size-5 text-accent" />}
@@ -150,7 +150,7 @@ export function Notice({ tone = "green", children }: { tone?: "green" | "amber" 
 }
 
 export const buttonClass = {
-  primary: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] bg-accent px-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_-12px_rgba(113,52,217,.85)] transition hover:-translate-y-0.5 hover:bg-accent-dark hover:shadow-md active:translate-y-0",
+  primary: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] bg-accent px-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_-12px_rgba(79,63,215,.85)] transition hover:-translate-y-0.5 hover:bg-accent-dark hover:shadow-md active:translate-y-0",
   secondary: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] border border-edge-strong bg-white px-5 text-[15px] font-semibold text-ink transition hover:-translate-y-0.5 hover:border-accent-muted hover:bg-page active:translate-y-0",
   ghost: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] px-3 text-[15px] font-semibold text-accent transition hover:bg-accent-soft",
   small: "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-edge-strong bg-white px-3 text-sm font-semibold text-ink transition hover:border-accent-muted hover:bg-page",
@@ -158,7 +158,7 @@ export const buttonClass = {
 
 export function DataTable({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(25,17,46,.025)]">
+    <div className="overflow-x-auto rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(24,19,64,.025)]">
       <table className="w-full min-w-[720px] border-collapse text-left text-sm [&_tbody_tr:hover]:bg-accent-soft/25 [&_tbody_tr]:transition-colors [&_td]:border-t [&_td]:border-line [&_td]:px-5 [&_td]:py-4 [&_td]:align-middle [&_th]:whitespace-nowrap [&_th]:bg-panel [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-[11px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[1px] [&_th]:text-muted">
         {children}
       </table>
@@ -193,11 +193,11 @@ export function TableToolbar({ action, q, placeholder, hidden = {}, filters, rig
   right?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-[5px] border border-edge bg-white p-4 shadow-[0_1px_2px_rgba(25,17,46,.025)] lg:flex-row lg:items-center">
+    <div className="flex flex-col gap-3 rounded-[5px] border border-edge bg-white p-4 shadow-[0_1px_2px_rgba(24,19,64,.025)] lg:flex-row lg:items-center">
       <form action={action} className="relative flex-1">
         {Object.entries(hidden).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
         <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted" />
-        <input name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} className="h-11 w-full rounded-lg border border-edge-strong bg-white pl-10 pr-3 text-sm text-ink placeholder:text-[#8b8598] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
+        <input name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} className="h-11 w-full rounded-lg border border-edge-strong bg-white pl-10 pr-3 text-sm text-ink placeholder:text-[#878598] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
       </form>
       {filters && (
         <div className="flex flex-wrap items-center gap-1.5">
