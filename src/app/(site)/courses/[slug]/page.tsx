@@ -184,7 +184,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
               <div className="grid gap-4 sm:grid-cols-2">
                 {instructors.map((i) => (
                   <div key={i.id} className="flex gap-4 rounded-[14px] border border-edge bg-white p-5">
-                    <Avatar name={i.name} src={i.avatarUrl} size="lg" />
+                    <Avatar name={i.name} src={i.avatarUrl} gender={i.gender} size="lg" />
                     <div className="flex min-w-0 flex-col gap-1">
                       <p className="font-display text-lg font-bold text-ink">{i.name}</p>
                       {i.bio && <p className="text-sm leading-relaxed text-muted">{i.bio}</p>}

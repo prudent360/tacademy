@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { changePassword, updateProfile } from "@/app/actions/account";
-import { ActionForm, Checkbox, FileField, Input, SubmitButton, Textarea } from "@/components/forms";
+import { ActionForm, Checkbox, FileField, Input, Select, SubmitButton, Textarea } from "@/components/forms";
 import { Card, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
-import { studentId } from "@/lib/utils";
+import { GENDER_OPTIONS, studentId } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -20,6 +20,7 @@ export default async function AccountPage() {
               <Input label="Full name" name="name" defaultValue={user.name} required />
               <Input label="Phone" name="phone" type="tel" defaultValue={user.phone} hint="Used by the academy for class updates." />
             </div>
+            <Select label="Gender" name="gender" defaultValue={user.gender ?? ""} options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))} hint="Optional. Without a photo, your avatar is an illustration based on this." className="max-w-[320px]" />
             {user.role !== "student" && <Textarea label="Short bio" name="bio" defaultValue={user.bio} hint="Shown on course pages you teach." />}
             <FileField label="Profile photo" name="avatar" current={user.avatarUrl} removeName="removeAvatar" />
             <Checkbox label="Email me class and deadline reminders" name="emailReminders" defaultChecked={user.emailReminders} hint="Receipts, feedback and account emails are always sent." />

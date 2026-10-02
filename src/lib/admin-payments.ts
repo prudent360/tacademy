@@ -28,7 +28,7 @@ export async function listPayments(f: PaymentFilters, { limit, offset }: { limit
   const db = await getDb();
   const where = paymentWhere(f);
   const [rows, [{ n }]] = await Promise.all([
-    db.select({ payment: payments, user: { id: users.id, name: users.name, email: users.email, avatarUrl: users.avatarUrl } })
+    db.select({ payment: payments, user: { id: users.id, name: users.name, email: users.email, avatarUrl: users.avatarUrl, gender: users.gender } })
       .from(payments).innerJoin(users, eq(users.id, payments.userId)).where(where).orderBy(desc(payments.createdAt)).limit(limit).offset(offset),
     db.select({ n: count() }).from(payments).innerJoin(users, eq(users.id, payments.userId)).where(where),
   ]);

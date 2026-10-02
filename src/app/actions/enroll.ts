@@ -26,6 +26,7 @@ const detailsSchema = z.object({
   phone: phoneNumber,
   dateOfBirth: z.string().trim().refine((v) => /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= "1920-01-01" && v <= new Date().toISOString().slice(0, 10), "Enter a valid date of birth."),
   country: z.string().trim().toUpperCase().refine((v) => Boolean(countryByCode(v)), "Choose the country you live in."),
+  gender: z.enum(["female", "male", ""]).catch(""),
   qualification: z.string().refine((v) => v === "" || (QUALIFICATIONS as readonly string[]).includes(v), "Choose a qualification from the list."),
   cohortId: z.coerce.number().int().positive("Choose a course and cohort."),
   currency: z.string().trim().max(3),
@@ -42,7 +43,7 @@ type Details = z.infer<typeof detailsSchema>;
  */
 async function applicantFor(details: Details, next: string): Promise<{ user: User } | { error: string; signIn?: string }> {
   const db = await getDb();
-  const profile = { phone: formatPhone(details.dialCode, details.phone), dateOfBirth: details.dateOfBirth, qualification: details.qualification, country: details.country };
+  const profile = { phone: formatPhone(details.dialCode, details.phone), dateOfBirth: details.dateOfBirth, gender: details.gender || null, qualification: details.qualification, country: details.country };
   const signedIn = await getCurrentUser();
   if (signedIn) {
     const [user] = await db.update(users).set(profile).where(eq(users.id, signedIn.id)).returning();

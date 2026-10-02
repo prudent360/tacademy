@@ -14,6 +14,9 @@ export function parseList(value: FormDataEntryValue | null, separator: RegExp = 
   return value.split(separator).map((item) => item.trim()).filter(Boolean);
 }
 
+/** Gender choices for profiles; "" is "prefer not to say". Used for the default avatar. */
+export const GENDER_OPTIONS = [{ value: "female", label: "Female" }, { value: "male", label: "Male" }, { value: "", label: "Prefer not to say" }] as const;
+
 export function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((n) => n.charAt(0)).join("").toUpperCase() || "?";
 }

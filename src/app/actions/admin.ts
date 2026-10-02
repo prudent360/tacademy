@@ -284,7 +284,7 @@ export async function inviteUser(_state: FormState, formData: FormData): Promise
   redirect(`/admin/users/${id}?invited=1`);
 }
 
-const userSchema = z.object({ name: required("Name", 120), role: z.enum(ROLES), phone: text(40), bio: text(600) });
+const userSchema = z.object({ name: required("Name", 120), role: z.enum(ROLES), phone: text(40), bio: text(600), gender: z.enum(["female", "male", ""]).catch("").transform((g) => g || null) });
 
 export async function updateUser(id: number, _state: FormState, formData: FormData): Promise<FormState> {
   const admin = await requireRole("admin");

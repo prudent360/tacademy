@@ -93,7 +93,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             <tbody>
               {rows.map((u) => (
                 <tr key={u.id}>
-                  <td><PersonCell name={u.name} email={u.email} src={u.avatarUrl} href={`/admin/users/${u.id}`} /></td>
+                  <td><PersonCell name={u.name} email={u.email} src={u.avatarUrl} gender={u.gender} href={`/admin/users/${u.id}`} /></td>
                   <td><Badge tone={ROLE_TONE[u.role]} className="capitalize">{u.role}</Badge>{u.role === "student" && <span className="mt-1 block font-mono text-xs text-muted">{studentId(u)}</span>}</td>
                   <td className="text-body">{courseCounts.find((c) => c.userId === u.id)?.n ?? 0}</td>
                   <td>{!u.active ? <Badge tone="red">Deactivated</Badge> : !u.passwordHash ? <Badge tone="amber">Invitation sent</Badge> : u.emailVerifiedAt ? <Badge tone="green">Verified</Badge> : <Badge>Email unverified</Badge>}</td>

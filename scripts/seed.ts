@@ -173,8 +173,8 @@ async function seedContent(db: Db, adminId: number | null) {
   if (!process.env.VERCEL) {
     const hash = await bcrypt.hash("demo-password-123", 12);
     const [instructor, student] = await db.insert(users).values([
-      { name: "Grace Bello", email: "instructor@example.com", passwordHash: hash, role: "instructor", emailVerifiedAt: new Date(), bio: "Power BI developer with 8 years' experience building reporting for retail and fintech teams." },
-      { name: "Ada Obi", email: "student@example.com", passwordHash: hash, role: "student", emailVerifiedAt: new Date() },
+      { name: "Grace Bello", email: "instructor@example.com", passwordHash: hash, role: "instructor", gender: "female", emailVerifiedAt: new Date(), bio: "Power BI developer with 8 years' experience building reporting for retail and fintech teams." },
+      { name: "Ada Obi", email: "student@example.com", passwordHash: hash, role: "student", gender: "female", emailVerifiedAt: new Date() },
     ]).onConflictDoNothing().returning();
     if (instructor && student) {
       await db.insert(cohortInstructors).values([{ cohortId: pbiOct.id, userId: instructor.id }, { cohortId: sqlOnline.id, userId: instructor.id }]);

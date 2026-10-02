@@ -98,7 +98,7 @@ export default async function StudentCohortPage({ params, searchParams }: { para
                 {news.map(({ announcement, author }) => (
                   <li key={announcement.id} className="flex flex-col gap-2 py-4">
                     <div className="flex items-center gap-2.5">
-                      <Avatar name={author?.name ?? "Academy"} src={author?.avatarUrl} size="sm" />
+                      <Avatar name={author?.name ?? "Academy"} src={author?.avatarUrl} gender={author?.gender} size="sm" />
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-ink">{author?.name ?? "Academy"}</span>
                         <span className="text-xs text-muted">{relativeTime(announcement.createdAt)}</span>
@@ -117,7 +117,7 @@ export default async function StudentCohortPage({ params, searchParams }: { para
                 {shownBoard.map((row) => (
                   <li key={row.userId} className={`flex items-center gap-3 rounded-lg px-2 py-1.5 ${row.userId === user.id ? "bg-accent-soft" : ""}`}>
                     <span className={`w-6 text-center font-display text-sm font-bold ${row.rank <= 3 ? "text-accent" : "text-muted"}`}>{row.rank}</span>
-                    <Avatar name={row.name} src={row.avatarUrl} size="sm" />
+                    <Avatar name={row.name} src={row.avatarUrl} gender={row.gender} seed={row.avatarSeed} size="sm" />
                     <span className="min-w-0 grow truncate text-sm font-semibold text-ink">{row.userId === user.id ? "You" : row.name}</span>
                     <span className="shrink-0 text-sm font-semibold text-accent">{row.points.toLocaleString("en-GB")} XP</span>
                   </li>
@@ -131,7 +131,7 @@ export default async function StudentCohortPage({ params, searchParams }: { para
               <ul className="flex flex-col gap-4">
                 {instructors.get(id)!.map((i) => (
                   <li key={i.id} className="flex items-center gap-3">
-                    <Avatar name={i.name} src={i.avatarUrl} />
+                    <Avatar name={i.name} src={i.avatarUrl} gender={i.gender} />
                     <div className="flex min-w-0 flex-col">
                       <span className="font-semibold text-ink">{i.name}</span>
                       <a href={`mailto:${i.email}`} className="truncate text-sm text-accent">{i.email}</a>

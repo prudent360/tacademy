@@ -43,6 +43,8 @@ export const users = pgTable("users", {
   phone: text("phone").notNull().default(""),
   bio: text("bio").notNull().default(""),
   avatarUrl: text("avatar_url"),
+  /** Optional; picks the default illustrated avatar when there's no photo. Null means not given. */
+  gender: text("gender").$type<"female" | "male">(),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   /** YYYY-MM-DD, collected at enrolment. */
   dateOfBirth: text("date_of_birth"),

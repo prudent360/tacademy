@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { DeliveryMode, SessionMode } from "@/db/schema";
-import { initials, MODE_LABEL } from "@/lib/utils";
+import { MODE_LABEL } from "@/lib/utils";
+import { AvatarArt, type Gender } from "./avatar-art";
 import { BuildingIcon, CheckCircleIcon, ClockIcon, MonitorIcon, SearchIcon, SwapIcon, XCircleIcon, type Icon } from "./icons";
 
 export function PageHeader({ title, description, actions, back }: { title: string; description?: React.ReactNode; actions?: React.ReactNode; back?: { href: string; label: string } }) {
@@ -108,13 +109,14 @@ export function StatCard({ label, value, hint, icon: IconComponent }: { label: s
   );
 }
 
-export function Avatar({ name, src, size = "md" }: { name: string; src?: string | null; size?: "sm" | "md" | "lg" }) {
-  const dims = { sm: "size-8 text-xs", md: "size-10 text-sm", lg: "size-14 text-lg" }[size];
+/** A photo when there is one, otherwise an illustrated default based on their gender. */
+export function Avatar({ name, src, gender, seed, size = "md" }: { name: string; src?: string | null; gender?: Gender | null; /** Picks the illustration; defaults to the name. */ seed?: string; size?: "sm" | "md" | "lg" }) {
+  const dims = { sm: "size-8", md: "size-10", lg: "size-14" }[size];
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt="" className={`${dims} shrink-0 rounded-full object-cover`} />;
   }
-  return <span aria-hidden="true" className={`${dims} flex shrink-0 items-center justify-center rounded-full bg-accent-soft font-display font-bold text-accent`}>{initials(name)}</span>;
+  return <AvatarArt seed={seed ?? name} gender={gender} className={`${dims} shrink-0 rounded-full`} />;
 }
 
 export function Tabs({ items, current }: { items: { href: string; label: string; key: string; count?: number; icon?: Icon }[]; current: string }) {
@@ -167,10 +169,10 @@ export function DataTable({ children }: { children: React.ReactNode }) {
 }
 
 /** Avatar with name and email, for the first column of people tables. */
-export function PersonCell({ name, email, src, href }: { name: string; email?: string; src?: string | null; href?: string }) {
+export function PersonCell({ name, email, src, gender, href }: { name: string; email?: string; src?: string | null; gender?: Gender | null; href?: string }) {
   const inner = (
     <span className="flex items-center gap-3">
-      <Avatar name={name} src={src} size="sm" />
+      <Avatar name={name} src={src} gender={gender} size="sm" />
       <span className="flex min-w-0 flex-col">
         <span className="truncate font-semibold text-ink">{name}</span>
         {email && <span className="truncate text-xs text-muted">{email}</span>}

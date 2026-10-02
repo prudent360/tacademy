@@ -62,7 +62,7 @@ export async function attendanceFor(userId: number, sessionIds: number[]) {
 export async function announcementsFor(cohortIds: number[], limit = 20) {
   if (!cohortIds.length) return [];
   return (await getDb())
-    .select({ announcement: announcements, author: { name: users.name, avatarUrl: users.avatarUrl } })
+    .select({ announcement: announcements, author: { name: users.name, avatarUrl: users.avatarUrl, gender: users.gender } })
     .from(announcements)
     .leftJoin(users, eq(users.id, announcements.authorId))
     .where(inArray(announcements.cohortId, cohortIds))

@@ -21,6 +21,7 @@ const profileSchema = z.object({
 export async function updateProfile(_state: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
   const parsed = profileSchema.safeParse({ name: formData.get("name"), phone: formData.get("phone") ?? "", bio: formData.get("bio") ?? "" });
+  const gender = formData.get("gender") === "female" ? "female" : formData.get("gender") === "male" ? "male" : null;
   if (!parsed.success) return { error: firstError(parsed.error) };
   let avatarUrl: string | null;
   try {
@@ -30,7 +31,7 @@ export async function updateProfile(_state: FormState, formData: FormData): Prom
     if (message) return { error: message };
     throw error;
   }
-  await (await getDb()).update(users).set({ ...parsed.data, avatarUrl, emailReminders: formData.get("emailReminders") === "on" }).where(eq(users.id, user.id));
+  await (await getDb()).update(users).set({ ...parsed.data, gender, avatarUrl, emailReminders: formData.get("emailReminders") === "on" }).where(eq(users.id, user.id));
   await deleteIfReplaced(user.avatarUrl, avatarUrl);
   revalidatePath("/", "layout");
   return { ok: "Profile saved." };

@@ -9,7 +9,7 @@ import type { DeliveryMode, PriceMap } from "@/db/schema";
 import { COUNTRIES, countryByCode, countryInSentence, currencyForCountry, flag } from "@/lib/countries";
 import { currencyInfo, formatMoney } from "@/lib/money";
 import { availablePlans, PLAN_LABEL, quote, type EnrolPlan } from "@/lib/pricing";
-import { MODE_LABEL, QUALIFICATIONS } from "@/lib/utils";
+import { GENDER_OPTIONS, MODE_LABEL, QUALIFICATIONS } from "@/lib/utils";
 
 export type EnrolCohort = {
   id: number;
@@ -42,7 +42,7 @@ const ONLINE_LABEL: Record<OnlineProvider, { short: string; long: string }> = {
   transactpay: { short: "TransactPay (card, bank transfer, OPay)", long: "Card, bank transfer or OPay via TransactPay" },
 };
 
-type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; qualification: string; country: string };
+type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; gender: string; qualification: string; country: string };
 
 const METHOD_LABEL = (method: Method, provider: OnlineProvider | undefined) =>
   method === "online" && provider ? ONLINE_LABEL[provider].short : method === "online" ? "Pay online" : "Direct bank transfer";
@@ -193,9 +193,16 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
           <Field label="Phone Number (WhatsApp preferred)" htmlFor={`${id}-phone`} required>
             <PhoneInput id={`${id}-phone`} country={phoneCountry} onCountryChange={setPhoneCountry} defaultValue={signedIn?.phone} />
           </Field>
-          <Field label="Date of Birth" htmlFor={`${id}-dob`} required>
-            <input id={`${id}-dob`} name="dateOfBirth" type="date" required min="1920-01-01" max={new Date().toISOString().slice(0, 10)} defaultValue={signedIn?.dateOfBirth} className={inputClass} />
-          </Field>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Date of Birth" htmlFor={`${id}-dob`} required>
+              <input id={`${id}-dob`} name="dateOfBirth" type="date" required min="1920-01-01" max={new Date().toISOString().slice(0, 10)} defaultValue={signedIn?.dateOfBirth} className={inputClass} />
+            </Field>
+            <Field label="Gender" htmlFor={`${id}-gender`}>
+              <select id={`${id}-gender`} name="gender" defaultValue={signedIn?.gender ?? ""} className={`${inputClass} cursor-pointer`}>
+                {GENDER_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+              </select>
+            </Field>
+          </div>
           <Field label="Highest academic qualification" htmlFor={`${id}-qual`}>
             <select id={`${id}-qual`} name="qualification" defaultValue={signedIn?.qualification ?? ""} className={`${inputClass} cursor-pointer`}>
               <option value="">Select an option</option>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { AvatarArt, type Gender } from "@/components/avatar-art";
 import { BrandMark } from "@/components/brand-mark";
 import { AwardIcon, BellIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
 import type { Role } from "@/db/schema";
@@ -144,14 +145,10 @@ function readNavState(): string | null {
   try { return window.localStorage.getItem(NAV_STATE_KEY); } catch { return null; }
 }
 
-function initials(name: string) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((n) => n[0]).join("").toUpperCase();
-}
-
-function Avatar({ name, src, className = "size-9" }: { name: string; src: string | null; className?: string }) {
+function Avatar({ name, src, gender, className = "size-9" }: { name: string; src: string | null; gender?: Gender | null; className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
   if (src) return <img src={src} alt="" className={`${className} shrink-0 rounded-full object-cover`} />;
-  return <span aria-hidden="true" className={`${className} flex shrink-0 items-center justify-center rounded-full bg-accent-soft font-display text-sm font-bold text-accent`}>{initials(name)}</span>;
+  return <AvatarArt seed={name} gender={gender} className={`${className} shrink-0 rounded-full`} />;
 }
 
 /** Closes a popover when clicking outside it or pressing Escape. */
@@ -205,13 +202,13 @@ function NotificationMenu({ items, unread, markAllRead }: { items: ShellNotifica
 }
 
 /** Just the person's photo in the top bar; the menu holds their details and account links. */
-function UserMenu({ user, studentId, logout }: { user: { name: string; email: string; avatarUrl: string | null; role: Role }; studentId?: string; logout: () => Promise<void> }) {
+function UserMenu({ user, studentId, logout }: { user: { name: string; email: string; avatarUrl: string | null; gender?: Gender | null; role: Role }; studentId?: string; logout: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const ref = useDismiss<HTMLDivElement>(open, () => setOpen(false));
   return (
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu" aria-label={`Account menu for ${user.name}`} title={user.name} className="flex cursor-pointer rounded-full ring-2 ring-transparent ring-offset-2 transition hover:ring-accent-muted aria-expanded:ring-accent">
-        <Avatar name={user.name} src={user.avatarUrl} className="size-9" />
+        <Avatar name={user.name} src={user.avatarUrl} gender={user.gender} className="size-9" />
       </button>
       {open && (
         <div className="absolute right-0 top-12 z-50 w-60 overflow-hidden rounded-[14px] border border-edge bg-white p-1.5 shadow-[0_24px_48px_-16px_rgba(24,19,64,0.3)]">
@@ -276,7 +273,7 @@ function StudentIdPill({ id }: { id: string }) {
 export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, newInstructorApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
-  user: { name: string; email: string; avatarUrl: string | null };
+  user: { name: string; email: string; avatarUrl: string | null; gender?: Gender | null };
   siteName: string;
   logoUrl: string | null;
   unread: number;
@@ -419,7 +416,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
       </nav>
       <div className="shrink-0 border-t border-line p-4">
         <div className="flex items-center gap-3 px-1 pb-3">
-          <Avatar name={user.name} src={user.avatarUrl} className="size-10 ring-2 ring-edge" />
+          <Avatar name={user.name} src={user.avatarUrl} gender={user.gender} className="size-10 ring-2 ring-edge" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
             <p className="truncate text-xs text-muted">{ROLE_LABEL[role]}</p>

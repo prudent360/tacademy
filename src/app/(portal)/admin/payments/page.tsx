@@ -122,7 +122,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
                 return (
                   <tr key={p.id}>
                     <td className="whitespace-nowrap"><span className="block text-body">{formatDateTime(p.paidAt ?? p.createdAt, settings.timezone, { zone: false })}</span><span className="font-mono text-[11px] text-muted">{p.reference}</span></td>
-                    <td><PersonCell name={u.name} email={u.email} src={u.avatarUrl} href={`/admin/users/${u.id}`} /></td>
+                    <td><PersonCell name={u.name} email={u.email} src={u.avatarUrl} gender={u.gender} href={`/admin/users/${u.id}`} /></td>
                     <td className="max-w-[280px] text-body"><span className="line-clamp-2">{p.description}</span></td>
                     <td className="whitespace-nowrap"><span className="block font-display text-[15px] font-bold text-ink">{formatMoney(p.amount, p.currency)}</span><span className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted"><span className="flex size-4 items-center justify-center rounded text-[9px] font-bold text-white" style={{ background: g.color }}>{g.short}</span>{g.label}</span></td>
                     <td><StatusBadge status={p.status} label={p.status === "paid" ? "Paid" : p.status === "pending" && p.gateway === "manual" ? "Awaiting transfer" : undefined} /></td>

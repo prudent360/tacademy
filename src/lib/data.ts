@@ -101,11 +101,11 @@ export async function getCohortWithCourse(id: number): Promise<{ cohort: Cohort;
   return row ?? null;
 }
 
-export async function getInstructorsByCohort(cohortIds: number[]): Promise<Map<number, Pick<User, "id" | "name" | "email" | "avatarUrl" | "bio">[]>> {
-  const out = new Map<number, Pick<User, "id" | "name" | "email" | "avatarUrl" | "bio">[]>();
+export async function getInstructorsByCohort(cohortIds: number[]): Promise<Map<number, Pick<User, "id" | "name" | "email" | "avatarUrl" | "gender" | "bio">[]>> {
+  const out = new Map<number, Pick<User, "id" | "name" | "email" | "avatarUrl" | "gender" | "bio">[]>();
   if (!cohortIds.length) return out;
   const rows = await (await getDb())
-    .select({ cohortId: cohortInstructors.cohortId, id: users.id, name: users.name, email: users.email, avatarUrl: users.avatarUrl, bio: users.bio })
+    .select({ cohortId: cohortInstructors.cohortId, id: users.id, name: users.name, email: users.email, avatarUrl: users.avatarUrl, gender: users.gender, bio: users.bio })
     .from(cohortInstructors)
     .innerJoin(users, eq(users.id, cohortInstructors.userId))
     .where(inArray(cohortInstructors.cohortId, cohortIds))

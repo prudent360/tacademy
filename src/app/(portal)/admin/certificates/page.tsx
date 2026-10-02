@@ -30,7 +30,7 @@ export default async function AdminCertificatesPage() {
           <tbody>
             {rows.map(({ certificate, student, course, cohort }) => (
               <tr key={certificate.id}>
-                <td><PersonCell name={student.name} email={student.email} src={student.avatarUrl} href={`/admin/users/${student.id}`} /></td>
+                <td><PersonCell name={student.name} email={student.email} src={student.avatarUrl} gender={student.gender} href={`/admin/users/${student.id}`} /></td>
                 <td><span className="font-semibold text-ink">{course.title}</span><span className="block text-xs text-muted">{cohort.name}</span></td>
                 <td className="font-mono text-xs text-muted">{certificate.code}</td>
                 <td className="whitespace-nowrap text-muted">{formatDateOnly(certificate.issuedAt.toISOString().slice(0, 10))}</td>

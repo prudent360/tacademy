@@ -10,7 +10,7 @@ import { cohortInstructors, cohorts, courses, enrollments, payments, users } fro
 import { formatMoney } from "@/lib/money";
 import { formatDateOnly, relativeTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
-import { studentId } from "@/lib/utils";
+import { GENDER_OPTIONS, studentId } from "@/lib/utils";
 import { countryByCode, flag } from "@/lib/countries";
 
 export const metadata: Metadata = { title: "Person" };
@@ -37,7 +37,10 @@ export default async function UserPage({ params, searchParams }: { params: Promi
           <ActionForm action={updateUser.bind(null, id)}>
             <Input label="Full name" name="name" defaultValue={user.name} required />
             <Select label="Role" name="role" defaultValue={user.role} options={[{ value: "student", label: "Student" }, { value: "instructor", label: "Instructor" }, { value: "admin", label: "Admin" }]} />
-            <Input label="Phone" name="phone" defaultValue={user.phone} />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Input label="Phone" name="phone" defaultValue={user.phone} />
+              <Select label="Gender" name="gender" defaultValue={user.gender ?? ""} options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))} hint="Picks the default avatar." />
+            </div>
             {(user.dateOfBirth || user.qualification) && <dl className="grid gap-3 rounded-[5px] bg-panel p-4 text-sm sm:grid-cols-2"><div><dt className="text-muted">Date of birth</dt><dd className="font-semibold text-ink">{user.dateOfBirth ? formatDateOnly(user.dateOfBirth) : "—"}</dd></div><div><dt className="text-muted">Highest qualification</dt><dd className="font-semibold text-ink">{user.qualification || "—"}</dd></div></dl>}
             <Textarea label="Bio" name="bio" defaultValue={user.bio} hint="Shown on course pages for instructors." />
             <Checkbox label="Account active" name="active" defaultChecked={user.active} hint="Deactivated accounts can't sign in." />

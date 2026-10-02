@@ -115,13 +115,13 @@ export async function xpForUser(userId: number, recent = 6): Promise<Level & { r
   return { ...levelFor(items.reduce((sum, item) => sum + item.points, 0)), recent: items.slice(0, recent) };
 }
 
-export type LeaderboardRow = { userId: number; name: string; avatarUrl: string | null; points: number; rank: number };
+export type LeaderboardRow = { userId: number; name: string; avatarUrl: string | null; gender: "female" | "male" | null; avatarSeed: string; points: number; rank: number };
 
 /** Students on a cohort ranked by the XP they earned in it. Names are shortened to first name and initial. */
 export async function cohortLeaderboard(cohortId: number): Promise<LeaderboardRow[]> {
   const db = await getDb();
   const [roster, items] = await Promise.all([
-    db.select({ userId: users.id, name: users.name, avatarUrl: users.avatarUrl })
+    db.select({ userId: users.id, name: users.name, avatarUrl: users.avatarUrl, gender: users.gender })
       .from(enrollments)
       .innerJoin(users, eq(users.id, enrollments.userId))
       .where(and(eq(enrollments.cohortId, cohortId), inArray(enrollments.status, ["active", "completed"]))),
@@ -132,7 +132,7 @@ export async function cohortLeaderboard(cohortId: number): Promise<LeaderboardRo
   const sorted = roster
     .map((r) => {
       const [first, ...rest] = r.name.trim().split(/\s+/);
-      return { userId: r.userId, name: rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first, avatarUrl: r.avatarUrl, points: points.get(r.userId) ?? 0 };
+      return { userId: r.userId, name: rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first, avatarUrl: r.avatarUrl, gender: r.gender, avatarSeed: r.name, points: points.get(r.userId) ?? 0 };
     })
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
   // Equal points share a rank.

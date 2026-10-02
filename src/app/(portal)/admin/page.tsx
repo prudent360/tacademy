@@ -170,7 +170,7 @@ export default async function AdminHome() {
               {recentUsers.map((u) => (
                 <li key={u.id}>
                   <Link href={`/admin/users/${u.id}`} className="flex items-center gap-3 py-3 first:pt-0">
-                    <Avatar name={u.name} src={u.avatarUrl} size="sm" />
+                    <Avatar name={u.name} src={u.avatarUrl} gender={u.gender} size="sm" />
                     <span className="flex min-w-0 grow flex-col"><span className="truncate font-semibold text-ink">{u.name}</span><span className="truncate text-xs text-muted">{u.email}</span></span>
                     <span className="shrink-0 text-xs text-muted">{relativeTime(u.createdAt)}</span>
                   </Link>
