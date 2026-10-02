@@ -9,12 +9,16 @@ import { certificates, cohorts, courses, enrollments } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { certificateEligibility } from "@/lib/certificates";
 import { formatDateOnly } from "@/lib/time";
+import { LinkedInButtons } from "@/components/linkedin-buttons";
+import { getSettings } from "@/lib/data";
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Certificates" };
 
 export default async function StudentCertificatesPage() {
   const user = await requireUser();
   const db = await getDb();
+  const { siteName } = await getSettings();
   const rows = await db
     .select({ certificate: certificates, course: courses, cohort: cohorts })
     .from(certificates)
@@ -38,6 +42,7 @@ export default async function StudentCertificatesPage() {
               <p className="mt-1 text-sm text-muted">{cohort.name} · issued {formatDateOnly(certificate.issuedAt.toISOString().slice(0, 10))}</p>
               <p className="mt-4 font-mono text-xs text-muted">{certificate.code}</p>
               <Link href={`/certificates/${certificate.code}`} target="_blank" className={`${buttonClass.primary} mt-5`}><ExternalIcon className="size-4" /> View certificate</Link>
+              <LinkedInButtons className="mt-3" course={course.title} organisation={siteName} issuedAt={certificate.issuedAt} url={absoluteUrl(`/certificates/${certificate.code}`)} code={certificate.code} />
             </Card>
           ))}
         </div>

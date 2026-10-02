@@ -69,6 +69,10 @@ const legacyPaths = [
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite"],
+  // The certificate share image reads its fonts from disk; make sure they ship with that route.
+  outputFileTracingIncludes: {
+    "/certificates/*/opengraph-image": ["./src/assets/fonts/PlusJakartaSans-*.woff"],
+  },
   images: {
     remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }],
   },

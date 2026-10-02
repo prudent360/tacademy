@@ -1,7 +1,7 @@
 import "server-only";
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, isNull, lt } from "drizzle-orm";
 import { getDb } from "@/db";
-import { assignments, attendance, classSessions, cohorts, courses, enrollments, submissions } from "@/db/schema";
+import { assignments, attendance, certificates, classSessions, cohorts, courses, enrollments, submissions, users } from "@/db/schema";
 import { courseQuizAverage } from "./quiz";
 
 export type CertificateEligibility = {
@@ -44,4 +44,17 @@ export async function certificateEligibility(enrollmentId: number): Promise<Cert
   const requirements = { attendance: course.certificateMinAttendance, assignments: course.certificateMinAssignments, averageScore: course.certificateMinScore, quizScore: course.certificateMinQuizScore };
   const reasons = [attendancePct < requirements.attendance && `Attendance is ${attendancePct}% (minimum ${requirements.attendance}%).`, assignmentPct < requirements.assignments && `Assignment completion is ${assignmentPct}% (minimum ${requirements.assignments}%).`, averageScore < requirements.averageScore && `Average score is ${averageScore}% (minimum ${requirements.averageScore}%).`, requirements.quizScore > 0 && quizScore !== null && quizScore < requirements.quizScore && `Average quiz score is ${quizScore}% (minimum ${requirements.quizScore}%).`].filter(Boolean) as string[];
   return { eligible: course.certificateEnabled && reasons.length === 0, attendance: attendancePct, assignments: assignmentPct, averageScore, quizScore, requirements, reasons: course.certificateEnabled ? reasons : ["Certificates are disabled for this course."] };
+}
+
+/** A valid (not revoked) certificate with its student, course and cohort, by its public code. */
+export async function certificateByCode(code: string) {
+  const [row] = await (await getDb())
+    .select({ certificate: certificates, student: users, course: courses, cohort: cohorts })
+    .from(certificates)
+    .innerJoin(enrollments, eq(enrollments.id, certificates.enrollmentId))
+    .innerJoin(users, eq(users.id, enrollments.userId))
+    .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
+    .innerJoin(courses, eq(courses.id, cohorts.courseId))
+    .where(and(eq(certificates.code, code), isNull(certificates.revokedAt)));
+  return row ?? null;
 }

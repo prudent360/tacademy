@@ -1,32 +1,33 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { BrandMark } from "@/components/brand-mark";
 import { CertificateActions } from "@/components/portal/certificate-actions";
 import { CheckCircleIcon } from "@/components/icons";
-import { getDb } from "@/db";
-import { certificates, cohorts, courses, enrollments, users } from "@/db/schema";
+import { LinkedInButtons } from "@/components/linkedin-buttons";
+import { getCurrentUser } from "@/lib/auth";
+import { certificateByCode } from "@/lib/certificates";
 import { getSettings } from "@/lib/data";
 import { formatDateOnly } from "@/lib/time";
 import { absoluteUrl } from "@/lib/site";
 import QRCode from "qrcode";
 
-export const metadata: Metadata = { title: "Certificate verification", robots: { index: true, follow: false } };
+export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
+  const row = await certificateByCode((await params).code);
+  if (!row) return { title: "Certificate verification", robots: { index: false } };
+  const settings = await getSettings();
+  const title = `${row.student.name}: ${row.course.title}`;
+  const description = `${row.student.name} completed ${row.course.title} at ${settings.siteName}. Verified certificate ${row.certificate.code}.`;
+  return { title, description, robots: { index: true, follow: false }, openGraph: { title, description, type: "website", siteName: settings.siteName } };
+}
 
 export default async function CertificatePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const [row] = await (await getDb())
-    .select({ certificate: certificates, student: users, course: courses, cohort: cohorts })
-    .from(certificates)
-    .innerJoin(enrollments, eq(enrollments.id, certificates.enrollmentId))
-    .innerJoin(users, eq(users.id, enrollments.userId))
-    .innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
-    .innerJoin(courses, eq(courses.id, cohorts.courseId))
-    .where(and(eq(certificates.code, code), isNull(certificates.revokedAt)));
+  const row = await certificateByCode(code);
   if (!row) notFound();
-  const settings = await getSettings();
-  const qr = await QRCode.toDataURL(absoluteUrl(`/certificates/${row.certificate.code}`), { width: 180, margin: 1, color: { dark: "#181340", light: "#ffffff" } });
+  const [settings, viewer] = await Promise.all([getSettings(), getCurrentUser()]);
+  const url = absoluteUrl(`/certificates/${row.certificate.code}`);
+  const qr = await QRCode.toDataURL(url, { width: 180, margin: 1, color: { dark: "#181340", light: "#ffffff" } });
   const issued = formatDateOnly(row.certificate.issuedAt.toISOString().slice(0, 10));
   const details: [string, string][] = [
     ["Issued to", row.student.name],
@@ -41,6 +42,13 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
         <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><CheckCircleIcon className="size-5" /> Verified credential</p>
         <CertificateActions />
       </div>
+      {/* Only the person it was issued to sees the LinkedIn buttons; anyone checking it sees the certificate. */}
+      {viewer?.id === row.student.id && (
+        <div className="certificate-toolbar mx-auto mb-5 flex max-w-[1120px] flex-wrap items-center justify-between gap-3 rounded-[5px] border border-[#0a66c2]/20 bg-white px-4 py-3">
+          <p className="text-sm text-body"><strong className="text-ink">Congratulations!</strong> Add it to your LinkedIn profile or share it with your network.</p>
+          <LinkedInButtons course={row.course.title} organisation={settings.siteName} issuedAt={row.certificate.issuedAt} url={url} code={row.certificate.code} />
+        </div>
+      )}
 
       {/* The landscape A4 layout from small tablets up (and when printing); on phones it grows to fit its content instead of being cropped. */}
       <article className="certificate-sheet relative mx-auto flex max-w-[1120px] flex-col items-center justify-center overflow-hidden border border-edge bg-white px-6 py-10 text-center shadow-[0_24px_70px_-35px_rgba(24,19,64,.35)] sm:aspect-[1.414/1] sm:px-10 sm:py-12">
@@ -62,7 +70,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
       </article>
 
       {/* For someone who scanned the QR code to check it: the facts, plainly. */}
-      <section aria-labelledby="verification-heading" className="certificate-toolbar mx-auto mt-6 max-w-[1120px] rounded-[14px] border border-emerald-200 bg-white p-5 sm:p-6">
+      <section aria-labelledby="verification-heading" className="certificate-toolbar mx-auto mt-6 max-w-[1120px] rounded-[5px] border border-emerald-200 bg-white p-5 sm:p-6">
         <h2 id="verification-heading" className="flex items-center gap-2 font-display text-lg font-bold text-ink"><CheckCircleIcon className="size-5 text-emerald-600" /> This certificate is valid</h2>
         <p className="mt-1 text-sm text-muted">Issued by {settings.siteName} and recorded in our system. It hasn&apos;t been revoked.</p>
         <dl className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -323,11 +323,13 @@ The {{siteName}} team`,
   instructor_application_accepted: {
     name: "Instructor application accepted",
     description: "Sent when an admin accepts an instructor application. Includes the link to set a password or sign in.",
-    variables: { accountUrl: "https://example.com/reset-password?token=sample", buttonLabel: "Set up my instructor account" },
+    variables: { accountUrl: "https://example.com/reset-password?token=sample", buttonLabel: "Set up my instructor account", cohortNote: "You'll be teaching **Data Analytics with Power BI** (October 2026). You'll find it under Teaching once you sign in." },
     subject: "Welcome to the {{siteName}} teaching team",
     body: `Hi {{name}},
 
 Great news: we'd love you to teach with **{{siteName}}**. Your instructor account is ready.
+
+{{cohortNote}}
 
 [[{{buttonLabel}}|{{accountUrl}}]]
 

@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { instructorApplications, users } from "@/db/schema";
+import { cohortInstructors, instructorApplications, users } from "@/db/schema";
 import { AVAILABILITY, HEARD_FROM, TEACHING_EXPERIENCE, TOPICS_MAX, YEARS_EXPERIENCE } from "@/lib/applications";
 import { requireRole } from "@/lib/auth";
 import { countryByCode } from "@/lib/countries";
-import { getAdmins } from "@/lib/data";
+import { getAdmins, getCohortWithCourse } from "@/lib/data";
 import { sendEmail } from "@/lib/email";
 import { notify } from "@/lib/notify";
 import { loginBlockedFor, recordLoginFailure } from "@/lib/rate-limit";
@@ -130,7 +130,7 @@ export async function shortlistInstructorApplication(id: number): Promise<void> 
  * Accepts an applicant: creates an instructor account (or makes an existing student account an instructor)
  * and emails them a link to set their password or sign in. Admin accounts are left as they are.
  */
-export async function acceptInstructorApplication(id: number): Promise<FormState> {
+export async function acceptInstructorApplication(id: number, _state?: FormState, formData?: FormData): Promise<FormState> {
   const admin = await requireRole("admin");
   const application = await load(id);
   if (!application) return { error: "This application no longer exists." };
@@ -156,11 +156,21 @@ export async function acceptInstructorApplication(id: number): Promise<FormState
     accountUrl = absoluteUrl(`/reset-password?token=${await issueToken(user.id, "invite")}`);
     buttonLabel = "Set up my instructor account";
   }
+  // Optionally put them straight onto a cohort's teaching team.
+  const cohortId = Number(formData?.get("cohortId"));
+  const cohort = Number.isInteger(cohortId) && cohortId > 0 ? await getCohortWithCourse(cohortId) : null;
+  if (cohort) await db.insert(cohortInstructors).values({ cohortId: cohort.cohort.id, userId }).onConflictDoNothing();
   await db.update(instructorApplications).set({ status: "accepted", userId, decidedById: admin.id, decidedAt: new Date() }).where(eq(instructorApplications.id, id));
-  await sendEmail(application.email, "instructor_application_accepted", { name: firstName(application.name), accountUrl, buttonLabel });
+  await sendEmail(application.email, "instructor_application_accepted", {
+    name: firstName(application.name),
+    accountUrl,
+    buttonLabel,
+    cohortNote: cohort ? `You'll be teaching **${cohort.course.title}** (${cohort.cohort.name}). You'll find it under Teaching once you sign in.` : "",
+  });
+  if (cohort) revalidatePath(`/teach/cohorts/${cohort.cohort.id}`);
   revalidatePath("/admin/instructor-applications", "layout");
   revalidatePath("/admin/users");
-  return { ok: `Accepted. ${application.name} now has an instructor account and has been emailed a link to ${existing?.passwordHash ? "sign in" : "set their password"}. Assign them to a cohort from the cohort's settings.` };
+  return { ok: `Accepted. ${application.name} now has an instructor account and has been emailed a link to ${existing?.passwordHash ? "sign in" : "set their password"}. ${cohort ? `They've been added to ${cohort.course.title} (${cohort.cohort.name}).` : "Assign them to a cohort from the cohort's settings."}` };
 }
 
 export async function rejectInstructorApplication(id: number): Promise<void> {

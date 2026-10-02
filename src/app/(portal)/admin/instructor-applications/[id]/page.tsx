@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { asc, eq, gte, isNull, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { acceptInstructorApplication, rejectInstructorApplication, saveInstructorApplicationNotes, shortlistInstructorApplication } from "@/app/actions/instructor-applications";
-import { ActionButton, ActionForm, SubmitButton, Textarea } from "@/components/forms";
+import { ActionButton, ActionForm, Select, SubmitButton, Textarea } from "@/components/forms";
 import { ExternalIcon } from "@/components/icons";
 import { Badge, Card, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
-import { instructorApplications, users } from "@/db/schema";
+import { cohorts, courses, instructorApplications, users } from "@/db/schema";
 import { MODE_LABELS, STATUS_LABELS, STATUS_TONE } from "@/lib/applications";
 import { countryByCode, flag } from "@/lib/countries";
 import { getSettings } from "@/lib/data";
@@ -33,10 +33,13 @@ export default async function InstructorApplicationPage({ params }: { params: Pr
   const db = await getDb();
   const [application] = await db.select().from(instructorApplications).where(eq(instructorApplications.id, id));
   if (!application) notFound();
-  const [settings, decidedBy, existing] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [settings, decidedBy, existing, runs] = await Promise.all([
     getSettings(),
     application.decidedById ? db.select({ name: users.name }).from(users).where(eq(users.id, application.decidedById)).then((r) => r[0]) : undefined,
     db.select({ id: users.id, role: users.role }).from(users).where(eq(users.email, application.email)).then((r) => r[0]),
+    // Cohorts that haven't finished yet, soonest first, to add them to straight away.
+    db.select({ id: cohorts.id, name: cohorts.name, startDate: cohorts.startDate, course: courses.title }).from(cohorts).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(or(isNull(cohorts.endDate), gte(cohorts.endDate, today))).orderBy(asc(cohorts.startDate)),
   ]);
   const country = countryByCode(application.country);
   const decided = application.status === "accepted" || application.status === "rejected";
@@ -90,7 +93,7 @@ export default async function InstructorApplicationPage({ params }: { params: Pr
                 {application.status === "new" && <ActionButton action={shortlistInstructorApplication.bind(null, id)} pendingText="…">Shortlist</ActionButton>}
                 <ActionForm action={acceptInstructorApplication.bind(null, id)} className="flex flex-col gap-3 rounded-[5px] border border-edge p-4">
                   <p className="text-sm text-body">{existing ? (existing.role === "student" ? "They already have a student account; accepting makes it an instructor account." : `They already have an ${existing.role} account, which stays as it is.`) : "Accepting creates an instructor account and emails them a link to set their password."}</p>
-                  <p className="text-xs text-muted">Then add them to a cohort from the cohort&apos;s Settings tab.</p>
+                  {runs.length > 0 && <Select label="Add them to a cohort (optional)" name="cohortId" defaultValue="" options={[{ value: "", label: "Not yet, I'll assign them later" }, ...runs.map((r) => ({ value: String(r.id), label: `${r.course} · ${r.name}${r.startDate ? ` (starts ${formatDateOnly(r.startDate)})` : ""}` }))]} hint="They'll see it under Teaching as soon as they sign in. You can change this later in the cohort's Settings." />}
                   <div><SubmitButton pendingText="Accepting…">Accept as instructor</SubmitButton></div>
                 </ActionForm>
                 <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
