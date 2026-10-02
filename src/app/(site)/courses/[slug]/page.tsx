@@ -5,12 +5,15 @@ import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ChevronRight,
 import { Markdown } from "@/components/markdown";
 import { CourseArt } from "@/components/site/course-art";
 import { CurriculumRequest } from "@/components/site/curriculum-request";
+import { WaitlistForm } from "@/components/site/waitlist-form";
 import { HeroVisual, PageHero, heroButton } from "@/components/site/page-hero";
 import { Avatar, Badge, ModeBadge, Notice } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
 import { getCourseBySlug, getInstructorsByCohort, getSettings, getStudentCohorts, linkedCourseTitles } from "@/lib/data";
 import { publicCurriculum } from "@/lib/curriculum";
+import { publishedReviews, ratingsFor } from "@/lib/reviews";
+import { Star } from "@/components/portal/review-form";
 import { formatMoney } from "@/lib/money";
 import { cohortCurrencies } from "@/lib/pricing";
 import type { Cohort } from "@/db/schema";
@@ -34,7 +37,8 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const [{ slug }, { cancelled }] = await Promise.all([params, searchParams]);
   const course = await getCourseBySlug(slug);
   if (!course) notFound();
-  const [settings, user, [summary], curriculum] = await Promise.all([getSettings(), getCurrentUser(), withCohorts([course]), publicCurriculum(course.id, course.curriculum)]);
+  const [settings, user, [summary], curriculum, reviews, ratings] = await Promise.all([getSettings(), getCurrentUser(), withCohorts([course]), publicCurriculum(course.id, course.curriculum), publishedReviews(course.id), ratingsFor([course.id])]);
+  const rating = ratings.get(course.id);
   const cohorts = summary.cohorts;
   const instructorsByCohort = await getInstructorsByCohort(cohorts.map((c) => c.id));
   const instructors = [...new Map([...instructorsByCohort.values()].flat().map((i) => [i.id, i])).values()];
@@ -49,7 +53,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const photo = course.heroImageUrl;
   const open = cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full);
   const nextStart = cohorts.filter((cohort) => cohort.enrollmentOpen && cohort.startDate).map((cohort) => cohort.startDate!).sort()[0];
-  const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
+  const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, reviews.length > 0 && { href: "#reviews", label: "Reviews" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -58,6 +62,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
     description: course.summary,
     url: absoluteUrl(`/courses/${course.slug}`),
     provider: { "@type": "EducationalOrganization", name: settings.siteName, url: absoluteUrl("/") },
+    ...(rating && rating.count > 0 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: rating.average, reviewCount: rating.count, bestRating: 5, worstRating: 1 } } : {}),
     hasCourseInstance: cohorts.map((c) => ({
       "@type": "CourseInstance",
       name: c.name,
@@ -104,6 +109,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
           {open && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-300/25"><span className="size-1.5 rounded-full bg-emerald-300" />Registration open</span>}
           {startingPrice && <span><span className="text-white/55">{startingPrice === "Free" ? "Course fee" : "From"} </span><strong className="font-display text-2xl font-bold text-white">{startingPrice}</strong></span>}
           <span className="flex items-center gap-1.5"><CalendarIcon className="size-4 text-cyan-light" />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span>
+          {rating && rating.count > 0 && <a href="#reviews" className="flex items-center gap-1.5 hover:text-white"><Star filled className="size-4" /><strong className="text-white">{rating.average.toFixed(1)}</strong> ({rating.count} review{rating.count === 1 ? "" : "s"})</a>}
         </div>
       </PageHero>
 
@@ -178,6 +184,23 @@ export default async function CoursePage({ params, searchParams }: Props) {
               {course.jobRoles.length > 0 && <div className="rounded-[5px] border border-edge bg-white p-6"><h2 className="font-display text-xl font-bold text-ink">Roles this supports</h2><div className="mt-4 flex flex-wrap gap-2">{course.jobRoles.map((role) => <Badge key={role} tone="accent">{role}</Badge>)}</div></div>}
             </section>
           )}
+          {reviews.length > 0 && rating && (
+            <section id="reviews" className="scroll-mt-36 flex flex-col gap-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Reviews</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What students say</h2></div>
+                <p className="flex items-center gap-2"><span className="flex">{[1, 2, 3, 4, 5].map((i) => <Star key={i} filled={i <= Math.round(rating.average)} className="size-5" />)}</span><strong className="font-display text-xl text-ink">{rating.average.toFixed(1)}</strong><span className="text-sm text-muted">from {rating.count} review{rating.count === 1 ? "" : "s"}</span></p>
+              </div>
+              <ul className="grid gap-4 sm:grid-cols-2">
+                {reviews.map((r) => (
+                  <li key={r.review.id} className="flex flex-col gap-3 rounded-[5px] border border-edge bg-white p-5">
+                    <span className="flex" aria-label={`${r.review.rating} out of 5`}>{[1, 2, 3, 4, 5].map((i) => <Star key={i} filled={i <= r.review.rating} className="size-4" />)}</span>
+                    <p className="text-[15px] leading-relaxed text-body">“{r.review.body}”</p>
+                    <p className="mt-auto flex items-center gap-2.5 pt-1"><Avatar name={r.fullName} src={r.avatarUrl} gender={r.gender} size="sm" /><span className="flex flex-col"><span className="text-sm font-semibold text-ink">{r.displayName}</span><span className="text-xs text-muted">{r.cohortName}</span></span></p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {instructors.length > 0 && (
             <section className="flex flex-col gap-5">
               <h2 className="font-display text-2xl font-bold text-ink">Your {instructors.length === 1 ? "instructor" : "instructors"}</h2>
@@ -227,6 +250,8 @@ export default async function CoursePage({ params, searchParams }: Props) {
                 <div className="border-t border-line pt-4">
                   {enrolled ? (
                     <Link href={`/dashboard/cohorts/${cohort.id}`} className="flex h-11 w-fit items-center rounded-lg bg-emerald-700 px-5 text-[15px] font-semibold text-white hover:bg-emerald-800">You&apos;re enrolled: go to class</Link>
+                  ) : cohort.full && cohort.enrollmentOpen ? (
+                    <WaitlistForm cohortId={cohort.id} />
                   ) : cohort.full ? (
                     <p className="text-[15px] font-semibold text-muted">This cohort is full.</p>
                   ) : !cohort.enrollmentOpen ? (

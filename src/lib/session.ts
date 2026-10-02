@@ -42,7 +42,26 @@ export async function verifySessionToken(token: string | undefined): Promise<Ses
 
 /** Where each role lands after signing in. */
 export function homeFor(role: Role): string {
-  if (role === "admin") return "/admin";
+  if (role === "admin" || role === "staff") return "/admin";
   if (role === "instructor") return "/teach";
   return "/dashboard";
+}
+
+/** Between the password and the two-factor code: who is signing in, valid for ten minutes. */
+export const PENDING_COOKIE = "academy_2fa";
+export type PendingSignIn = { userId: number; v: number; remember: boolean; next: string | null };
+
+export async function signPendingSignIn(payload: PendingSignIn): Promise<string> {
+  return new SignJWT({ ...payload, purpose: "2fa" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("10m").sign(secretKey());
+}
+
+export async function verifyPendingSignIn(token: string | undefined): Promise<PendingSignIn | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
+    if (payload.purpose !== "2fa" || typeof payload.userId !== "number" || typeof payload.v !== "number") return null;
+    return { userId: payload.userId, v: payload.v, remember: payload.remember === true, next: typeof payload.next === "string" ? payload.next : null };
+  } catch {
+    return null;
+  }
 }

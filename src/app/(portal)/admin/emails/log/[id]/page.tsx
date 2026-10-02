@@ -7,10 +7,12 @@ import { emailLog } from "@/db/schema";
 import { getSettings } from "@/lib/data";
 import { formatDateTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Email" };
 
 export default async function EmailLogPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("emails.manage");
   const id = idParam((await params).id);
   if (!id) notFound();
   const [row] = await (await getDb()).select().from(emailLog).where(eq(emailLog.id, id));

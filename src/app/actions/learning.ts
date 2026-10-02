@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { cohorts, courseModules, courses, enrollments, lessonProgress, lessons, moduleReleases, quizzes } from "@/db/schema";
-import { requireCourseEditor, requireRole, requireTeacher, requireUser } from "@/lib/auth";
+import { requireCourseEditor, requireTeacher, requireUser, requirePermission } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
 import { quizStatus } from "@/lib/quiz";
 import { fromZonedInput } from "@/lib/time";
@@ -72,7 +72,7 @@ export async function updateLesson(lessonId: number, _state: FormState, formData
 }
 
 export async function deleteLesson(lessonId: number): Promise<void> {
-  await requireRole("admin");
+  await requirePermission("courses.manage");
   const db = await getDb();
   const [lesson] = await db.select({ moduleId: lessons.moduleId }).from(lessons).where(eq(lessons.id, lessonId));
   if (!lesson) redirect("/admin/courses");
@@ -235,7 +235,7 @@ export async function reorderCurriculum(courseId: number, layout: { id: number; 
 
 /** Deletes a module and its lessons from the builder (admins only). */
 export async function removeModule(moduleId: number): Promise<BuilderResult> {
-  await requireRole("admin");
+  await requirePermission("courses.manage");
   const [row] = await (await getDb()).delete(courseModules).where(eq(courseModules.id, moduleId)).returning({ courseId: courseModules.courseId });
   if (row) refreshCourseLearning(row.courseId);
   return { ok: true };
@@ -243,7 +243,7 @@ export async function removeModule(moduleId: number): Promise<BuilderResult> {
 
 /** Deletes a lesson from the builder (admins only). */
 export async function removeLesson(lessonId: number): Promise<BuilderResult> {
-  await requireRole("admin");
+  await requirePermission("courses.manage");
   const courseId = await lessonCourse(lessonId);
   await (await getDb()).delete(lessons).where(eq(lessons.id, lessonId));
   if (courseId) refreshCourseLearning(courseId);

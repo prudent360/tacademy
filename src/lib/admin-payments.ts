@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, desc, eq, ilike, or, sum, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or, sum, type SQL, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { PAYMENT_STATUSES, payments, users, type Gateway, type PaymentStatus } from "@/db/schema";
 
@@ -35,12 +35,12 @@ export async function listPayments(f: PaymentFilters, { limit, offset }: { limit
   return { rows, total: n };
 }
 
-/** Counts per status and paid totals per currency, for the summary cards. */
+/** Counts per status and paid totals per currency (net of refunds), for the summary cards. */
 export async function paymentSummary() {
   const db = await getDb();
   const [byStatus, revenue] = await Promise.all([
     db.select({ status: payments.status, n: count() }).from(payments).groupBy(payments.status),
-    db.select({ currency: payments.currency, total: sum(payments.amount) }).from(payments).where(eq(payments.status, "paid")).groupBy(payments.currency),
+    db.select({ currency: payments.currency, total: sum(sql`${payments.amount} - ${payments.refundedAmount}`) }).from(payments).where(eq(payments.status, "paid")).groupBy(payments.currency),
   ]);
   const n = (s: PaymentStatus) => byStatus.find((b) => b.status === s)?.n ?? 0;
   return {

@@ -8,6 +8,7 @@ import { withCohorts } from "@/lib/catalog";
 import { getPublishedCourses, getSettings } from "@/lib/data";
 import { pageMetadata, seoConfig } from "@/lib/seo";
 import { visitorCurrencies } from "@/lib/visitor";
+import { ratingsFor } from "@/lib/reviews";
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await seoConfig();
@@ -23,6 +24,7 @@ const POINTS = [
 export default async function InternshipsPage() {
   const [settings, courses] = await Promise.all([getSettings(), getPublishedCourses()]);
   const [programmes, { currencies }] = await Promise.all([withCohorts(courses.filter((c) => c.kind === "internship")), visitorCurrencies(settings)]);
+  const ratings = await ratingsFor(programmes.map((p) => p.id));
 
   return (
     <>
@@ -47,7 +49,7 @@ export default async function InternshipsPage() {
       </div>
       {programmes.length ? (
         <div id="programmes" className="grid scroll-mt-28 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {programmes.map((programme) => <CourseCard key={programme.id} course={programme} currencies={currencies} />)}
+          {programmes.map((programme) => <CourseCard key={programme.id} course={programme} currencies={currencies} rating={ratings.get(programme.id)} />)}
         </div>
       ) : (
         <EmptyState icon={BriefcaseIcon} title="New internship intakes are coming soon">

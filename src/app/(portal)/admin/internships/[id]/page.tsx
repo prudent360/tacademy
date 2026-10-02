@@ -5,10 +5,12 @@ import { ProgrammeAdmin } from "@/components/admin/programme-admin";
 import { getDb } from "@/db";
 import { courses } from "@/db/schema";
 import { idParam } from "@/lib/validation";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Edit internship" };
 
 export default async function EditInternshipPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
+  await requirePermission("courses.manage");
   const [{ id: raw }, { created }] = await Promise.all([params, searchParams]);
   const id = idParam(raw);
   if (!id) notFound();

@@ -8,6 +8,7 @@ import { APPLICATION_STATUSES, instructorApplications, type ApplicationStatus } 
 import { STATUS_LABELS, STATUS_TONE } from "@/lib/applications";
 import { countryByCode, flag } from "@/lib/countries";
 import { relativeTime } from "@/lib/time";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Instructor applications" };
 
@@ -16,6 +17,7 @@ const PAGE_SIZE = 25;
 type Search = { status?: string; q?: string; page?: string };
 
 export default async function InstructorApplicationsPage({ searchParams }: { searchParams: Promise<Search> }) {
+  await requirePermission("instructors.review");
   const params = await searchParams;
   const status = APPLICATION_STATUSES.find((s) => s === params.status);
   const q = params.q?.trim() ?? "";

@@ -3,9 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { courseModules } from "@/db/schema";
 import { idParam } from "@/lib/validation";
+import { requirePermission } from "@/lib/auth";
 
 /** Modules are edited in the curriculum builder on the course page; old links land there. */
 export default async function ModuleRedirect({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("courses.manage");
   const id = idParam((await params).id);
   if (!id) notFound();
   const [module] = await (await getDb()).select({ courseId: courseModules.courseId }).from(courseModules).where(eq(courseModules.id, id));

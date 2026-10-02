@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { settings, type GatewaySettings, type Settings } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 import { AI_MODELS, AI_PROVIDERS, DEFAULT_AI, DEFAULT_MODEL, pingAi } from "@/lib/ai";
 import { DEFAULT_BANK, DEFAULT_REMINDERS } from "@/lib/config";
 import { detectTransactpayCurrencies } from "@/lib/payments";
@@ -40,7 +41,7 @@ const generalSchema = z.object({
 });
 
 export async function saveGeneral(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("settings.manage");
   const parsed = generalSchema.safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   const currencies = formData.getAll("currencies").map(String).filter((c) => CURRENCY_CODES.includes(c));
@@ -48,6 +49,7 @@ export async function saveGeneral(_state: FormState, formData: FormData): Promis
   const primary = String(formData.get("primaryCurrency") ?? currencies[0]);
   if (!currencies.includes(primary)) return { error: "The main currency must be one of the currencies you accept." };
   await update({ ...parsed.data, currencies: [primary, ...currencies.filter((c) => c !== primary)] });
+  await logAudit(actor, { action: "settings.saved", summary: "updated the general settings" });
   return { ok: "General settings saved." };
 }
 
@@ -69,7 +71,7 @@ function parseFaqs(raw: FormDataEntryValue | null) {
 }
 
 export async function saveBranding(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("settings.manage");
   const parsed = z.object({ heroEyebrow: text(80), heroTitle: text(160), heroSubtitle: text(400) }).safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   const current = await getSettings();
@@ -103,6 +105,7 @@ export async function saveBranding(_state: FormState, formData: FormData): Promi
   await deleteIfReplaced(current.logoDarkUrl, logoDarkUrl);
   await deleteIfReplaced(current.faviconUrl, faviconUrl);
   await deleteIfReplaced(current.heroImageUrl, heroImageUrl);
+  await logAudit(actor, { action: "settings.saved", summary: "updated the branding" });
   return { ok: "Branding saved." };
 }
 
@@ -157,7 +160,7 @@ function gatewayFrom(formData: FormData, prefix: "stripe" | "paystack" | "transa
 }
 
 export async function savePayments(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("settings.manage");
   const problems = [
     checkKey(formData.get("stripeTestSecretKey"), ["sk_test_", "rk_test_"], "Stripe test secret key"),
     checkKey(formData.get("stripeLiveSecretKey"), ["sk_live_", "rk_live_"], "Stripe live secret key"),
@@ -212,12 +215,13 @@ export async function savePayments(_state: FormState, formData: FormData): Promi
     }
   }
   await update({ payment: { stripe, paystack, transactpay, bank } });
+  await logAudit(actor, { action: "settings.saved", summary: "updated the payment settings" });
   return note.startsWith(" But") ? { error: `Payment settings saved.${note}` } : { ok: `Payment settings saved.${note}` };
 }
 
 /** "Check again" on the TransactPay settings: asks which currencies the account takes, for the current mode. */
 export async function checkTransactpayCurrencies(): Promise<FormState> {
-  await requireRole("admin");
+  await requirePermission("settings.manage");
   const checked = await detectTransactpayCurrencies();
   if ("error" in checked) return { error: checked.error };
   const payment = (await getSettings()).payment;
@@ -231,7 +235,7 @@ export async function checkTransactpayCurrencies(): Promise<FormState> {
 const EMAIL_DRIVERS = ["resend", "smtp", "log"] as const;
 
 export async function saveEmailSettings(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("settings.manage");
   const parsed = z.object({ fromName: text(80), fromAddress: optionalEmail, replyTo: optionalEmail }).safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   const current = (await getSettings()).email;
@@ -247,18 +251,19 @@ export async function saveEmailSettings(_state: FormState, formData: FormData): 
   const smtpPassword = driver === "smtp" ? secretField(formData, "smtpPassword", current.smtpPassword) : current.smtpPassword ?? "";
   if (driver === "smtp" && (!smtpHost || !smtpUser || !smtpPassword)) return { error: "Add the SMTP host, username and password to send with SMTP." };
   await update({ email: { ...parsed.data, driver, apiKey: driver === "resend" ? secretField(formData, "apiKey", current.apiKey) : current.apiKey ?? "", smtpHost, smtpPort, smtpSecurity, smtpUser, smtpPassword } });
+  await logAudit(actor, { action: "settings.saved", summary: "updated the email settings" });
   return { ok: "Email settings saved." };
 }
 
 export async function sendTestEmailNow(): Promise<void> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("settings.manage");
   await sendEmail(admin.email, "verify_email", { name: firstName(admin.name), verifyUrl: "https://example.com/this-is-a-test" });
 }
 
 // ---------- AI ----------
 
 export async function saveAiSettings(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("settings.manage");
   const current = { ...DEFAULT_AI, ...((await getSettings()).ai ?? {}) };
   const provider = AI_PROVIDERS.find((p) => p.id === formData.get("aiProvider"))?.id ?? "openai";
   // Only the chosen provider's fields are read: the others are hidden but still submitted.
@@ -284,11 +289,12 @@ export async function saveAiSettings(_state: FormState, formData: FormData): Pro
       writing: formData.get("aiWriting") === "on",
     },
   });
+  await logAudit(actor, { action: "settings.saved", summary: "updated the AI settings" });
   return { ok: "AI settings saved." };
 }
 
 export async function testAiConnection(): Promise<FormState> {
-  await requireRole("admin");
+  await requirePermission("settings.manage");
   const problem = await pingAi();
   return problem ? { error: problem } : { ok: "Connected: the AI provider replied." };
 }
@@ -303,7 +309,7 @@ function verificationCode(value: FormDataEntryValue | null): string {
 }
 
 export async function saveSeo(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("settings.manage");
   const parsed = z.object({
     titleTemplate: text(120),
     homeTitle: text(90),
@@ -340,24 +346,26 @@ export async function saveSeo(_state: FormState, formData: FormData): Promise<Fo
     },
   });
   await deleteIfReplaced(current.seo?.shareImageUrl ?? null, shareImageUrl);
+  await logAudit(actor, { action: "settings.saved", summary: "updated the SEO settings" });
   return { ok: "SEO settings saved." };
 }
 
 // ---------- Video ----------
 
 export async function saveVideoSettings(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("settings.manage");
   const value = String(formData.get("bunnyTokenKey") ?? "").trim();
   if (value && !/^[A-Za-z0-9-]{16,100}$/.test(value)) return { error: "That doesn't look like a Bunny Stream token authentication key. Copy it from Stream → your library → Security." };
   const current = (await getSettings()).video ?? {};
   await update({ video: { bunnyTokenKey: secretField(formData, "bunnyTokenKey", current.bunnyTokenKey) } });
+  await logAudit(actor, { action: "settings.saved", summary: "updated the video settings" });
   return { ok: "Video settings saved." };
 }
 
 // ---------- Reminders ----------
 
 export async function saveReminders(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("settings.manage");
   const minutes = Number(formData.get("hourLeadMinutes"));
   const hours = Number(formData.get("assignmentLeadHours"));
   if (!Number.isInteger(minutes) || minutes < 15 || minutes > 360) return { error: "The class reminder must be between 15 and 360 minutes before." };
@@ -372,11 +380,12 @@ export async function saveReminders(_state: FormState, formData: FormData): Prom
       assignmentLeadHours: hours,
     },
   });
+  await logAudit(actor, { action: "settings.saved", summary: "updated the reminder settings" });
   return { ok: "Reminder settings saved." };
 }
 
 export async function runRemindersNow(): Promise<FormState> {
-  await requireRole("admin");
+  await requirePermission("settings.manage");
   const r = await sendDueReminders();
   const total = r.dayReminders + r.hourReminders + r.assignmentReminders;
   return { ok: total ? `Sent ${r.dayReminders} day-before, ${r.hourReminders} class-starting and ${r.assignmentReminders} deadline reminders.` : "Nothing is due right now. Reminders already sent are never repeated." };

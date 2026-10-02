@@ -9,10 +9,12 @@ import { Card, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
 import { courseModules, courses } from "@/db/schema";
 import { idParam } from "@/lib/validation";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "New lesson" };
 
 export default async function NewLessonPage({ searchParams }: { searchParams: Promise<{ module?: string }> }) {
+  await requirePermission("courses.manage");
   const { module: raw } = await searchParams;
   const moduleId = idParam(raw ?? "");
   if (!moduleId) notFound();

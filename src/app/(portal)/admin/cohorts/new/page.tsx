@@ -8,10 +8,12 @@ import { getDb } from "@/db";
 import { courses, users } from "@/db/schema";
 import { getSettings } from "@/lib/data";
 import { idParam } from "@/lib/validation";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "New cohort" };
 
 export default async function NewCohortPage({ searchParams }: { searchParams: Promise<{ course?: string }> }) {
+  await requirePermission("courses.manage");
   const courseId = idParam((await searchParams).course ?? "");
   if (!courseId) notFound();
   const db = await getDb();

@@ -3,10 +3,12 @@ import { createCourse } from "@/app/actions/admin";
 import { CourseForm } from "@/components/admin/course-form";
 import { Card, PageHeader } from "@/components/ui";
 import { aiAvailable } from "@/lib/ai";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "New course" };
 
 export default async function NewCoursePage() {
+  await requirePermission("courses.manage");
   const ai = await aiAvailable("writing");
   return (
     <>

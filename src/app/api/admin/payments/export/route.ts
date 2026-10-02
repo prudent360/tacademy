@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, can } from "@/lib/auth";
 import { listPayments, parsePaymentFilters } from "@/lib/admin-payments";
 
 const GATEWAY = { stripe: "Stripe", paystack: "Paystack", transactpay: "TransactPay", manual: "Bank transfer / offline", test: "Test" } as const;
@@ -12,7 +12,7 @@ function csv(value: string | number | null | undefined): string {
 /** CSV of payments matching the same filters as the Payments page. */
 export async function GET(request: Request) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return new Response("Unauthorized", { status: 401 });
+  if (!user || !(await can(user, "payments.view"))) return new Response("Unauthorized", { status: 401 });
   const params = Object.fromEntries(new URL(request.url).searchParams);
   const { rows } = await listPayments(parsePaymentFilters(params), { limit: 10_000, offset: 0 });
   const header = ["Date", "Paid at", "Reference", "Student", "Email", "Description", "Amount", "Currency", "Status", "Gateway"];

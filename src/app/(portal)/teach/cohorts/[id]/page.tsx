@@ -5,6 +5,8 @@ import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { addStudentToCohort, deleteCohort, issueCertificate, setEnrollmentStatus, updateCohort } from "@/app/actions/admin";
 import { createAssignment, createSessions, deleteAnnouncement, postAnnouncement } from "@/app/actions/teach";
 import { setModuleRelease } from "@/app/actions/learning";
+import { offerWaitlistPlace, removeFromWaitlist } from "@/app/actions/waitlist";
+import { OFFER_HOURS } from "@/lib/waitlist";
 import { CohortForm } from "@/components/admin/cohort-form";
 import { ActionButton, ActionForm, Checkbox, DeleteButton, FileField, Input, Select, SubmitButton } from "@/components/forms";
 import { Markdown } from "@/components/markdown";
@@ -14,8 +16,8 @@ import { SessionFields } from "@/components/teach/session-fields";
 import { Badge, Card, DataTable, EmptyState, ModeBadge, Notice, PageHeader, StatusBadge, Tabs, buttonClass } from "@/components/ui";
 import { BookIcon, CalendarIcon, ClipboardIcon, EditIcon, MegaphoneIcon, UsersIcon, VideoIcon } from "@/components/icons";
 import { getDb } from "@/db";
-import { announcements, assignments, attendance, certificates, classSessions, cohortInstructors, courseModules, enrollments, lessonProgress, lessons, moduleReleases, submissions, users, type ClassSession, type Cohort, type Course } from "@/db/schema";
-import { requireTeacher } from "@/lib/auth";
+import { announcements, assignments, attendance, certificates, classSessions, cohortInstructors, cohortWaitlist, courseModules, enrollments, lessonProgress, lessons, moduleReleases, submissions, users, type ClassSession, type Cohort, type Course } from "@/db/schema";
+import { can, requireTeacher } from "@/lib/auth";
 import { certificateEligibility } from "@/lib/certificates";
 import { getCohortStudents, getCohortWithCourse, getSettings } from "@/lib/data";
 import { formatDateOnly, formatDateTime, formatSessionRange, relativeTime, toZonedInput, untilLabel } from "@/lib/time";
@@ -38,7 +40,8 @@ export default async function CohortPage({ params, searchParams }: { params: Pro
   const id = idParam(raw);
   if (!id) notFound();
   const user = await requireTeacher(id);
-  const isAdmin = user.role === "admin";
+  // Managing the cohort itself (settings, prices) and its students are separate permissions.
+  const [isAdmin, manageStudents] = await Promise.all([can(user, "courses.manage"), can(user, "users.manage")]);
   const aiWriting = await aiAvailable("writing");
   const found = await getCohortWithCourse(id);
   if (!found) notFound();
@@ -97,7 +100,7 @@ export default async function CohortPage({ params, searchParams }: { params: Pro
 
       {tab === "assignments" && <AssignmentsTab cohortId={id} work={work} studentCount={students.length} timeZone={tz} learning={learning} />}
 
-      {tab === "students" && <StudentsTab cohortId={id} cohort={cohort} isAdmin={isAdmin} marks={marks.filter((m) => held.some((s) => s.id === m.sessionId))} heldCount={held.length} assignmentIds={work.map((w) => w.id)} learning={learning} />}
+      {tab === "students" && <StudentsTab cohortId={id} cohort={cohort} isAdmin={manageStudents} marks={marks.filter((m) => held.some((s) => s.id === m.sessionId))} heldCount={held.length} assignmentIds={work.map((w) => w.id)} learning={learning} />}
 
       {tab === "announcements" && (
         <div className="grid items-start gap-6 xl:grid-cols-[1fr_1.3fr]">
@@ -494,6 +497,7 @@ async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assign
           <ActionButton action={completeAll.bind(null, activeIds)} pendingText="Updating…">Mark {activeIds.length} {activeIds.length === 1 ? "student" : "students"} as completed</ActionButton>
         </Card>
       )}
+      {isAdmin && <WaitlistCard cohortId={cohortId} timeZone={(await getSettings()).timezone} />}
       {enrolled.length > 0 && (
         <details className="rounded-[14px] border border-edge bg-white px-5 py-4">
           <summary className="cursor-pointer text-sm font-semibold text-accent">Copy email addresses</summary>
@@ -507,4 +511,32 @@ async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assign
 async function completeAll(ids: number[]) {
   "use server";
   for (const id of ids) await setEnrollmentStatus(id, "completed");
+}
+
+/** People waiting for a place on this cohort, in order. Places are offered automatically when one opens. */
+async function WaitlistCard({ cohortId, timeZone }: { cohortId: number; timeZone: string }) {
+  const entries = await (await getDb()).select().from(cohortWaitlist).where(and(eq(cohortWaitlist.cohortId, cohortId), inArray(cohortWaitlist.status, ["waiting", "offered", "expired"]))).orderBy(asc(cohortWaitlist.createdAt));
+  if (!entries.length) return null;
+  const waiting = entries.filter((e) => e.status === "waiting");
+  return (
+    <Card title={`Waitlist (${waiting.length} waiting)`} padded={false}>
+      <p className="border-b border-line px-5 py-3 text-sm text-muted md:px-6">When a place opens (someone is removed, or you add seats), the next person is emailed automatically and has {OFFER_HOURS} hours to enrol before it passes on.</p>
+      <ul className="divide-y divide-line">
+        {entries.map((e) => (
+          <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 md:px-6">
+            <span className="flex min-w-0 flex-col">
+              <span className="font-semibold text-ink">{e.status === "waiting" ? `${waiting.indexOf(e) + 1}. ` : ""}{e.name}</span>
+              <span className="text-xs text-muted">{e.email}{e.phone ? ` · ${e.phone}` : ""} · joined {formatDateTime(e.createdAt, timeZone, { zone: false })}</span>
+            </span>
+            <span className="flex items-center gap-2">
+              {e.status === "offered" && <Badge tone="green">Place offered{e.offeredAt ? ` ${relativeTime(e.offeredAt)}` : ""}</Badge>}
+              {e.status === "expired" && <Badge tone="amber">Offer expired</Badge>}
+              {e.status !== "offered" && <ActionButton action={offerWaitlistPlace.bind(null, e.id)} pendingText="Sending…">Offer a place</ActionButton>}
+              <DeleteButton action={removeFromWaitlist.bind(null, e.id)} label="Remove" />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
 }

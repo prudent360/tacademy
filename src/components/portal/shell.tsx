@@ -5,22 +5,24 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AvatarArt, type Gender } from "@/components/avatar-art";
 import { BrandMark } from "@/components/brand-mark";
-import { AwardIcon, BellIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
+import { AwardIcon, TrendIcon, BellIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
 import type { Role } from "@/db/schema";
+import type { Permission } from "@/lib/permissions";
 
 /** A link, or (with children) a dropdown whose first child is its main page. `href` may carry a ?tab= query. */
-type NavItem = { href: string; label: string; icon: Icon; exact?: boolean; badge?: number; also?: string[]; children?: NavItem[] };
+/** `perm`: the permission needed to see it (admin-area items only). */
+type NavItem = { href: string; label: string; icon: Icon; exact?: boolean; badge?: number; also?: string[]; children?: NavItem[]; perm?: Permission };
 type NavGroup = { label: string; items: NavItem[] };
 export type ShellNotification = { id: number; title: string; body: string; href: string | null; read: boolean; when: string };
 
-const ROLE_LABEL: Record<Role, string> = { admin: "Administrator", instructor: "Instructor", student: "Student" };
+const ROLE_LABEL: Record<Role, string> = { admin: "Administrator", instructor: "Instructor", student: "Student", staff: "Team member" };
 
 const SETTINGS_TABS: [string, string][] = [
   ["general", "General"], ["branding", "Branding"], ["payments", "Payments"], ["email", "Email"], ["templates", "Email templates"],
   ["reminders", "Reminders"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
 ];
 
-function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number }): NavGroup[] {
+function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number }, perms: Permission[]): NavGroup[] {
   const learning: NavGroup = {
     label: "Learning",
     items: [
@@ -43,21 +45,23 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
   const overview: NavGroup = {
     label: "Overview",
     items: [
-      { href: "/admin", label: "Dashboard", icon: GridIcon, exact: true },
-      { href: "/admin/insights", label: "Insights", icon: ChartIcon },
+      { href: "/admin", label: "Dashboard", icon: GridIcon, exact: true, perm: "admin.access" },
+      { href: "/admin/insights", label: "Insights", icon: ChartIcon, perm: "insights.view" },
+      { href: "/admin/reports", label: "Reports", icon: TrendIcon, perm: "reports.view" },
     ],
   };
   const programmes: NavGroup = {
     label: "Programmes",
     items: [
-      { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon, also: ["/admin/cohorts", "/teach/cohorts", "/admin/modules", "/admin/lessons"] },
+      { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon, also: ["/admin/cohorts", "/teach/cohorts", "/admin/modules", "/admin/lessons"], perm: "courses.manage" },
       {
         href: "/admin/internships", label: "Internships", icon: BriefcaseIcon, children: [
-          { href: "/admin/internships", label: "Programmes", icon: BriefcaseIcon },
-          { href: "/admin/applications", label: "Applications", icon: ClipboardIcon, badge: counts.newApplications },
+          { href: "/admin/internships", label: "Programmes", icon: BriefcaseIcon, perm: "courses.manage" },
+          { href: "/admin/applications", label: "Applications", icon: ClipboardIcon, badge: counts.newApplications, perm: "applications.review" },
         ],
       },
-      { href: "/admin/certificates", label: "Certificates", icon: AwardIcon },
+      { href: "/admin/certificates", label: "Certificates", icon: AwardIcon, perm: "certificates.manage" },
+      { href: "/admin/reviews", label: "Reviews", icon: MessageIcon, perm: "reviews.manage" },
     ],
   };
   const peopleAndSales: NavGroup = {
@@ -65,25 +69,27 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
     items: [
       {
         href: "/admin/users", label: "People", icon: UsersIcon, children: [
-          { href: "/admin/users", label: "Everyone", icon: UsersIcon },
-          { href: "/admin/instructor-applications", label: "Instructor applications", icon: ClipboardIcon, badge: counts.newInstructorApplications },
+          { href: "/admin/users", label: "Everyone", icon: UsersIcon, perm: "users.view" },
+          { href: "/admin/instructor-applications", label: "Instructor applications", icon: ClipboardIcon, badge: counts.newInstructorApplications, perm: "instructors.review" },
         ],
       },
       {
         href: "/admin/payments", label: "Payments", icon: CardIcon, children: [
-          { href: "/admin/payments", label: "All payments", icon: CardIcon },
-          { href: "/admin/discounts", label: "Discount codes", icon: CardIcon },
+          { href: "/admin/payments", label: "All payments", icon: CardIcon, perm: "payments.view" },
+          { href: "/admin/discounts", label: "Discount codes", icon: CardIcon, perm: "discounts.manage" },
         ],
       },
-      { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon },
+      { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon, perm: "leads.view" },
     ],
   };
   const system: NavGroup = {
     label: "System",
     items: [
+      { href: "/admin/team", label: "Team & roles", icon: ShieldIcon, perm: "team.manage" },
+      { href: "/admin/audit", label: "Audit log", icon: ClipboardIcon, perm: "audit.view" },
       {
         href: "/admin/settings", label: "Settings", icon: CogIcon,
-        children: SETTINGS_TABS.map(([tab, label]) => ({ href: tab === "general" ? "/admin/settings" : `/admin/settings?tab=${tab}`, label, icon: CogIcon, ...(tab === "templates" ? { also: ["/admin/emails"] } : {}) })),
+        children: SETTINGS_TABS.map(([tab, label]) => ({ href: tab === "general" ? "/admin/settings" : `/admin/settings?tab=${tab}`, label, icon: CogIcon, perm: tab === "templates" ? "emails.manage" as const : "settings.manage" as const, ...(tab === "templates" ? { also: ["/admin/emails"] } : {}) })),
       },
     ],
   };
@@ -95,19 +101,31 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
       { href: "/account", label: "Profile & security", icon: UserIcon },
     ],
   };
-  if (role === "admin") return [overview, programmes, peopleAndSales, teaching, system, account];
   if (role === "instructor") return [teaching, account];
-  return [learning, account];
+  if (role === "student") return [learning, account];
+  // Admins and staff see what their permissions allow; a parent with one allowed child keeps just that child.
+  const allowed = new Set(perms);
+  const keep = (items: NavItem[]): NavItem[] => items.flatMap((item) => {
+    if (item.children) {
+      const children = keep(item.children);
+      return children.length ? [{ ...item, href: children[0].href, children }] : [];
+    }
+    return !item.perm || allowed.has(item.perm) ? [item] : [];
+  });
+  const groups = [overview, programmes, peopleAndSales, ...(role === "admin" ? [teaching] : []), system].map((g) => ({ ...g, items: keep(g.items) })).filter((g) => g.items.length > 0);
+  return [...groups, account];
 }
 
-function bottomNavFor(role: Role): NavItem[] {
-  if (role === "admin") return [
-    { href: "/admin", label: "Home", icon: GridIcon, exact: true },
-    { href: "/admin/courses", label: "Courses", icon: BookIcon },
-    { href: "/admin/payments", label: "Payments", icon: CardIcon },
-    { href: "/admin/users", label: "People", icon: UsersIcon },
-    { href: "/account", label: "Account", icon: UserIcon },
-  ];
+function bottomNavFor(role: Role, perms: Permission[]): NavItem[] {
+  if (role === "admin" || role === "staff") {
+    const items: NavItem[] = [
+      { href: "/admin", label: "Home", icon: GridIcon, exact: true, perm: "admin.access" },
+      { href: "/admin/courses", label: "Courses", icon: BookIcon, perm: "courses.manage" },
+      { href: "/admin/payments", label: "Payments", icon: CardIcon, perm: "payments.view" },
+      { href: "/admin/users", label: "People", icon: UsersIcon, perm: "users.view" },
+    ];
+    return [...items.filter((i) => !i.perm || perms.includes(i.perm)), { href: "/account", label: "Account", icon: UserIcon }];
+  }
   if (role === "instructor") return [
     { href: "/teach", label: "Home", icon: GridIcon, exact: true },
     { href: "/teach/grading", label: "Grade", icon: ClipboardIcon },
@@ -270,7 +288,7 @@ function StudentIdPill({ id }: { id: string }) {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, newInstructorApplications = 0, notifications, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, newInstructorApplications = 0, permissions = [], notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null; gender?: Gender | null };
@@ -281,6 +299,8 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   /** Admins: internship applications waiting for review. */
   newApplications?: number;
   newInstructorApplications?: number;
+  /** Admin-area permissions, for admins and staff. */
+  permissions?: Permission[];
   notifications: ShellNotification[];
   /** Shown instead of the date for students. */
   studentId?: string;
@@ -292,7 +312,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   const pathname = usePathname();
   const tab = useSearchParams().get("tab");
   const [drawer, setDrawer] = useState(false);
-  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications });
+  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications }, permissions);
   // Which groups and dropdowns are open is remembered in this browser; until changed, groups start open and
   // dropdowns open when they hold the current page.
   const storedNav = useSyncExternalStore(subscribeStorage, readNavState, () => null);
@@ -304,8 +324,8 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
     setNavOverrides(next);
     try { window.localStorage.setItem(NAV_STATE_KEY, JSON.stringify(next)); } catch { /* storage blocked */ }
   }
-  const bottom = bottomNavFor(role);
-  const home = role === "admin" ? "/admin" : role === "instructor" ? "/teach" : "/dashboard";
+  const bottom = bottomNavFor(role, permissions);
+  const home = role === "admin" || role === "staff" ? "/admin" : role === "instructor" ? "/teach" : "/dashboard";
   const [first, ...rest] = siteName.split(" ");
 
   const sidebar = (

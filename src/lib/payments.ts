@@ -8,6 +8,7 @@ import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
 import { countryByCode } from "./countries";
+import { markWaitlistEnrolled } from "./waitlist";
 import { CURRENCIES, CURRENCY_CODES, formatMoney, gatewayFor } from "./money";
 import { notify } from "./notify";
 import { PART_PAYMENT_PLANS, quote, type EnrolPlan } from "./pricing";
@@ -380,6 +381,7 @@ export async function activateEnrollment(userId: number, cohortId: number, sourc
   const { cohort, course } = found;
   // Accounts are created at enrolment without a password; the student sets one from this email.
   const [student] = await db.select().from(users).where(eq(users.id, userId));
+  if (student) await markWaitlistEnrolled(cohortId, student.email);
   if (student && !student.passwordHash) {
     const token = await issueToken(student.id, "invite");
     await sendEmails([{ to: student.email, template: "account_setup", vars: { name: firstName(student.name), courseTitle: course.title, setupUrl: absoluteUrl(`/reset-password?token=${token}`) } }]);

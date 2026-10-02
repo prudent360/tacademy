@@ -7,7 +7,8 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { cohortInstructors, instructorApplications, users } from "@/db/schema";
 import { AVAILABILITY, HEARD_FROM, TEACHING_EXPERIENCE, TOPICS_MAX, YEARS_EXPERIENCE } from "@/lib/applications";
-import { requireRole } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 import { countryByCode } from "@/lib/countries";
 import { getAdmins, getCohortWithCourse } from "@/lib/data";
 import { sendEmail } from "@/lib/email";
@@ -113,7 +114,7 @@ async function load(id: number) {
 }
 
 export async function saveInstructorApplicationNotes(id: number, _state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  await requirePermission("instructors.review");
   const notes = String(formData.get("adminNotes") ?? "").trim().slice(0, 5000);
   await (await getDb()).update(instructorApplications).set({ adminNotes: notes }).where(eq(instructorApplications.id, id));
   revalidatePath(`/admin/instructor-applications/${id}`);
@@ -121,7 +122,7 @@ export async function saveInstructorApplicationNotes(id: number, _state: FormSta
 }
 
 export async function shortlistInstructorApplication(id: number): Promise<void> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("instructors.review");
   await (await getDb()).update(instructorApplications).set({ status: "shortlisted", decidedById: admin.id }).where(eq(instructorApplications.id, id));
   revalidatePath("/admin/instructor-applications", "layout");
 }
@@ -131,7 +132,7 @@ export async function shortlistInstructorApplication(id: number): Promise<void> 
  * and emails them a link to set their password or sign in. Admin accounts are left as they are.
  */
 export async function acceptInstructorApplication(id: number, _state?: FormState, formData?: FormData): Promise<FormState> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("instructors.review");
   const application = await load(id);
   if (!application) return { error: "This application no longer exists." };
   if (application.status === "accepted") return { ok: "Already accepted." };
@@ -168,16 +169,18 @@ export async function acceptInstructorApplication(id: number, _state?: FormState
     cohortNote: cohort ? `You'll be teaching **${cohort.course.title}** (${cohort.cohort.name}). You'll find it under Teaching once you sign in.` : "",
   });
   if (cohort) revalidatePath(`/teach/cohorts/${cohort.cohort.id}`);
+  await logAudit(admin, { action: "instructor_application.accepted", summary: `accepted ${application.name} as an instructor${cohort ? ` on ${cohort.cohort.name}` : ""}`, target: { type: "user", id: userId } });
   revalidatePath("/admin/instructor-applications", "layout");
   revalidatePath("/admin/users");
   return { ok: `Accepted. ${application.name} now has an instructor account and has been emailed a link to ${existing?.passwordHash ? "sign in" : "set their password"}. ${cohort ? `They've been added to ${cohort.course.title} (${cohort.cohort.name}).` : "Assign them to a cohort from the cohort's settings."}` };
 }
 
 export async function rejectInstructorApplication(id: number): Promise<void> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("instructors.review");
   const application = await load(id);
   if (!application || application.status === "rejected" || application.status === "accepted") return;
   await (await getDb()).update(instructorApplications).set({ status: "rejected", decidedById: admin.id, decidedAt: new Date() }).where(eq(instructorApplications.id, id));
+  await logAudit(admin, { action: "instructor_application.declined", summary: `declined ${application.name}'s application to teach`, target: { type: "instructor_application", id } });
   await sendEmail(application.email, "instructor_application_rejected", { name: firstName(application.name), expertise: application.expertise });
   revalidatePath("/admin/instructor-applications", "layout");
 }

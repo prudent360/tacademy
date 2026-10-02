@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: Settings = {
   logoDarkUrl: null,
   faviconUrl: null,
   heroImageUrl: null,
+  requireStaffTwoFactor: false,
   supportEmail: "",
   phone: "",
   address: "",

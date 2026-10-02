@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, count, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import {
-  AlertIcon, BookIcon, CalendarIcon, CardIcon, ChartIcon, CheckIcon, LayersIcon, MailIcon, PlusIcon, TrendIcon, UsersIcon,
+  AlertIcon, BookIcon, CalendarIcon, CardIcon, ChartIcon, CheckIcon, LayersIcon, MailIcon, PlusIcon, ShieldIcon, TrendIcon, UsersIcon,
 } from "@/components/icons";
 import { BannerButton, BarChart, GreetingBanner, Panel, PanelEmpty, ProgressBar, QuickAction, StatTile } from "@/components/portal/dash";
 import { Avatar, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
 import { classSessions, enrollments, payments, users } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { permissionsFor, requirePermission } from "@/lib/auth";
 import { getSettings, getUpcomingCohorts, seatsTaken } from "@/lib/data";
 import { emailConfigured } from "@/lib/email";
 import { formatMoney } from "@/lib/money";
@@ -33,7 +33,7 @@ const compact = (minor: number, currency: string) => {
 };
 
 export default async function AdminHome() {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("admin.access");
   const db = await getDb();
   const settings = await getSettings();
   const now = new Date();
@@ -48,7 +48,7 @@ export default async function AdminHome() {
     db.select({ n: count() }).from(users).where(and(eq(users.role, "student"), gte(users.createdAt, thirtyDaysAgo))),
     db.select({ n: count() }).from(enrollments).where(eq(enrollments.status, "active")),
     db.select({ n: count() }).from(payments).where(and(eq(payments.status, "pending"), gte(payments.createdAt, hoursAgo(72)))),
-    db.select({ amount: payments.amount, currency: payments.currency, paidAt: payments.paidAt }).from(payments).where(and(eq(payments.status, "paid"), gte(payments.paidAt, sixMonthsAgo))),
+    db.select({ amount: sql<number>`${payments.amount} - ${payments.refundedAmount}`.mapWith(Number), currency: payments.currency, paidAt: payments.paidAt }).from(payments).where(and(eq(payments.status, "paid"), gte(payments.paidAt, sixMonthsAgo))),
     db.select({ payment: payments, name: users.name }).from(payments).innerJoin(users, eq(users.id, payments.userId)).where(inArray(payments.status, ["paid", "failed"])).orderBy(desc(payments.createdAt)).limit(5),
     db.select().from(users).where(eq(users.role, "student")).orderBy(desc(users.createdAt)).limit(5),
     getUpcomingCohorts(5),
@@ -75,31 +75,37 @@ export default async function AdminHome() {
   ];
   const setupDone = setup.filter((s) => s.ok).length;
 
+  // Each section shows only to people whose role covers it (administrators see everything).
+  const perms = await permissionsFor(admin);
+  const money = perms.has("payments.view");
+  const people = perms.has("users.view");
+  const courseAdmin = perms.has("courses.manage");
+
   return (
     <>
       <GreetingBanner
         tone="admin"
         title={`${greeting(settings.timezone, now)}, ${firstName(admin.name)}`}
         subtitle={`Here's how ${settings.siteName} is doing.`}
-        aside={
+        aside={money && people && (
           <div className="grid grid-cols-2 gap-6 rounded-2xl border border-white/15 bg-white/[0.07] px-6 py-4 backdrop-blur">
             <div><p className="font-display text-2xl font-bold">{compact(primary30, primary)}</p><p className="text-xs font-semibold uppercase tracking-wider text-white/60">Revenue, 30 days</p></div>
             <div><p className="font-display text-2xl font-bold">{newStudents.n}</p><p className="text-xs font-semibold uppercase tracking-wider text-white/60">New students</p></div>
           </div>
-        }
+        )}
       >
-        <BannerButton href="/admin/courses/new"><PlusIcon className="size-4" /> New course</BannerButton>
-        <BannerButton href="/admin/payments" variant="ghost"><CardIcon className="size-4" /> Payments</BannerButton>
+        {courseAdmin && <BannerButton href="/admin/courses/new"><PlusIcon className="size-4" /> New course</BannerButton>}
+        {money && <BannerButton href="/admin/payments" variant="ghost"><CardIcon className="size-4" /> Payments</BannerButton>}
       </GreetingBanner>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Students" value={students.n} icon={UsersIcon} tone="purple" hint={`+${newStudents.n} in the last 30 days`} href="/admin/users?role=student" />
+        {people && <StatTile label="Students" value={students.n} icon={UsersIcon} tone="purple" hint={`+${newStudents.n} in the last 30 days`} href="/admin/users?role=student" />}
         <StatTile label="Active enrolments" value={active.n} icon={LayersIcon} tone="cyan" href="/admin/courses" />
-        <StatTile label={`Revenue (30 days, ${primary})`} value={formatMoney(primary30, primary)} icon={TrendIcon} tone="green" hint={others30.length ? `+ ${others30.map(([c, v]) => formatMoney(v, c)).join(" · ")}` : undefined} href="/admin/payments?status=paid" />
+        {money && <StatTile label={`Revenue (30 days, ${primary})`} value={formatMoney(primary30, primary)} icon={TrendIcon} tone="green" hint={others30.length ? `+ ${others30.map(([c, v]) => formatMoney(v, c)).join(" · ")}` : undefined} href="/admin/payments?status=paid" />}
         <StatTile label="Classes this week" value={weekSessions.n} icon={CalendarIcon} tone="navy" hint={pending.n ? `${pending.n} checkouts pending` : undefined} href="/teach/schedule" />
       </div>
 
-      {setupDone < setup.length && (
+      {setupDone < setup.length && perms.has("settings.manage") && (
         <Panel title="Finish setting up" icon={AlertIcon}>
           <div className="grid gap-5 xl:grid-cols-[220px_1fr] xl:items-center">
             <ProgressBar value={setupDone} max={setup.length} tone="cyan" label="Academy setup" detail={`${setupDone} of ${setup.length} complete`} />
@@ -116,12 +122,12 @@ export default async function AdminHome() {
       )}
 
       <div className="grid items-start gap-6 xl:grid-cols-2">
-        <Panel title={`Revenue in ${primary}`} icon={ChartIcon} href="/admin/payments?status=paid">
+        {money && <Panel title={`Revenue in ${primary}`} icon={ChartIcon} href="/admin/payments?status=paid">
           <BarChart data={revenueSeries} format={(v) => compact(v, primary)} />
           {otherCurrencyTotals.length > 0 && (
             <p className="mt-4 border-t border-line pt-3 text-sm text-muted">Other currencies, last 6 months: {otherCurrencyTotals.map((o) => <span key={o.c} className="ml-2 font-semibold text-ink">{formatMoney(o.total, o.c)}</span>)}</p>
           )}
-        </Panel>
+        </Panel>}
         <Panel title="Enrolments per month" icon={UsersIcon}>
           <BarChart data={enrolSeries} tone="cyan" />
         </Panel>
@@ -149,7 +155,7 @@ export default async function AdminHome() {
           ) : <PanelEmpty icon={BookIcon} action={<Link href="/admin/courses" className="text-sm font-semibold text-accent">Add a cohort →</Link>}>No upcoming cohorts.</PanelEmpty>}
         </Panel>
 
-        <Panel title="Recent payments" href="/admin/payments" icon={CardIcon}>
+        {money && <Panel title="Recent payments" href="/admin/payments" icon={CardIcon}>
             {recentPayments.length ? (
               <ul className="flex flex-col divide-y divide-line">
                 {recentPayments.map(({ payment, name }) => (
@@ -160,11 +166,11 @@ export default async function AdminHome() {
                 ))}
               </ul>
             ) : <PanelEmpty icon={CardIcon}>No payments yet.</PanelEmpty>}
-        </Panel>
+        </Panel>}
       </div>
 
       <div className="grid items-start gap-6 xl:grid-cols-2">
-        <Panel title="Newest students" href="/admin/users?role=student" icon={UsersIcon}>
+        {people && <Panel title="Newest students" href="/admin/users?role=student" icon={UsersIcon}>
           {recentUsers.length ? (
             <ul className="flex flex-col divide-y divide-line">
               {recentUsers.map((u) => (
@@ -178,13 +184,14 @@ export default async function AdminHome() {
               ))}
             </ul>
           ) : <PanelEmpty icon={UsersIcon}>No students yet.</PanelEmpty>}
-        </Panel>
+        </Panel>}
         <Panel title="Quick actions">
           <div className="grid gap-3">
-            <QuickAction href="/admin/courses/new" icon={BookIcon} title="Create a course" text="Then add cohorts, prices and classes" tone="purple" />
-            <QuickAction href="/admin/users" icon={UsersIcon} title="Invite an instructor" text="They set their own password" tone="cyan" />
-            <QuickAction href="/admin/payments" icon={CardIcon} title="Record an offline payment" text="Bank transfer or cash, enrols the student" tone="green" />
-            <QuickAction href="/admin/settings?tab=templates" icon={MailIcon} title="Edit email templates" text="Reminders, receipts, feedback and more" tone="navy" />
+            {courseAdmin && <QuickAction href="/admin/courses/new" icon={BookIcon} title="Create a course" text="Then add cohorts, prices and classes" tone="purple" />}
+            {perms.has("users.manage") && <QuickAction href="/admin/users" icon={UsersIcon} title="Invite an instructor" text="They set their own password" tone="cyan" />}
+            {perms.has("payments.manage") && <QuickAction href="/admin/payments" icon={CardIcon} title="Record an offline payment" text="Bank transfer or cash, enrols the student" tone="green" />}
+            {perms.has("emails.manage") && <QuickAction href="/admin/settings?tab=templates" icon={MailIcon} title="Edit email templates" text="Reminders, receipts, feedback and more" tone="navy" />}
+            {perms.has("team.manage") && <QuickAction href="/admin/team" icon={ShieldIcon} title="Manage your team" text="Roles and what each can do" tone="purple" />}
           </div>
         </Panel>
       </div>

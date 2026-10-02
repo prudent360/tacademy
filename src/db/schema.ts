@@ -1,6 +1,6 @@
 import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
-export const ROLES = ["admin", "instructor", "student"] as const;
+export const ROLES = ["admin", "instructor", "student", "staff"] as const;
 export type Role = (typeof ROLES)[number];
 
 /** An internship is run like a course (cohorts, classes, assignments) but listed separately. */
@@ -34,6 +34,17 @@ export type PriceMap = Partial<Record<string, number>>;
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
+/** Custom staff roles and what they can do. Administrators always have every permission. */
+export const staffRoles = pgTable("staff_roles", {
+  key: text("key").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  permissions: jsonb("permissions").$type<string[]>().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type StaffRole = typeof staffRoles.$inferSelect;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -43,6 +54,12 @@ export const users = pgTable("users", {
   phone: text("phone").notNull().default(""),
   bio: text("bio").notNull().default(""),
   avatarUrl: text("avatar_url"),
+  /** For role "staff": the custom role whose permissions they have (Settings › Team & roles). */
+  staffRoleKey: text("staff_role_key").references(() => staffRoles.key, { onDelete: "set null" }),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  /** Two-factor sign-in: the authenticator secret (encrypted) and when it was switched on. */
+  totpSecret: text("totp_secret"),
+  totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
   /** Optional; picks the default illustrated avatar when there's no photo. Null means not given. */
   gender: text("gender").$type<"female" | "male">(),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
@@ -183,6 +200,8 @@ export const settings = pgTable("settings", {
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
   seo: jsonb("seo").$type<Partial<SeoSettings>>().notNull().default({}),
   video: jsonb("video").$type<Partial<VideoSettings>>().notNull().default({}),
+  /** Administrators and team members must use two-factor sign-in. */
+  requireStaffTwoFactor: boolean("require_staff_two_factor").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -539,6 +558,11 @@ export const payments = pgTable("payments", {
   registrationFee: integer("registration_fee").notNull().default(0),
   discountCodeId: integer("discount_code_id").references(() => discountCodes.id, { onDelete: "set null" }),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  /** Money given back. A full refund also sets the status to "refunded"; a partial one leaves it "paid". */
+  refundedAmount: integer("refunded_amount").notNull().default(0),
+  refundedAt: timestamp("refunded_at", { withTimezone: true }),
+  refundReason: text("refund_reason").notNull().default(""),
+  refundedById: integer("refunded_by_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: createdAt(),
 }, (t) => [index("payments_user_idx").on(t.userId)]);
 
@@ -642,3 +666,57 @@ export type Submission = typeof submissions.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type CurriculumRequest = typeof curriculumRequests.$inferSelect;
+
+/** Who did what in the admin area. Never store passwords, codes or secrets in `details`. */
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  actorId: integer("actor_id").references(() => users.id, { onDelete: "set null" }),
+  /** Kept so entries still read well if the account is deleted. */
+  actorName: text("actor_name").notNull().default(""),
+  action: text("action").notNull(),
+  summary: text("summary").notNull(),
+  targetType: text("target_type"),
+  targetId: text("target_id"),
+  details: jsonb("details").$type<Record<string, unknown>>(),
+  ip: text("ip"),
+  createdAt: createdAt(),
+}, (t) => [index("audit_logs_created_idx").on(t.createdAt), index("audit_logs_actor_idx").on(t.actorId, t.createdAt)]);
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+
+export const WAITLIST_STATUSES = ["waiting", "offered", "enrolled", "expired", "removed"] as const;
+export type WaitlistStatus = (typeof WAITLIST_STATUSES)[number];
+
+/** People waiting for a place on a full cohort. When one opens, the next person is offered it for 48 hours. */
+export const cohortWaitlist = pgTable("cohort_waitlist", {
+  id: serial("id").primaryKey(),
+  cohortId: integer("cohort_id").notNull().references(() => cohorts.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull().default(""),
+  status: text("status").$type<WaitlistStatus>().notNull().default("waiting"),
+  offeredAt: timestamp("offered_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("cohort_waitlist_cohort_email_idx").on(t.cohortId, t.email), index("cohort_waitlist_queue_idx").on(t.cohortId, t.status, t.createdAt)]);
+
+export type WaitlistEntry = typeof cohortWaitlist.$inferSelect;
+
+export const REVIEW_STATUSES = ["pending", "published", "hidden"] as const;
+export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+
+/** A student's rating and review of a course, one per enrolment. Shown on the course page once published. */
+export const courseReviews = pgTable("course_reviews", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  enrollmentId: integer("enrollment_id").notNull().references(() => enrollments.id, { onDelete: "cascade" }).unique(),
+  rating: integer("rating").notNull(),
+  body: text("body").notNull().default(""),
+  status: text("status").$type<ReviewStatus>().notNull().default("pending"),
+  moderatedById: integer("moderated_by_id").references(() => users.id, { onDelete: "set null" }),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("course_reviews_course_idx").on(t.courseId, t.status)]);
+
+export type CourseReview = typeof courseReviews.$inferSelect;

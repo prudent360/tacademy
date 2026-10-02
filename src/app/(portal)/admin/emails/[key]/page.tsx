@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { resetTemplate, saveTemplate, sendTestEmail } from "@/app/actions/admin";
 import { ActionButton, ActionForm, Input, SubmitButton, Textarea } from "@/components/forms";
 import { Card, Notice, PageHeader } from "@/components/ui";
-import { requireRole } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { getTemplate, renderEmail } from "@/lib/email";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
 import { draftEmailTemplate } from "@/app/actions/ai";
@@ -13,7 +13,7 @@ import { aiAvailable } from "@/lib/ai";
 export const metadata: Metadata = { title: "Edit email" };
 
 export default async function EditEmailPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ reset?: string }> }) {
-  const [{ key }, { reset }, admin] = await Promise.all([params, searchParams, requireRole("admin")]);
+  const [{ key }, { reset }, admin] = await Promise.all([params, searchParams, requirePermission("emails.manage")]);
   if (!isTemplateKey(key)) notFound();
   const def = EMAIL_TEMPLATES[key];
   const current = await getTemplate(key);

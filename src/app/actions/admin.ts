@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { and, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, count, eq, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -10,7 +10,9 @@ import {
   certificates, cohortInstructors, cohorts, courses, DELIVERY_MODES, discountCodes, emailTemplates, enrollments, internshipCourses, payments, ROLES, users,
   type PriceMap, type Role,
 } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { can, requirePermission } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
+import { offerOpenPlaces } from "@/lib/waitlist";
 import { getCohortWithCourse } from "@/lib/data";
 import { REQUIRED_TEMPLATES, sendEmail } from "@/lib/email";
 import { certificateEligibility } from "@/lib/certificates";
@@ -55,7 +57,7 @@ const courseSchema = z.object({
 });
 
 async function saveCourse(id: number | null, formData: FormData): Promise<FormState | number> {
-  await requireRole("admin");
+  const actor = await requirePermission("courses.manage");
   const parsed = courseSchema.safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   const slug = slugify(parsed.data.slug || parsed.data.title);
@@ -105,6 +107,7 @@ async function saveCourse(id: number | null, formData: FormData): Promise<FormSt
     [{ id: savedId }] = await db.insert(courses).values(values).returning({ id: courses.id }) as [{ id: number }];
   }
   if (values.kind === "internship") await setLinkedCourses(savedId!, formData);
+  await logAudit(actor, { action: id ? "course.updated" : "course.created", summary: `${id ? "updated" : "created"} the ${values.kind === "internship" ? "internship" : "course"} “${values.title}”`, target: { type: "course", id: savedId! } });
   return savedId!;
 }
 
@@ -129,9 +132,10 @@ export async function updateCourse(id: number, _state: FormState, formData: Form
 }
 
 export async function deleteCourse(id: number): Promise<void> {
-  await requireRole("admin");
-  const [removed] = await (await getDb()).delete(courses).where(eq(courses.id, id)).returning({ kind: courses.kind, imageUrl: courses.imageUrl, heroImageUrl: courses.heroImageUrl, curriculumUrl: courses.curriculumUrl });
+  const actor = await requirePermission("courses.manage");
+  const [removed] = await (await getDb()).delete(courses).where(eq(courses.id, id)).returning({ title: courses.title, kind: courses.kind, imageUrl: courses.imageUrl, heroImageUrl: courses.heroImageUrl, curriculumUrl: courses.curriculumUrl });
   await Promise.all([deleteUpload(removed?.imageUrl), deleteUpload(removed?.heroImageUrl), deleteUpload(removed?.curriculumUrl)]);
+  if (removed) await logAudit(actor, { action: "course.deleted", summary: `deleted the ${removed.kind === "internship" ? "internship" : "course"} “${removed.title}” and its cohorts`, target: { type: "course", id } });
   revalidatePath("/", "layout");
   redirect(removed?.kind === "internship" ? "/admin/internships" : "/admin/courses");
 }
@@ -172,7 +176,7 @@ async function setInstructors(cohortId: number, formData: FormData) {
 }
 
 async function saveCohort(id: number | null, courseId: number, formData: FormData): Promise<FormState | number> {
-  await requireRole("admin");
+  const actor = await requirePermission("courses.manage");
   const parsed = cohortSchema.safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   const priced = parsePrices(formData);
@@ -199,6 +203,9 @@ async function saveCohort(id: number | null, courseId: number, formData: FormDat
     [{ id: cohortId }] = await db.insert(cohorts).values({ ...values, courseId }).returning({ id: cohorts.id }) as [{ id: number }];
   }
   await setInstructors(cohortId!, formData);
+  // More seats (or enrolment reopened) can mean places for people on the waitlist.
+  if (id) await offerOpenPlaces(cohortId!);
+  await logAudit(actor, { action: id ? "cohort.updated" : "cohort.created", summary: `${id ? "updated" : "created"} the cohort “${values.name}”`, target: { type: "cohort", id: cohortId! }, details: { prices: values.prices } });
   revalidatePath("/", "layout");
   return cohortId!;
 }
@@ -215,8 +222,9 @@ export async function updateCohort(id: number, courseId: number, _state: FormSta
 }
 
 export async function deleteCohort(id: number): Promise<void> {
-  await requireRole("admin");
-  const [removed] = await (await getDb()).delete(cohorts).where(eq(cohorts.id, id)).returning({ courseId: cohorts.courseId });
+  const actor = await requirePermission("courses.manage");
+  const [removed] = await (await getDb()).delete(cohorts).where(eq(cohorts.id, id)).returning({ courseId: cohorts.courseId, name: cohorts.name });
+  if (removed) await logAudit(actor, { action: "cohort.deleted", summary: `deleted the cohort “${removed.name}”`, target: { type: "cohort", id } });
   revalidatePath("/", "layout");
   redirect(removed ? `/admin/courses/${removed.courseId}` : "/admin/courses");
 }
@@ -233,7 +241,7 @@ async function findOrInvite(name: string, email: string, role: Role): Promise<{ 
 }
 
 export async function addStudentToCohort(cohortId: number, _state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("users.manage");
   const parsedEmail = emailSchema.safeParse(formData.get("email"));
   if (!parsedEmail.success) return { error: "Enter a valid email address." };
   const name = String(formData.get("name") ?? "").trim().slice(0, 120) || parsedEmail.data.split("@")[0];
@@ -241,25 +249,31 @@ export async function addStudentToCohort(cohortId: number, _state: FormState, fo
   const added = await activateEnrollment(id, cohortId, "manual");
   revalidatePath(`/teach/cohorts/${cohortId}`);
   if (!added) return { error: "That student is already enrolled on this cohort." };
+  await logAudit(actor, { action: "enrolment.added", summary: `enrolled ${name} (${parsedEmail.data}) without payment`, target: { type: "cohort", id: cohortId } });
   return { ok: created ? "Student account created, invitation and enrolment emails sent." : "Student enrolled and emailed." };
 }
 
 export async function setEnrollmentStatus(enrollmentId: number, status: "active" | "cancelled" | "completed"): Promise<void> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("users.manage");
   const db = await getDb();
   const [row] = await db.update(enrollments).set({ status, completedAt: status === "completed" ? new Date() : null }).where(eq(enrollments.id, enrollmentId)).returning({ cohortId: enrollments.cohortId, userId: enrollments.userId });
   if (!row) return;
+  const [person] = await db.select({ name: users.name }).from(users).where(eq(users.id, row.userId));
+  await logAudit(admin, { action: `enrolment.${status}`, summary: `${status === "completed" ? "marked complete" : status === "cancelled" ? "removed" : "reactivated"} ${person?.name ?? "a student"}'s enrolment`, target: { type: "cohort", id: row.cohortId } });
   if (status === "completed") {
     const eligibility = await certificateEligibility(enrollmentId);
     if (eligibility?.eligible) {
       const code = `TSU-${new Date().getUTCFullYear()}-${randomBytes(5).toString("hex").toUpperCase()}`;
       const [certificate] = await db.insert(certificates).values({ enrollmentId, code, issuedById: admin.id }).onConflictDoUpdate({ target: certificates.enrollmentId, set: { revokedAt: null, issuedAt: new Date(), issuedById: admin.id } }).returning();
+      await logAudit(admin, { action: "certificate.issued", summary: `issued certificate ${certificate.code} to ${person?.name ?? "a student"}`, target: { type: "certificate", id: certificate.code } });
       const [student] = await db.select().from(users).where(eq(users.id, row.userId));
       const found = await getCohortWithCourse(row.cohortId);
       if (student && found) await sendEmail(student.email, "certificate_issued", { name: firstName(student.name), courseTitle: found.course.title, certificateCode: certificate.code, certificateUrl: absoluteUrl(`/certificates/${certificate.code}`) });
     }
   } else if (status === "cancelled") {
     await db.update(certificates).set({ revokedAt: new Date() }).where(eq(certificates.enrollmentId, enrollmentId));
+    // A place has opened: offer it to the waitlist.
+    await offerOpenPlaces(row.cohortId);
   }
   revalidatePath(`/teach/cohorts/${row.cohortId}`);
   revalidatePath(`/admin/users/${row.userId}`);
@@ -275,11 +289,15 @@ export async function issueCertificate(enrollmentId: number): Promise<void> {
 const inviteSchema = z.object({ name: required("Name", 120), email: emailSchema, role: z.enum(ROLES) });
 
 export async function inviteUser(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("users.manage");
   const parsed = inviteSchema.safeParse({ name: formData.get("name"), email: formData.get("email"), role: formData.get("role") });
   if (!parsed.success) return { error: firstError(parsed.error) };
+  // Staff accounts need a role, so they're invited from Team & roles.
+  if (parsed.data.role === "staff") return { error: "Invite team members from Team & roles, where you choose what they can do." };
+  if (parsed.data.role === "admin" && !(await can(actor, "team.manage"))) return { error: "Only people who manage the team can invite administrators." };
   const { id, created } = await findOrInvite(parsed.data.name, parsed.data.email, parsed.data.role);
   if (!created) return { error: "Someone with that email already has an account. Open their profile to change their role." };
+  await logAudit(actor, { action: "user.invited", summary: `invited ${parsed.data.name} (${parsed.data.email}) as ${parsed.data.role}`, target: { type: "user", id } });
   revalidatePath("/admin/users");
   redirect(`/admin/users/${id}?invited=1`);
 }
@@ -287,26 +305,43 @@ export async function inviteUser(_state: FormState, formData: FormData): Promise
 const userSchema = z.object({ name: required("Name", 120), role: z.enum(ROLES), phone: text(40), bio: text(600), gender: z.enum(["female", "male", ""]).catch("").transform((g) => g || null) });
 
 export async function updateUser(id: number, _state: FormState, formData: FormData): Promise<FormState> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("users.manage");
   const parsed = userSchema.safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   const active = formData.get("active") === "on";
-  if (id === admin.id && (parsed.data.role !== "admin" || !active)) return { error: "You can't remove your own admin access or deactivate yourself." };
+  if (id === admin.id && (parsed.data.role !== admin.role || !active)) return { error: "You can't change your own role or deactivate yourself." };
   const db = await getDb();
   const [before] = await db.select().from(users).where(eq(users.id, id));
   if (!before) return { error: "This account no longer exists." };
+  // Anything touching admin or team access is for people who manage the team.
+  const staffy = (role: string) => role === "admin" || role === "staff";
+  if ((staffy(before.role) || staffy(parsed.data.role)) && (parsed.data.role !== before.role || !active) && !(await can(admin, "team.manage"))) {
+    return { error: "Only people who manage the team can change administrator or team access." };
+  }
+  if (parsed.data.role === "staff" && before.role !== "staff") return { error: "Give someone a team role from Team & roles, where you choose what they can do." };
+  if (before.role === "admin" && (parsed.data.role !== "admin" || !active) && (await activeAdminCount()) <= 1) return { error: "They're the only active administrator. Make someone else an administrator first." };
   await db.update(users).set({
     ...parsed.data,
     active,
     // Deactivating signs the person out everywhere.
+    // Staff roles only apply to team members.
+    ...(parsed.data.role !== "staff" ? { staffRoleKey: null } : {}),
     ...(before.active && !active ? { sessionVersion: sql`${users.sessionVersion} + 1` } : {}),
   }).where(eq(users.id, id));
+  if (parsed.data.role !== before.role) await logAudit(admin, { action: "user.role_changed", summary: `changed ${before.name}'s role from ${before.role} to ${parsed.data.role}`, target: { type: "user", id } });
+  if (before.active !== active) await logAudit(admin, { action: active ? "user.reactivated" : "user.deactivated", summary: `${active ? "reactivated" : "deactivated"} ${before.name}'s account`, target: { type: "user", id } });
   revalidatePath(`/admin/users/${id}`);
   return { ok: "Saved." };
 }
 
+/** Active administrators, so the last one can't be removed. */
+async function activeAdminCount(): Promise<number> {
+  const [row] = await (await getDb()).select({ n: count() }).from(users).where(and(eq(users.role, "admin"), eq(users.active, true)));
+  return row?.n ?? 0;
+}
+
 export async function resendInvite(id: number): Promise<void> {
-  await requireRole("admin");
+  await requirePermission("users.manage");
   const [user] = await (await getDb()).select().from(users).where(eq(users.id, id));
   if (!user) return;
   const token = await issueToken(user.id, user.passwordHash ? "reset" : "invite");
@@ -327,7 +362,7 @@ const discountSchema = z.object({
 });
 
 export async function createDiscountCode(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("discounts.manage");
   const parsed = discountSchema.safeParse(formValues(formData));
   if (!parsed.success) return { error: firstError(parsed.error) };
   const code = parsed.data.code.replace(/\s+/g, "").toUpperCase();
@@ -337,18 +372,20 @@ export async function createDiscountCode(_state: FormState, formData: FormData):
   } catch {
     return { error: "That discount code already exists." };
   }
+  await logAudit(actor, { action: "discount.created", summary: `created the discount code ${code} (${parsed.data.percentOff}% off)` });
   revalidatePath("/admin/discounts");
   return { ok: `${code} is ready to use.` };
 }
 
 export async function setDiscountCodeActive(id: number, active: boolean): Promise<void> {
-  await requireRole("admin");
-  await (await getDb()).update(discountCodes).set({ active }).where(eq(discountCodes.id, id));
+  const actor = await requirePermission("discounts.manage");
+  const [row] = await (await getDb()).update(discountCodes).set({ active }).where(eq(discountCodes.id, id)).returning({ code: discountCodes.code });
+  if (row) await logAudit(actor, { action: active ? "discount.enabled" : "discount.disabled", summary: `${active ? "switched on" : "switched off"} the discount code ${row.code}` });
   revalidatePath("/admin/discounts");
 }
 
 export async function sendBalanceReminder(userId: number, cohortId: number, currency: string): Promise<void> {
-  await requireRole("admin");
+  await requirePermission("payments.manage");
   const db = await getDb();
   const [[student], found] = await Promise.all([db.select().from(users).where(eq(users.id, userId)), getCohortWithCourse(cohortId)]);
   if (!student || !found) return;
@@ -369,26 +406,28 @@ export async function sendBalanceReminder(userId: number, cohortId: number, curr
 }
 
 export async function markPaymentPaid(reference: string): Promise<void> {
-  await requireRole("admin");
+  const actor = await requirePermission("payments.manage");
   await fulfilPayment(reference);
+  await logAudit(actor, { action: "payment.confirmed", summary: `confirmed payment ${reference} as received`, target: { type: "payment", id: reference } });
   revalidatePath("/admin/payments");
 }
 
 /** Re-asks Stripe/Paystack/TransactPay about a pending payment (useful if a webhook was missed). */
 export async function recheckPayment(reference: string): Promise<void> {
-  await requireRole("admin");
+  await requirePermission("payments.manage");
   await verifyPayment(reference);
   revalidatePath("/admin/payments");
 }
 
 export async function markPaymentFailed(reference: string): Promise<void> {
-  await requireRole("admin");
+  const actor = await requirePermission("payments.manage");
+  await logAudit(actor, { action: "payment.failed", summary: `marked payment ${reference} as not received`, target: { type: "payment", id: reference } });
   await (await getDb()).update(payments).set({ status: "failed" }).where(and(eq(payments.reference, reference), eq(payments.status, "pending")));
   revalidatePath("/admin/payments");
 }
 
 export async function recordOfflinePayment(_state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("payments.manage");
   const parsedEmail = emailSchema.safeParse(formData.get("email"));
   if (!parsedEmail.success) return { error: "Enter the student's email address." };
   const cohortId = Number(formData.get("cohortId"));
@@ -408,14 +447,55 @@ export async function recordOfflinePayment(_state: FormState, formData: FormData
     description: `${describePurchase(found.course, found.cohort)}${note ? ` (${note})` : ""}`,
   });
   await fulfilPayment(reference);
+  await logAudit(actor, { action: "payment.recorded", summary: `recorded an offline payment of ${formatMoney(amount, currency)} from ${name} (${reference})`, target: { type: "payment", id: reference } });
   revalidatePath("/admin/payments");
   return { ok: `Payment recorded (${reference}). The student is enrolled and has been emailed a receipt.` };
+}
+
+/**
+ * Records a refund that has been sent back to the student (from Stripe, Paystack, TransactPay or the bank).
+ * The academy's figures then show the net amount; a full refund marks the payment refunded.
+ */
+export async function recordRefund(reference: string, _state: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requirePermission("payments.manage");
+  const db = await getDb();
+  const [payment] = await db.select().from(payments).where(eq(payments.reference, reference));
+  if (!payment || payment.status !== "paid") return { error: "Only successful payments can be refunded." };
+  const refundable = payment.amount - payment.refundedAmount;
+  const amount = parseMajor(String(formData.get("amount") ?? ""));
+  if (!amount || amount <= 0) return { error: "Enter the amount refunded." };
+  if (amount > refundable) return { error: `You can refund at most ${formatMoney(refundable, payment.currency)} on this payment.` };
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  if (reason.length < 3) return { error: "Add a short reason, for your records." };
+  const total = payment.refundedAmount + amount;
+  const full = total >= payment.amount;
+  await db.update(payments).set({ refundedAmount: total, refundedAt: new Date(), refundReason: reason, refundedById: actor.id, ...(full ? { status: "refunded" as const } : {}) }).where(eq(payments.id, payment.id));
+
+  // Optionally take them off the cohort (and withdraw any certificate) at the same time.
+  let removed = false;
+  if (formData.get("removeFromCohort") === "on" && payment.cohortId) {
+    const [row] = await db.update(enrollments).set({ status: "cancelled", completedAt: null }).where(and(eq(enrollments.userId, payment.userId), eq(enrollments.cohortId, payment.cohortId))).returning({ id: enrollments.id });
+    if (row) {
+      await db.update(certificates).set({ revokedAt: new Date() }).where(eq(certificates.enrollmentId, row.id));
+      removed = true;
+      await offerOpenPlaces(payment.cohortId);
+    }
+  }
+  const [student] = await db.select().from(users).where(eq(users.id, payment.userId));
+  if (student && formData.get("notify") === "on") {
+    await sendEmail(student.email, "refund_processed", { name: firstName(student.name), amount: formatMoney(amount, payment.currency), description: payment.description, reference: payment.reference, paymentsUrl: absoluteUrl("/dashboard/payments") });
+  }
+  await logAudit(actor, { action: "refund.recorded", summary: `recorded a ${full ? "full" : "partial"} refund of ${formatMoney(amount, payment.currency)} on ${reference}${student ? ` for ${student.name}` : ""}${removed ? " and removed them from the cohort" : ""}`, target: { type: "payment", id: reference }, details: { reason } });
+  revalidatePath("/admin/payments");
+  revalidatePath("/dashboard/payments");
+  return { ok: `Refund of ${formatMoney(amount, payment.currency)} recorded${removed ? " and the student was removed from the cohort" : ""}.` };
 }
 
 // ---------- Email templates ----------
 
 export async function saveTemplate(key: string, _state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  const actor = await requirePermission("emails.manage");
+  if (isTemplateKey(key)) await logAudit(actor, { action: "email_template.saved", summary: `edited the “${EMAIL_TEMPLATES[key].name}” email`, target: { type: "email_template", id: key } });
   if (!isTemplateKey(key)) return { error: "Unknown template." };
   const subject = String(formData.get("subject") ?? "").trim().slice(0, 200);
   const body = String(formData.get("body") ?? "").trim().slice(0, 20_000);
@@ -428,7 +508,7 @@ export async function saveTemplate(key: string, _state: FormState, formData: For
 }
 
 export async function setTemplateEnabled(key: string, enabled: boolean): Promise<void> {
-  await requireRole("admin");
+  await requirePermission("emails.manage");
   if (!isTemplateKey(key) || REQUIRED_TEMPLATES.includes(key)) return;
   const def = EMAIL_TEMPLATES[key];
   await (await getDb()).insert(emailTemplates).values({ key, subject: def.subject, body: def.body, enabled }).onConflictDoUpdate({ target: emailTemplates.key, set: { enabled, updatedAt: new Date() } });
@@ -436,7 +516,7 @@ export async function setTemplateEnabled(key: string, enabled: boolean): Promise
 }
 
 export async function resetTemplate(key: string): Promise<void> {
-  await requireRole("admin");
+  await requirePermission("emails.manage");
   if (!isTemplateKey(key)) return;
   const def = EMAIL_TEMPLATES[key];
   // Keep the on/off choice; only the wording goes back to the original.
@@ -446,7 +526,7 @@ export async function resetTemplate(key: string): Promise<void> {
 }
 
 export async function sendTestEmail(key: string): Promise<void> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("emails.manage");
   if (!isTemplateKey(key)) return;
   await sendEmail(admin.email, key, { ...COMMON_VARIABLES, ...EMAIL_TEMPLATES[key].variables, name: firstName(admin.name) });
 }

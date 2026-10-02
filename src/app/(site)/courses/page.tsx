@@ -11,6 +11,7 @@ import Link from "next/link";
 import { MODE_LABEL } from "@/lib/utils";
 import { pageMetadata, seoConfig } from "@/lib/seo";
 import { visitorCurrencies } from "@/lib/visitor";
+import { ratingsFor } from "@/lib/reviews";
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await seoConfig();
@@ -39,6 +40,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     const q = params.toString();
     return q ? `/courses?${q}` : "/courses";
   };
+  const ratings = await ratingsFor(all.map((c) => c.id));
   const nextStart = all.flatMap((c) => c.cohorts.filter((co) => co.enrollmentOpen && co.startDate).map((co) => co.startDate!)).sort()[0];
   const pill = (active: boolean) => `flex h-10 items-center rounded-full border px-4 text-sm font-semibold ${active ? "border-accent bg-accent text-white" : "border-edge-strong bg-white text-body hover:border-accent hover:text-accent"}`;
 
@@ -71,7 +73,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       </div>
       {shown.length ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {shown.map((course) => <CourseCard key={course.id} course={course} currencies={currencies} />)}
+          {shown.map((course) => <CourseCard key={course.id} course={course} currencies={currencies} rating={ratings.get(course.id)} />)}
         </div>
       ) : (
         <EmptyState icon={BookIcon} title="No courses match">Try a different format or topic, or check back soon for new cohorts.</EmptyState>

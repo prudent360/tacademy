@@ -6,10 +6,12 @@ import { Card, PageHeader } from "@/components/ui";
 import { getDb } from "@/db";
 import { courses } from "@/db/schema";
 import { aiAvailable } from "@/lib/ai";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "New internship" };
 
 export default async function NewInternshipPage() {
+  await requirePermission("courses.manage");
   const [ai, linkable] = await Promise.all([
     aiAvailable("writing"),
     (await getDb()).select({ id: courses.id, title: courses.title }).from(courses).where(eq(courses.kind, "course")).orderBy(asc(courses.sortOrder), asc(courses.title)),

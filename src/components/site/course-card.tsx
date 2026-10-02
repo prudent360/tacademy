@@ -5,8 +5,9 @@ import { fromPrice, type CourseSummary } from "@/lib/catalog";
 import { formatMoney } from "@/lib/money";
 import { formatDateOnly } from "@/lib/time";
 import { CourseArt } from "./course-art";
+import { Star } from "@/components/portal/review-form";
 
-export function CourseCard({ course, currencies }: { course: CourseSummary; currencies: string[] }) {
+export function CourseCard({ course, currencies, rating }: { course: CourseSummary; currencies: string[]; rating?: { average: number; count: number } }) {
   const price = fromPrice(course.cohorts.filter((c) => c.enrollmentOpen), currencies);
   const modes = [...new Set(course.cohorts.map((c) => c.deliveryMode))];
   return (
@@ -23,6 +24,9 @@ export function CourseCard({ course, currencies }: { course: CourseSummary; curr
       <div className="flex grow flex-col gap-3 p-5 md:p-6">
         <div className="flex flex-wrap gap-1.5">{modes.map((m) => <ModeBadge key={m} mode={m} />)}</div>
         <h3 className="font-display text-[22px] font-bold leading-snug text-ink transition group-hover:text-accent">{course.title}</h3>
+        {rating && rating.count > 0 && (
+          <p className="-mt-1 flex items-center gap-1.5 text-sm"><Star filled className="size-4" /><span className="font-semibold text-ink">{rating.average.toFixed(1)}</span><span className="text-muted">({rating.count} review{rating.count === 1 ? "" : "s"})</span></p>
+        )}
         <p className="line-clamp-3 text-[15px] leading-relaxed text-muted">{course.summary}</p>
         <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1.5 pt-2 text-sm text-body">
           {course.durationWeeks && <span className="flex items-center gap-1.5"><ClockIcon className="size-4 text-muted" /> {course.durationWeeks} weeks</span>}

@@ -5,13 +5,13 @@ import { AwardIcon, ExternalIcon } from "@/components/icons";
 import { DataTable, EmptyState, PageHeader, PersonCell, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
 import { certificates, cohorts, courses, enrollments, users } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { formatDateOnly } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Certificates" };
 
 export default async function AdminCertificatesPage() {
-  await requireRole("admin");
+  await requirePermission("certificates.manage");
   const rows = await (await getDb())
     .select({ certificate: certificates, student: users, course: courses, cohort: cohorts })
     .from(certificates)

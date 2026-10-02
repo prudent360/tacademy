@@ -5,10 +5,12 @@ import { BriefcaseIcon } from "@/components/icons";
 import { Badge, DataTable, EmptyState, PageHeader, buttonClass } from "@/components/ui";
 import { getDb } from "@/db";
 import { cohorts, courses, internshipApplications, internshipCourses } from "@/db/schema";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Internships" };
 
 export default async function AdminInternshipsPage() {
+  await requirePermission("courses.manage");
   const db = await getDb();
   const rows = await db.select().from(courses).where(eq(courses.kind, "internship")).orderBy(asc(courses.sortOrder), asc(courses.title));
   const ids = rows.map((r) => r.id);

@@ -7,12 +7,14 @@ import { getDb } from "@/db";
 import { curriculumRequests } from "@/db/schema";
 import { getSettings } from "@/lib/data";
 import { formatDateTime } from "@/lib/time";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Curriculum requests" };
 
 const PAGE_SIZE = 50;
 
 export default async function CurriculumRequestsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  await requirePermission("leads.view");
   const page = Math.max(1, Number((await searchParams).page) || 1);
   const db = await getDb();
   const [settings, [{ total }], rows] = await Promise.all([

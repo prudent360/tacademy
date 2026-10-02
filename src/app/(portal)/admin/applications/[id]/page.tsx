@@ -12,6 +12,7 @@ import { countryByCode, flag } from "@/lib/countries";
 import { getSettings } from "@/lib/data";
 import { formatDateOnly, formatDateTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Application" };
 
@@ -27,6 +28,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 const link = (url: string | null) => url && <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 break-all font-semibold text-accent hover:text-accent-dark">{url.replace(/^https?:\/\//, "")} <ExternalIcon className="size-3.5 shrink-0" /></a>;
 
 export default async function ApplicationPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("applications.review");
   const id = idParam((await params).id);
   if (!id) notFound();
   const db = await getDb();

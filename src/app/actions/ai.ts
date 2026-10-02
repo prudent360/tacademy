@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { assignments, cohorts, courseModules, courses, enrollments, lessons, moduleReleases, submissions } from "@/db/schema";
 import { aiQuota, askAi, trimChat, type AiResult } from "@/lib/ai";
-import { getCurrentUser, requireCourseEditor, requireRole, requireTeacher } from "@/lib/auth";
+import { getCurrentUser, requireCourseEditor, requireTeacher, requirePermission } from "@/lib/auth";
 import { fromPrice, isFree, withCohorts } from "@/lib/catalog";
 import { getPublishedCourses, getSettings } from "@/lib/data";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
@@ -152,7 +152,7 @@ const WRITING: Record<WritingKind, { field: string; ask: string }> = {
 
 /** Drafts course page copy from what's already in the course form. */
 export async function draftCourseText(kind: WritingKind, values: Record<string, string>): Promise<AiDraft> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("courses.manage");
   const limited = await aiQuota("writing", String(admin.id), 60);
   if (limited) return { error: limited };
   const v = (name: string) => String(values[name] ?? "").trim().slice(0, 6000);
@@ -189,7 +189,7 @@ export async function draftAnnouncement(cohortId: number, values: Record<string,
 
 /** Rewrites an email template's body, keeping its {{placeholders}}. */
 export async function draftEmailTemplate(key: string, values: Record<string, string>): Promise<AiDraft> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("emails.manage");
   if (!isTemplateKey(key)) return { error: "Unknown template." };
   const limited = await aiQuota("writing", String(admin.id), 60);
   if (limited) return { error: limited };

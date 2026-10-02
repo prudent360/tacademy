@@ -3,7 +3,7 @@ import { markAllRead } from "@/app/actions/account";
 import { logout, resendVerification } from "@/app/actions/auth";
 import { ActionButton } from "@/components/forms";
 import { PortalShell } from "@/components/portal/shell";
-import { requireUser } from "@/lib/auth";
+import { permissionsFor, requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
 import { latestNotifications, toGradeCount, unreadCount } from "@/lib/portal";
 import { relativeTime } from "@/lib/time";
@@ -21,8 +21,9 @@ export default async function PortalLayout({ children }: { children: React.React
   const user = await requireUser();
   const [settings, unread, toGrade, recent] = await Promise.all([getSettings(), unreadCount(user.id), toGradeCount(user), latestNotifications(user.id)]);
   const xp = user.role === "student" ? await xpForUser(user.id, 0) : null;
-  const newApplications = user.role === "admin" ? (await (await getDb()).select({ n: count() }).from(internshipApplications).where(eq(internshipApplications.status, "new")))[0]?.n ?? 0 : 0;
-  const newInstructorApplications = user.role === "admin" ? (await (await getDb()).select({ n: count() }).from(instructorApplications).where(eq(instructorApplications.status, "new")))[0]?.n ?? 0 : 0;
+  const perms = await permissionsFor(user);
+  const newApplications = perms.has("applications.review") ? (await (await getDb()).select({ n: count() }).from(internshipApplications).where(eq(internshipApplications.status, "new")))[0]?.n ?? 0 : 0;
+  const newInstructorApplications = perms.has("instructors.review") ? (await (await getDb()).select({ n: count() }).from(instructorApplications).where(eq(instructorApplications.status, "new")))[0]?.n ?? 0 : 0;
 
   return (
     <PortalShell
@@ -34,6 +35,7 @@ export default async function PortalLayout({ children }: { children: React.React
       toGrade={toGrade}
       newApplications={newApplications}
       newInstructorApplications={newInstructorApplications}
+      permissions={[...perms]}
       studentId={user.role === "student" ? studentId(user) : undefined}
       xp={xp ? { level: xp.level, total: xp.total, percent: xp.percent, toNext: xp.next - xp.total } : undefined}
       notifications={recent.map((n) => ({ id: n.id, title: n.title, body: n.body, href: n.href, read: Boolean(n.readAt), when: relativeTime(n.createdAt) }))}

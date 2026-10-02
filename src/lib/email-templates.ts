@@ -72,7 +72,7 @@ This link expires in 1 hour. If you didn't ask for a reset, you can safely ignor
     subject: "You've been invited to {{siteName}}",
     body: `Hi {{name}},
 
-You've been added to **{{siteName}}** as an **{{role}}**. Set your password to sign in:
+You've been given **{{role}}** access to **{{siteName}}**. Set your password to sign in:
 
 [[Set my password|{{inviteUrl}}]]
 
@@ -348,6 +348,49 @@ The {{siteName}} team`,
 Thank you for applying to teach **{{expertise}}** with {{siteName}}, and for the time you took to tell us about your experience.
 
 We're not able to take your application forward at the moment. Our needs change as new courses and cohorts open, so you're very welcome to apply again in future.
+
+The {{siteName}} team`,
+  },
+  refund_processed: {
+    name: "Refund processed",
+    description: "Sent when the academy records a refund on a payment.",
+    variables: { amount: "£149", description: "Data Analytics with Power BI – October 2026", reference: "TSU-8K2P-1Q4Z", paymentsUrl: "https://example.com/dashboard/payments" },
+    subject: "Your refund of {{amount}}",
+    body: `Hi {{name}},
+
+We've refunded **{{amount}}** for {{description}} (reference {{reference}}).
+
+Depending on your bank or payment method, it can take 5–10 working days to appear on your statement.
+
+[[View my payments|{{paymentsUrl}}]]
+
+If you have any questions, reply to this email or contact us at {{supportEmail}}.`,
+  },
+  waitlist_joined: {
+    name: "Waitlist confirmation",
+    description: "Sent when someone joins the waitlist for a full cohort.",
+    variables: { courseTitle: "Data Analytics with Power BI", cohortName: "October 2026", position: "3" },
+    subject: "You're on the waitlist for {{courseTitle}}",
+    body: `Hi {{name}},
+
+You're on the waitlist for **{{courseTitle}}** ({{cohortName}}). You're number **{{position}}** in line.
+
+If a place opens, we'll email you straight away with a link to enrol. Places are offered in order and held for 48 hours.
+
+The {{siteName}} team`,
+  },
+  waitlist_place_open: {
+    name: "Waitlist place available",
+    description: "Sent to the next person on a waitlist when a place opens. The place is held for them for a limited time.",
+    variables: { courseTitle: "Data Analytics with Power BI", cohortName: "October 2026", startDate: "6 Oct 2026", hours: "48", enrolUrl: "https://example.com/enroll?cohort=1" },
+    subject: "A place has opened on {{courseTitle}}",
+    body: `Hi {{name}},
+
+Good news: a place has opened on **{{courseTitle}}** ({{cohortName}}), starting {{startDate}}. We're holding it for you for **{{hours}} hours**.
+
+[[Enrol now|{{enrolUrl}}]]
+
+After that, it's offered to the next person on the waitlist.
 
 The {{siteName}} team`,
   },

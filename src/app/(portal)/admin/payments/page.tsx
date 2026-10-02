@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
-import { markPaymentFailed, markPaymentPaid, recheckPayment, recordOfflinePayment, sendBalanceReminder } from "@/app/actions/admin";
+import { markPaymentFailed, markPaymentPaid, recheckPayment, recordOfflinePayment, recordRefund, sendBalanceReminder } from "@/app/actions/admin";
 import { ActionButton, ActionForm, Input, ModalButton, Select, SubmitButton } from "@/components/forms";
 import { BankIcon, CardIcon, CheckCircleIcon, ClockIcon, DownloadIcon, PlusIcon, TrendIcon, XCircleIcon } from "@/components/icons";
 import { StatTile } from "@/components/portal/dash";
@@ -14,6 +14,7 @@ import { CURRENCIES, formatMoney } from "@/lib/money";
 import { paymentBalanceFor } from "@/lib/payments";
 import { PART_PAYMENT_PLANS } from "@/lib/pricing";
 import { formatDateTime } from "@/lib/time";
+import { can, requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -29,6 +30,8 @@ const GATEWAY = {
 type Search = { status?: string; gateway?: string; q?: string; page?: string };
 
 export default async function AdminPaymentsPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const viewer = await requirePermission("payments.view");
+  const canManage = await can(viewer, "payments.manage");
   const params = await searchParams;
   const filters = parsePaymentFilters(params);
   const page = Math.max(1, Number(params.page) || 1);
@@ -125,8 +128,26 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
                     <td><PersonCell name={u.name} email={u.email} src={u.avatarUrl} gender={u.gender} href={`/admin/users/${u.id}`} /></td>
                     <td className="max-w-[280px] text-body"><span className="line-clamp-2">{p.description}</span></td>
                     <td className="whitespace-nowrap"><span className="block font-display text-[15px] font-bold text-ink">{formatMoney(p.amount, p.currency)}</span><span className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted"><span className="flex size-4 items-center justify-center rounded text-[9px] font-bold text-white" style={{ background: g.color }}>{g.short}</span>{g.label}</span></td>
-                    <td><StatusBadge status={p.status} label={p.status === "paid" ? "Paid" : p.status === "pending" && p.gateway === "manual" ? "Awaiting transfer" : undefined} /></td>
+                    <td>
+                      <StatusBadge status={p.status} label={p.status === "paid" ? (p.refundedAmount > 0 ? "Part refunded" : "Paid") : p.status === "pending" && p.gateway === "manual" ? "Awaiting transfer" : undefined} />
+                      {p.refundedAmount > 0 && <span className="mt-1 block text-xs text-red-700" title={p.refundReason}>Refunded {formatMoney(p.refundedAmount, p.currency)}</span>}
+                    </td>
                     <td className="text-right">
+                      {canManage && p.status === "paid" && p.amount > p.refundedAmount && (
+                        <details className="relative inline-block text-left">
+                          <summary className="inline-flex h-10 cursor-pointer list-none items-center rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page [&::-webkit-details-marker]:hidden">Refund</summary>
+                          <div className="absolute right-0 z-20 mt-2 w-[320px] rounded-[5px] border border-edge bg-white p-4 shadow-[0_24px_48px_-16px_rgba(24,19,64,0.3)]">
+                            <p className="mb-3 text-sm text-body">Record a refund you&apos;ve already sent from {GATEWAY[p.gateway]?.label ?? "the payment provider"} or your bank. Figures then show the net amount.</p>
+                            <ActionForm action={recordRefund.bind(null, p.reference)} className="flex flex-col gap-3">
+                              <Input label={`Amount (${p.currency})`} name="amount" inputMode="decimal" defaultValue={((p.amount - p.refundedAmount) / 100).toFixed(2).replace(/\.00$/, "")} required hint={`Up to ${formatMoney(p.amount - p.refundedAmount, p.currency)}`} />
+                              <Input label="Reason" name="reason" required placeholder="e.g. Withdrew before the cohort started" />
+                              <label className="flex items-center gap-2 text-sm text-body"><input type="checkbox" name="removeFromCohort" className="size-4 accent-accent" /> Remove them from the cohort</label>
+                              <label className="flex items-center gap-2 text-sm text-body"><input type="checkbox" name="notify" defaultChecked className="size-4 accent-accent" /> Email the student</label>
+                              <SubmitButton pendingText="Recording…">Record refund</SubmitButton>
+                            </ActionForm>
+                          </div>
+                        </details>
+                      )}
                       {p.status === "pending" && (
                         <span className="flex justify-end gap-1.5">
                           {p.gateway === "manual" || p.gateway === "test"

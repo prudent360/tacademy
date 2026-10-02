@@ -7,10 +7,12 @@ import { Card, DataTable, EmptyState, PageHeader, StatusBadge } from "@/componen
 import { getDb } from "@/db";
 import { discountCodes } from "@/db/schema";
 import { formatDateTime } from "@/lib/time";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Discount codes" };
 
 export default async function DiscountsPage() {
+  await requirePermission("discounts.manage");
   const rows = await (await getDb()).select().from(discountCodes).orderBy(desc(discountCodes.createdAt));
   return <>
     <PageHeader title="Discount codes" description="Create controlled promotions for online enrolment. Expiry and usage limits are enforced at checkout." />

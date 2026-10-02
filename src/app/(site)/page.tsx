@@ -14,6 +14,7 @@ import { MODE_LABEL } from "@/lib/utils";
 import { visitorCurrencies } from "@/lib/visitor";
 import { pageMetadata, seoConfig } from "@/lib/seo";
 import type { Metadata } from "next";
+import { ratingsFor } from "@/lib/reviews";
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await seoConfig();
@@ -61,6 +62,7 @@ export default async function HomePage() {
   const [settings, courses, upcoming] = await Promise.all([getSettings(), getPublishedCourses(), getUpcomingCohorts(6)]);
   const summaries = await withCohorts(courses.filter((c) => c.kind === "course"));
   const featured = (summaries.some((c) => c.featured) ? summaries.filter((c) => c.featured) : summaries).slice(0, 3);
+  const ratings = await ratingsFor(featured.map((c) => c.id));
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
   const { currencies } = await visitorCurrencies(settings);
   const heroPhoto = settings.heroImageUrl ?? "/images/home-hero-team.webp";
@@ -225,7 +227,7 @@ export default async function HomePage() {
               <Link href="/courses" className="flex h-11 items-center gap-2 rounded-[5px] border border-edge-strong bg-white px-5 font-semibold text-ink hover:bg-page">All courses <ArrowRight className="size-4" /></Link>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featured.map((course) => <CourseCard key={course.id} course={course} currencies={currencies} />)}
+              {featured.map((course) => <CourseCard key={course.id} course={course} currencies={currencies} rating={ratings.get(course.id)} />)}
             </div>
           </div>
         </section>

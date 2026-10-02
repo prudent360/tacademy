@@ -11,10 +11,12 @@ import { getDb } from "@/db";
 import { courseModules, courses, lessons } from "@/db/schema";
 import { idParam } from "@/lib/validation";
 import { QuizEditor } from "@/components/quiz/quiz-editor";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Edit lesson" };
 
 export default async function EditLessonPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
+  await requirePermission("courses.manage");
   const [{ id: raw }, { created }] = await Promise.all([params, searchParams]);
   const id = idParam(raw);
   if (!id) notFound();

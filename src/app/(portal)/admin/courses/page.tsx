@@ -5,10 +5,12 @@ import { BookIcon } from "@/components/icons";
 import { Badge, DataTable, EmptyState, PageHeader, buttonClass } from "@/components/ui";
 import { getDb } from "@/db";
 import { cohorts, courses } from "@/db/schema";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Courses" };
 
 export default async function AdminCoursesPage() {
+  await requirePermission("courses.manage");
   const db = await getDb();
   const [rows, counts] = await Promise.all([
     // Internships have their own section.

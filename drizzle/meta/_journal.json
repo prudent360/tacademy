@@ -169,6 +169,41 @@
       "when": 1790934060818,
       "tag": "0023_user_gender",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790951687499,
+      "tag": "0024_staff_roles_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790952487678,
+      "tag": "0025_two_factor",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790953288684,
+      "tag": "0026_refunds",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1790953502482,
+      "tag": "0027_cohort_waitlist",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1790953686014,
+      "tag": "0028_course_reviews",
+      "breakpoints": true
     }
   ]
 }

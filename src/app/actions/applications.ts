@@ -7,7 +7,8 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { cohorts, courses, internshipApplications, users } from "@/db/schema";
 import { CURRENT_STATUSES, EXPERIENCE_LEVELS, HEARD_FROM, HOURS_PER_WEEK, MOTIVATION_MAX } from "@/lib/applications";
-import { requireRole } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 import { countryByCode } from "@/lib/countries";
 import { getAdmins, getCohortWithCourse, graduateFor, isGraduate } from "@/lib/data";
 import { sendEmail } from "@/lib/email";
@@ -133,7 +134,7 @@ async function loadApplication(id: number) {
 }
 
 export async function saveApplicationNotes(id: number, _state: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+  await requirePermission("applications.review");
   const notes = String(formData.get("adminNotes") ?? "").trim().slice(0, 5000);
   await (await getDb()).update(internshipApplications).set({ adminNotes: notes }).where(eq(internshipApplications.id, id));
   revalidatePath(`/admin/applications/${id}`);
@@ -141,14 +142,14 @@ export async function saveApplicationNotes(id: number, _state: FormState, formDa
 }
 
 export async function shortlistApplication(id: number): Promise<void> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("applications.review");
   await (await getDb()).update(internshipApplications).set({ status: "shortlisted", decidedById: admin.id }).where(eq(internshipApplications.id, id));
   revalidatePath("/admin/applications", "layout");
 }
 
 /** Accepts an applicant and emails them a link to enrol on the chosen intake (free for verified graduates when the intake allows). */
 export async function acceptApplication(id: number, _state: FormState, formData: FormData): Promise<FormState> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("applications.review");
   const application = await loadApplication(id);
   if (!application) return { error: "This application no longer exists." };
   const cohortId = Number(formData.get("cohortId"));
@@ -161,15 +162,17 @@ export async function acceptApplication(id: number, _state: FormState, formData:
     intake: found.cohort.name,
     enrolUrl: absoluteUrl(`/enroll?cohort=${cohortId}`),
   });
+  await logAudit(admin, { action: "application.accepted", summary: `accepted ${application.name}'s internship application onto ${found.cohort.name}`, target: { type: "internship_application", id } });
   revalidatePath("/admin/applications", "layout");
   return { ok: `Accepted. ${application.name} has been emailed a link to enrol on ${found.cohort.name}.` };
 }
 
 export async function rejectApplication(id: number): Promise<void> {
-  const admin = await requireRole("admin");
+  const admin = await requirePermission("applications.review");
   const application = await loadApplication(id);
   if (!application || application.status === "rejected") return;
   await (await getDb()).update(internshipApplications).set({ status: "rejected", decidedById: admin.id, decidedAt: new Date() }).where(eq(internshipApplications.id, id));
+  await logAudit(admin, { action: "application.declined", summary: `declined ${application.name}'s internship application`, target: { type: "internship_application", id } });
   await sendEmail(application.email, "application_rejected", { name: firstName(application.name), programme: application.skillArea });
   revalidatePath("/admin/applications", "layout");
 }

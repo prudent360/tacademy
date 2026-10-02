@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
@@ -9,7 +10,9 @@ import { createSession, destroySession, getCurrentUser, requireUser } from "@/li
 import { sendEmail } from "@/lib/email";
 import { passwordProblem } from "@/lib/password";
 import { clearLoginFailures, loginBlockedFor, recordLoginFailure } from "@/lib/rate-limit";
-import { homeFor, sessionSecretProblem } from "@/lib/session";
+import { homeFor, PENDING_COOKIE, sessionSecretProblem, signPendingSignIn, verifyPendingSignIn } from "@/lib/session";
+import { decryptSecret } from "@/lib/secrets";
+import { verifyTotp } from "@/lib/totp";
 import { absoluteUrl } from "@/lib/site";
 import { consumeToken, issueToken } from "@/lib/tokens";
 import { firstName } from "@/lib/utils";
@@ -44,8 +47,37 @@ export async function login(_state: FormState, formData: FormData): Promise<Form
   await clearLoginFailures(email);
   const blocked = secretError();
   if (blocked) return blocked;
-  await createSession(user, { remember: formData.get("remember") === "on" });
-  redirect(safeNext(formData.get("next")) ?? homeFor(user.role));
+  const remember = formData.get("remember") === "on";
+  const next = safeNext(formData.get("next"));
+  // With two-factor on, the password only gets them as far as the code page.
+  if (user.totpEnabledAt) await startTwoFactorStep(user, remember, next);
+  await createSession(user, { remember });
+  redirect(next ?? homeFor(user.role));
+}
+
+async function startTwoFactorStep(user: { id: number; sessionVersion: number }, remember: boolean, next: string | null): Promise<never> {
+  (await cookies()).set(PENDING_COOKIE, await signPendingSignIn({ userId: user.id, v: user.sessionVersion, remember, next }), { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 600 });
+  redirect("/login/verify");
+}
+
+/** The second step of signing in: the 6-digit code from their authenticator app. */
+export async function verifyTwoFactorSignIn(_state: FormState, formData: FormData): Promise<FormState> {
+  const jar = await cookies();
+  const pending = await verifyPendingSignIn(jar.get(PENDING_COOKIE)?.value);
+  if (!pending) return { error: "That sign-in took too long. Please sign in again." };
+  const [user] = await (await getDb()).select().from(users).where(eq(users.id, pending.userId));
+  if (!user || !user.active || user.sessionVersion !== pending.v || !user.totpEnabledAt || !user.totpSecret) return { error: "Please sign in again." };
+  const scope = `2fa:${user.id}`;
+  const waitMinutes = await loginBlockedFor(scope);
+  if (waitMinutes) return { error: `Too many wrong codes. Try again in ${waitMinutes} minute${waitMinutes === 1 ? "" : "s"}.` };
+  if (!verifyTotp(decryptSecret(user.totpSecret), String(formData.get("code") ?? ""))) {
+    await recordLoginFailure(scope);
+    return { error: "That code isn't right. Check the time on your phone and try the newest code." };
+  }
+  await clearLoginFailures(scope);
+  jar.delete(PENDING_COOKIE);
+  await createSession(user, { remember: pending.remember });
+  redirect(pending.next ?? homeFor(user.role));
 }
 
 async function sendVerification(user: { id: number; email: string; name: string }, template: "welcome" | "verify_email") {
@@ -104,6 +136,8 @@ export async function resetPassword(_state: FormState, formData: FormData): Prom
   if (!user) return { error: "This account no longer exists." };
   const blocked = secretError();
   if (blocked) return blocked;
+  // A reset link proves the email, not the phone: two-factor still applies.
+  if (user.totpEnabledAt) await startTwoFactorStep(user, true, null);
   await createSession(user);
   redirect(homeFor(user.role));
 }

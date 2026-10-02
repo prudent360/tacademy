@@ -10,15 +10,17 @@ import { getDb } from "@/db";
 import { enrollments, ROLES, users, type Role } from "@/db/schema";
 import { relativeTime } from "@/lib/time";
 import { parseStudentId, studentId } from "@/lib/utils";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "People" };
 
 const PAGE_SIZE = 25;
-const ROLE_TONE = { admin: "navy", instructor: "cyan", student: "accent" } as const;
+const ROLE_TONE = { admin: "navy", instructor: "cyan", student: "accent", staff: "green" } as const;
 
 type Search = { role?: string; q?: string; page?: string };
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<Search> }) {
+  await requirePermission("users.view");
   const params = await searchParams;
   const role = ROLES.find((r) => r === params.role) as Role | undefined;
   const q = params.q?.trim() ?? "";
@@ -83,6 +85,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           { label: "Students", href: url({ role: "student" }), active: role === "student" },
           { label: "Instructors", href: url({ role: "instructor" }), active: role === "instructor" },
           { label: "Admins", href: url({ role: "admin" }), active: role === "admin" },
+          { label: "Team", href: url({ role: "staff" }), active: role === "staff" },
         ]}
       />
 

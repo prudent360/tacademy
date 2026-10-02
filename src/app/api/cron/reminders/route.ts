@@ -1,4 +1,5 @@
 import { sendDueReminders } from "@/lib/reminders";
+import { expireOffers } from "@/lib/waitlist";
 
 export const dynamic = "force-dynamic";
 
@@ -11,5 +12,7 @@ export async function GET(request: Request) {
   if (!secret) return new Response("CRON_SECRET is not set", { status: 503 });
   if (request.headers.get("authorization") !== `Bearer ${secret}`) return new Response("Unauthorized", { status: 401 });
   const result = await sendDueReminders();
-  return Response.json({ ok: true, ...result });
+  // Waitlist offers that weren't taken in time pass to the next person.
+  const expiredOffers = await expireOffers();
+  return Response.json({ ok: true, ...result, expiredOffers });
 }

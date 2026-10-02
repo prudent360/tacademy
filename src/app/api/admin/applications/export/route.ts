@@ -2,7 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { APPLICATION_STATUSES, internshipApplications } from "@/db/schema";
 import { MODE_LABELS, STATUS_LABELS } from "@/lib/applications";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, can } from "@/lib/auth";
 import { countryByCode } from "@/lib/countries";
 
 function csv(value: string | number | boolean | null | undefined): string {
@@ -14,7 +14,7 @@ function csv(value: string | number | boolean | null | undefined): string {
 /** CSV of internship applications, newest first (optionally one status). */
 export async function GET(request: Request) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "admin") return new Response("Unauthorized", { status: 401 });
+  if (!user || !(await can(user, "applications.review"))) return new Response("Unauthorized", { status: 401 });
   const status = APPLICATION_STATUSES.find((s) => s === new URL(request.url).searchParams.get("status"));
   const rows = await (await getDb()).select().from(internshipApplications).where(status ? eq(internshipApplications.status, status) : undefined).orderBy(desc(internshipApplications.createdAt));
   const header = ["Applied", "Status", "Name", "Email", "Phone", "Country", "City", "Graduate (said)", "Graduate (verified)", "Qualification", "Currently", "Area", "Experience", "Work mode", "Hours a week", "Laptop", "Internet", "Portfolio", "LinkedIn", "CV", "Motivation", "Heard from", "Notes"];

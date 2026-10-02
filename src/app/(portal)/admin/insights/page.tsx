@@ -9,6 +9,7 @@ import { getDb } from "@/db";
 import { attendance, classSessions, cohorts, courses, enrollments, lessonProgress, quizAttempts, submissions, users } from "@/db/schema";
 import { certificateEligibility } from "@/lib/certificates";
 import { getSettings } from "@/lib/data";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Learning insights" };
 
@@ -23,6 +24,7 @@ function weekStarts(now: Date): Date[] {
 }
 
 export default async function InsightsPage() {
+  await requirePermission("insights.view");
   const db = await getDb();
   const now = new Date();
   const weeks = weekStarts(now);

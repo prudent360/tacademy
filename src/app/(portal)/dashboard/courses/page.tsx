@@ -8,6 +8,9 @@ import { Badge, Card, EmptyState, ModeBadge, PageHeader, buttonClass } from "@/c
 import { getDb } from "@/db";
 import { certificates, classSessions, courseModules, lessonProgress, lessons } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { reviewableFor } from "@/lib/reviews";
+import { submitReview } from "@/app/actions/reviews";
+import { ReviewForm } from "@/components/portal/review-form";
 import { fromPrice, isFree, withCohorts } from "@/lib/catalog";
 import { getPublishedCourses, getSettings, getStudentCohorts, graduateFor } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
@@ -19,6 +22,7 @@ export const metadata: Metadata = { title: "My courses" };
 /** A student's courses, and the other courses and internships they could join next, without leaving the portal. */
 export default async function MyCoursesPage() {
   const user = await requireUser();
+  const reviewable = await reviewableFor(user.id);
   const settings = await getSettings();
   const db = await getDb();
   const [mine, published, { currencies }] = await Promise.all([getStudentCohorts(user.id), getPublishedCourses(), visitorCurrencies(settings)]);
@@ -44,6 +48,20 @@ export default async function MyCoursesPage() {
   return (
     <>
       <PageHeader title="My courses" description="Your courses, and what you could take next." />
+      {reviewable.length > 0 && (
+        <section id="reviews" className="scroll-mt-24">
+          <Card title="Rate your courses">
+            <div className="flex flex-col gap-6">
+              {reviewable.map((r) => (
+                <div key={r.enrollmentId} className="flex flex-col gap-3 border-b border-line pb-6 last:border-0 last:pb-0">
+                  <p className="flex flex-wrap items-center gap-2"><span className="font-display font-bold text-ink">{r.courseTitle}</span><span className="text-sm text-muted">{r.cohortName}</span>{r.review && <Badge tone={r.review.status === "published" ? "green" : r.review.status === "hidden" ? "neutral" : "amber"}>{r.review.status === "published" ? "Published" : r.review.status === "hidden" ? "Not shown" : "Awaiting approval"}</Badge>}</p>
+                  <ReviewForm action={submitReview.bind(null, r.enrollmentId)} initial={r.review ? { rating: r.review.rating, body: r.review.body } : undefined} />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </section>
+      )}
 
       {mine.length ? (
         <div className="flex flex-col gap-4">

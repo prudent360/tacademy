@@ -12,10 +12,12 @@ import { formatDateOnly, relativeTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
 import { GENDER_OPTIONS, studentId } from "@/lib/utils";
 import { countryByCode, flag } from "@/lib/countries";
+import { requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Person" };
 
 export default async function UserPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ invited?: string }> }) {
+  await requirePermission("users.view");
   const [{ id: raw }, { invited }] = await Promise.all([params, searchParams]);
   const id = idParam(raw);
   if (!id) notFound();
@@ -36,7 +38,7 @@ export default async function UserPage({ params, searchParams }: { params: Promi
         <Card title="Account">
           <ActionForm action={updateUser.bind(null, id)}>
             <Input label="Full name" name="name" defaultValue={user.name} required />
-            <Select label="Role" name="role" defaultValue={user.role} options={[{ value: "student", label: "Student" }, { value: "instructor", label: "Instructor" }, { value: "admin", label: "Admin" }]} />
+            <Select label="Role" name="role" defaultValue={user.role} options={[{ value: "student", label: "Student" }, { value: "instructor", label: "Instructor" }, { value: "admin", label: "Admin" }, ...(user.role === "staff" ? [{ value: "staff", label: "Team member (role set in Team & roles)" }] : [])]} />
             <div className="grid gap-5 sm:grid-cols-2">
               <Input label="Phone" name="phone" defaultValue={user.phone} />
               <Select label="Gender" name="gender" defaultValue={user.gender ?? ""} options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))} hint="Picks the default avatar." />
