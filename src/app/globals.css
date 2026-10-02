@@ -117,9 +117,27 @@ body {
 
 @media print {
   @page { size: A4 landscape; margin: 0; }
+  html, body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   .certificate-toolbar { display: none !important; }
-  .certificate-page { min-height: 0; padding: 0; background: white; }
-  .certificate-sheet { width: 297mm; height: 210mm; max-width: none; border: 0; box-shadow: none; }
+  .certificate-page {
+    min-height: 0;
+    padding: 0;
+    background: white;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .certificate-sheet {
+    width: 297mm;
+    height: 210mm;
+    max-width: none;
+    border: 0;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
 
 /* Native disclosure widgets used for FAQ and menus */

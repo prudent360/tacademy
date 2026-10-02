@@ -115,16 +115,46 @@ const STUDENT_VIEWS: View[] = [
     title: "Certificates",
     text: "Finish the course and get a certificate employers can verify with a QR code.",
     scene: <>
-      <div className="absolute left-[60px] top-[44px] flex w-[400px] flex-col items-center gap-1.5 rounded-[6px] bg-white px-8 py-7 text-center shadow-[0_30px_70px_-30px_rgba(24,19,64,.45)] ring-1 ring-black/5">
-        <div className="pointer-events-none absolute inset-2 rounded-[4px] border border-accent/25" />
-        <AwardIcon className="size-7 text-accent" />
-        <p className="font-display text-[17px] font-bold text-ink">Certificate of Completion</p>
-        <p className="text-[9px] text-muted">This certifies that</p>
-        <p className="border-b border-accent/30 px-4 pb-1 font-display text-[18px] font-bold text-ink">Ada Okafor</p>
-        <p className="mt-1 text-[11px] font-bold text-accent">Data Analytics with Power BI</p>
-        <div className="mt-3 grid w-full grid-cols-3 items-center border-t border-line pt-3 text-[9px]">
+      <div className="absolute left-[50px] top-[36px] flex w-[420px] flex-col items-center gap-1 overflow-hidden rounded-[6px] border-2 border-navy/85 bg-[#fcfbfe] px-7 py-6 text-center shadow-[0_30px_70px_-30px_rgba(24,19,64,.45)]">
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_50%_50%,#ffffff_0%,#faf8fe_60%,#ede8f7_100%)]" />
+        <div className="pointer-events-none absolute inset-1.5 z-0 rounded-[3px] border border-cyan/35" />
+        <div className="pointer-events-none absolute inset-2.5 z-0 rounded-[2px] border border-accent/25" />
+        {/* Subtle Watermark */}
+        <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center opacity-[0.05]">
+          <svg viewBox="-22 -1 44 44" className="w-[180px]">
+            <g transform="rotate(45)">
+              <rect x="0" y="2" width="10" height="16.5" fill="#4F3FD7" />
+              <rect x="11.5" y="0" width="18.5" height="10" fill="#4F3FD7" />
+              <rect x="0" y="20" width="18.5" height="10" fill="#4F3FD7" />
+              <rect x="20" y="11.5" width="10" height="16.5" fill="#31C4F0" />
+            </g>
+          </svg>
+        </div>
+        <div className="relative z-10 flex items-center gap-1.5">
+          <svg viewBox="-22 -1 44 44" className="size-5">
+            <g transform="rotate(45)">
+              <rect x="0" y="2" width="10" height="16.5" fill="#4F3FD7" />
+              <rect x="11.5" y="0" width="18.5" height="10" fill="#4F3FD7" />
+              <rect x="0" y="20" width="18.5" height="10" fill="#4F3FD7" />
+              <rect x="20" y="11.5" width="10" height="16.5" fill="#31C4F0" />
+            </g>
+          </svg>
+          <span className="font-mono text-[9px] font-bold uppercase tracking-[2px] text-accent">TekSkillup</span>
+        </div>
+        <p className="relative z-10 font-display text-[16px] font-black uppercase tracking-tight text-ink">Certificate of Completion</p>
+        <p className="relative z-10 text-[9px] font-medium text-muted">This certifies that</p>
+        <p className="relative z-10 font-display text-[18px] font-extrabold text-ink">Ada Okafor</p>
+        <div className="relative z-10 flex items-center gap-1">
+          <span className="h-px w-6 bg-accent/40" />
+          <span className="size-1 rotate-45 bg-accent" />
+          <span className="size-1.5 rotate-45 bg-cyan" />
+          <span className="size-1 rotate-45 bg-accent" />
+          <span className="h-px w-6 bg-accent/40" />
+        </div>
+        <p className="relative z-10 mt-0.5 text-[11px] font-bold text-accent">Data Analytics with Power BI</p>
+        <div className="relative z-10 mt-2 grid w-full grid-cols-3 items-center border-t border-line/80 pt-2 text-[9px]">
           <span className="text-muted">Issued 16 Nov</span>
-          <span className="mx-auto grid size-10 grid-cols-5 gap-px rounded-sm bg-white p-0.5 ring-1 ring-line">{Array.from({ length: 25 }, (_, i) => <span key={i} className={[0, 1, 3, 5, 7, 8, 11, 12, 14, 16, 18, 19, 21, 23, 24].includes(i) ? "bg-ink" : ""} />)}</span>
+          <span className="mx-auto grid size-8 grid-cols-5 gap-px rounded-sm bg-white p-0.5 ring-1 ring-edge">{Array.from({ length: 25 }, (_, i) => <span key={i} className={[0, 1, 3, 5, 7, 8, 11, 12, 14, 16, 18, 19, 21, 23, 24].includes(i) ? "bg-ink" : ""} />)}</span>
           <span className="font-mono text-muted">TSU-2026-…</span>
         </div>
       </div>
