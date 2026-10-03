@@ -66,7 +66,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
               {next.session.mode === "virtual" ? <VideoIcon className="size-4" /> : <PinIcon className="size-4" />} {MODE_LABEL[next.session.mode]} · starts in
             </span>
             <Countdown to={new Date(next.session.startsAt).toISOString()} />
-            <Link href={`/teach/sessions/${next.session.id}`} className="inline-flex h-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-accent hover:bg-accent-soft">Open live class</Link>
+            <Link href={`/teach/sessions/${next.session.id}`} className="inline-flex h-10 items-center justify-center rounded-lg bg-surface text-sm font-semibold text-accent-ink hover:bg-accent-soft">Open live class</Link>
           </div>
         ) : undefined}
       >
@@ -86,7 +86,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
                     <span className="truncate font-semibold text-ink">{session.title}</span>
                     <span className="truncate text-sm text-muted">{course.title}: {cohortName} · {formatSessionRange(session.startsAt, session.endsAt, tz)}</span>
                   </span>
-                  <span className="text-sm font-semibold text-accent">Take attendance →</span>
+                  <span className="text-sm font-semibold text-accent-ink">Take attendance →</span>
                 </Link>
               </li>
             ))}
@@ -144,7 +144,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
                           <span className="truncate text-sm text-muted">{assignment.title}</span>
                           <span className="text-xs text-muted">{relativeTime(submission.submittedAt)}</span>
                         </span>
-                        <span className="flex shrink-0 flex-col items-end gap-1.5">{late && <Badge tone="amber">Late</Badge>}<span className="text-sm font-semibold text-accent">Review →</span></span>
+                        <span className="flex shrink-0 flex-col items-end gap-1.5">{late && <Badge tone="amber">Late</Badge>}<span className="text-sm font-semibold text-accent-ink">Review →</span></span>
                       </Link>
                     </li>
                   );
@@ -163,7 +163,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
                     <li key={a.id}>
                       <Link href={`/teach/assignments/${a.id}`} className="flex flex-col gap-2">
                         <span className="flex items-start justify-between gap-3">
-                          <span className="flex min-w-0 flex-col"><span className="truncate font-semibold text-ink hover:text-accent">{a.title}</span><span className="truncate text-xs text-muted">{courseFor.get(a.cohortId)} · due {untilLabel(a.dueAt!, now)}</span></span>
+                          <span className="flex min-w-0 flex-col"><span className="truncate font-semibold text-ink hover:text-accent-ink">{a.title}</span><span className="truncate text-xs text-muted">{courseFor.get(a.cohortId)} · due {untilLabel(a.dueAt!, now)}</span></span>
                         </span>
                         <ProgressBar value={got} max={total} tone="cyan" label="Submitted" detail={`${got}/${total}`} />
                       </Link>
@@ -190,7 +190,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
                     {r.toGrade > 0 && <Badge tone="cyan">{r.toGrade} to grade</Badge>}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="font-display text-[17px] font-bold text-ink group-hover:text-accent">{r.course.title}</p>
+                    <p className="font-display text-[17px] font-bold text-ink group-hover:text-accent-ink">{r.course.title}</p>
                     <p className="text-sm text-muted">{r.cohort.name}{r.cohort.startDate ? ` · ${formatDateOnly(r.cohort.startDate)} – ${formatDateOnly(r.cohort.endDate)}` : ""}</p>
                   </div>
                   <ProgressBar value={done} max={list.length} label="Live classes held" detail={list.length ? `${done}/${list.length}` : "No timetable yet"} />
@@ -206,9 +206,9 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
         ) : <PanelEmpty icon={LayersIcon}>{user.role === "admin" ? "Create a course and a cohort under Courses & cohorts." : "An admin will assign you to cohorts; they'll appear here."}</PanelEmpty>}
         {past.length > 0 && (
           <details className="mt-5 border-t border-line pt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-accent">Finished cohorts ({past.length})</summary>
+            <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Finished cohorts ({past.length})</summary>
             <ul className="mt-3 flex flex-col gap-2">
-              {past.map((r) => <li key={r.cohort.id}><Link href={`/teach/cohorts/${r.cohort.id}`} className="text-sm font-medium text-body hover:text-accent">{r.course.title}: {r.cohort.name}</Link></li>)}
+              {past.map((r) => <li key={r.cohort.id}><Link href={`/teach/cohorts/${r.cohort.id}`} className="text-sm font-medium text-body hover:text-accent-ink">{r.course.title}: {r.cohort.name}</Link></li>)}
             </ul>
           </details>
         )}

@@ -112,8 +112,8 @@ export default async function AdminHome() {
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {setup.map((s) => (
                 <li key={s.label} className={`flex items-start gap-3 border p-3 text-sm ${s.ok ? "border-emerald-100 bg-emerald-50/60" : "border-edge bg-panel"} rounded-[5px]`}>
-                  <span className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${s.ok ? "bg-emerald-100 text-emerald-700" : "border-2 border-edge-strong bg-white"}`}>{s.ok && <CheckIcon className="size-3.5" />}</span>
-                  <span className="flex min-w-0 flex-col"><span className={`font-semibold ${s.ok ? "text-emerald-800" : "text-ink"}`}>{s.label}</span>{s.ok ? <span className="text-xs text-emerald-700">Connected</span> : s.href ? <Link href={s.href} className="text-xs font-medium text-accent hover:text-accent-dark">{s.hint} →</Link> : <span className="text-xs text-muted">{s.hint}</span>}</span>
+                  <span className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${s.ok ? "bg-emerald-100 text-emerald-700" : "border-2 border-edge-strong bg-surface"}`}>{s.ok && <CheckIcon className="size-3.5" />}</span>
+                  <span className="flex min-w-0 flex-col"><span className={`font-semibold ${s.ok ? "text-emerald-800" : "text-ink"}`}>{s.label}</span>{s.ok ? <span className="text-xs text-emerald-700">Connected</span> : s.href ? <Link href={s.href} className="text-xs font-medium text-accent-ink hover:text-accent-ink-strong">{s.hint} →</Link> : <span className="text-xs text-muted">{s.hint}</span>}</span>
                 </li>
               ))}
             </ul>
@@ -152,7 +152,7 @@ export default async function AdminHome() {
                 );
               })}
             </ul>
-          ) : <PanelEmpty icon={BookIcon} action={<Link href="/admin/courses" className="text-sm font-semibold text-accent">Add a cohort →</Link>}>No upcoming cohorts.</PanelEmpty>}
+          ) : <PanelEmpty icon={BookIcon} action={<Link href="/admin/courses" className="text-sm font-semibold text-accent-ink">Add a cohort →</Link>}>No upcoming cohorts.</PanelEmpty>}
         </Panel>
 
         {money && <Panel title="Recent payments" href="/admin/payments" icon={CardIcon}>

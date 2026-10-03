@@ -17,7 +17,7 @@ export function RoleSelect({ action, current, roles, label }: { action: Action; 
         aria-label={label}
         disabled={pending}
         onChange={() => form.current?.requestSubmit()}
-        className="h-9 w-full min-w-[170px] cursor-pointer rounded-[5px] border border-edge-strong bg-white px-2.5 text-sm font-semibold text-ink focus:border-accent focus:outline-none disabled:opacity-60"
+        className="h-9 w-full min-w-[170px] cursor-pointer rounded-[5px] border border-edge-strong bg-surface px-2.5 text-sm font-semibold text-ink focus:border-accent focus:outline-none disabled:opacity-60"
       >
         {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
       </select>

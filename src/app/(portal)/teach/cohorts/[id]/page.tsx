@@ -167,10 +167,10 @@ function OverviewTab({ base, cohort, sessions, needsAttendance, toGrade, student
               </div>
               <span className="flex flex-wrap gap-2">
                 {next.mode === "virtual" && next.meetingUrl && <a href={next.meetingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-sm font-semibold text-white hover:bg-accent-dark"><VideoIcon className="size-4" /> Join</a>}
-                <Link href={`/teach/sessions/${next.id}`} className="inline-flex h-9 items-center rounded-lg border border-edge-strong bg-white px-3.5 text-sm font-semibold text-ink hover:bg-page">{live ? "Take attendance" : "Edit class"}</Link>
+                <Link href={`/teach/sessions/${next.id}`} className="inline-flex h-9 items-center rounded-lg border border-edge-strong bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-page">{live ? "Take attendance" : "Edit class"}</Link>
               </span>
             </div>
-          ) : <p className="text-sm text-muted">Nothing scheduled. <Link href={`${base}?tab=classes`} className="font-semibold text-accent">Add live classes</Link>.</p>}
+          ) : <p className="text-sm text-muted">Nothing scheduled. <Link href={`${base}?tab=classes`} className="font-semibold text-accent-ink">Add live classes</Link>.</p>}
         </Card>
         <Card title="To do">
           {todos.length ? (
@@ -178,7 +178,7 @@ function OverviewTab({ base, cohort, sessions, needsAttendance, toGrade, student
               {todos.map((t) => (
                 <li key={t.text} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <span className="text-[15px] font-medium text-ink">{t.text}</span>
-                  <Link href={t.href} className="text-sm font-semibold text-accent hover:text-accent-dark">{t.action} →</Link>
+                  <Link href={t.href} className="text-sm font-semibold text-accent-ink hover:text-accent-ink-strong">{t.action} →</Link>
                 </li>
               ))}
             </ul>
@@ -214,13 +214,13 @@ function ClassesTimetable({ sessions, students, marks, timeZone, now }: { sessio
                   <details className="group rounded-[5px] border border-edge">
                     <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
                       {mine.length ? <span className="text-body">Attendance: <strong className="text-ink">{came}/{mine.length}</strong> present</span> : <Badge tone="amber">Attendance not taken</Badge>}
-                      <span className="font-semibold text-accent group-open:hidden">{mine.length ? "Edit attendance" : "Take attendance"}</span>
+                      <span className="font-semibold text-accent-ink group-open:hidden">{mine.length ? "Edit attendance" : "Take attendance"}</span>
                       <span className="hidden font-semibold text-muted group-open:inline">Close</span>
                     </summary>
                     <div className="border-t border-line px-3 pb-3 pt-1"><AttendanceForm sessionId={s.id} students={active} marks={mine} /></div>
                   </details>
                 )}
-                <Link href={`/teach/sessions/${s.id}`} className="w-fit text-sm font-semibold text-accent hover:text-accent-dark">{ended ? "Edit class or add recording →" : "Edit class →"}</Link>
+                <Link href={`/teach/sessions/${s.id}`} className="w-fit text-sm font-semibold text-accent-ink hover:text-accent-ink-strong">{ended ? "Edit class or add recording →" : "Edit class →"}</Link>
               </SessionRow>
             );
           })}
@@ -307,7 +307,7 @@ async function LearningTab({ cohortId, courseId, learning, students, editHref }:
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line bg-panel/60 px-4 py-3.5">
                   <div className="flex min-w-0 flex-col gap-1">
                     <span className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-accent">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="font-mono text-xs font-semibold text-accent-ink">{String(index + 1).padStart(2, "0")}</span>
                       <h3 className="font-display font-bold text-ink">{module.title}</h3>
                       {!live.length ? <Badge>Not visible yet</Badge> : open ? <Badge tone="green">Open</Badge> : <Badge tone="amber">Opens {formatDateTime(releaseAt!, timeZone, { zone: false })}</Badge>}
                     </span>
@@ -430,8 +430,8 @@ async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assign
   return (
     <div className="flex flex-col gap-4">
       {isAdmin && (
-        <details className="rounded-[14px] border border-edge bg-white px-5 py-4">
-          <summary className="cursor-pointer text-sm font-semibold text-accent">Add a student</summary>
+        <details className="rounded-[14px] border border-edge bg-surface px-5 py-4">
+          <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Add a student</summary>
           <ActionForm action={addStudentToCohort.bind(null, cohortId)} resetOnSuccess className="mt-4 flex flex-col gap-4">
             <p className="text-sm text-muted">Enrol someone without online payment (e.g. scholarship or bank transfer). New emails get an account and an invitation to set a password.</p>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -459,8 +459,8 @@ async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assign
                 <tr key={enrollment.id} className={enrollment.status === "cancelled" ? "opacity-60" : undefined}>
                   <td>
                     <span className="flex max-w-xs flex-col">
-                      {isAdmin ? <Link href={`/admin/users/${user.id}`} className="font-semibold text-ink hover:text-accent">{user.name}</Link> : <span className="font-semibold text-ink">{user.name}</span>}
-                      <a href={`mailto:${user.email}`} className="truncate text-sm text-accent">{user.email}</a>
+                      {isAdmin ? <Link href={`/admin/users/${user.id}`} className="font-semibold text-ink hover:text-accent-ink">{user.name}</Link> : <span className="font-semibold text-ink">{user.name}</span>}
+                      <a href={`mailto:${user.email}`} className="truncate text-sm text-accent-ink">{user.email}</a>
                       {isAdmin && <span className="text-xs text-muted">{enrollment.source} · joined {relativeTime(enrollment.createdAt)}</span>}
                       {check && !check.eligible && enrollment.status !== "cancelled" && <span className="mt-1 text-xs text-amber-800">Certificate pending: {check.reasons.join(" ")}</span>}
                     </span>
@@ -472,7 +472,7 @@ async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assign
                   <td>
                     <span className="flex flex-col items-start gap-1">
                       <StatusBadge status={enrollment.status} />
-                      {certificate && <Link href={`/certificates/${certificate.code}`} target="_blank" className="text-xs font-semibold text-accent">Certificate</Link>}
+                      {certificate && <Link href={`/certificates/${certificate.code}`} target="_blank" className="text-xs font-semibold text-accent-ink">Certificate</Link>}
                     </span>
                   </td>
                   {isAdmin && (
@@ -499,8 +499,8 @@ async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assign
       )}
       {isAdmin && <WaitlistCard cohortId={cohortId} timeZone={(await getSettings()).timezone} />}
       {enrolled.length > 0 && (
-        <details className="rounded-[14px] border border-edge bg-white px-5 py-4">
-          <summary className="cursor-pointer text-sm font-semibold text-accent">Copy email addresses</summary>
+        <details className="rounded-[14px] border border-edge bg-surface px-5 py-4">
+          <summary className="cursor-pointer text-sm font-semibold text-accent-ink">Copy email addresses</summary>
           <textarea readOnly className="mt-3 w-full rounded-lg border border-edge bg-panel p-3 font-mono text-sm" rows={3} defaultValue={enrolled.map((r) => r.user.email).join(", ")} aria-label="Email addresses for this cohort" />
         </details>
       )}

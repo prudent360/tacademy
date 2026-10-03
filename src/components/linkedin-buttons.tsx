@@ -17,7 +17,7 @@ export function LinkedInButtons({ course, organisation, issuedAt, url, code, cla
       <a href={links.add} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-[5px] bg-[#0a66c2] px-4 text-sm font-semibold text-white transition hover:bg-[#004182]">
         <LinkedInMark /> Add to LinkedIn profile
       </a>
-      <a href={links.share} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-[5px] border border-[#0a66c2]/40 bg-white px-4 text-sm font-semibold text-[#0a66c2] transition hover:bg-[#0a66c2]/5">
+      <a href={links.share} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center gap-2 rounded-[5px] border border-[#0a66c2]/40 bg-surface px-4 text-sm font-semibold text-[#0a66c2] transition hover:bg-[#0a66c2]/5 dark:text-[#70b5f9]">
         <LinkedInMark /> Share on LinkedIn
       </a>
     </div>

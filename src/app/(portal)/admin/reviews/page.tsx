@@ -55,8 +55,8 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
                 <div className="flex min-w-0 items-start gap-3">
                   <Avatar name={r.name} src={r.avatarUrl} gender={r.gender} />
                   <div className="flex min-w-0 flex-col gap-1">
-                    <p className="flex flex-wrap items-center gap-2"><Link href={`/admin/users/${r.userId}`} className="font-semibold text-ink hover:text-accent">{r.name}</Link><Badge tone={TONE[r.review.status]}>{LABEL[r.review.status]}</Badge></p>
-                    <p className="text-sm text-muted"><Link href={`/courses/${r.slug}`} className="font-semibold text-body hover:text-accent">{r.course}</Link> · {r.cohort} · {relativeTime(r.review.updatedAt)}</p>
+                    <p className="flex flex-wrap items-center gap-2"><Link href={`/admin/users/${r.userId}`} className="font-semibold text-ink hover:text-accent-ink">{r.name}</Link><Badge tone={TONE[r.review.status]}>{LABEL[r.review.status]}</Badge></p>
+                    <p className="text-sm text-muted"><Link href={`/courses/${r.slug}`} className="font-semibold text-body hover:text-accent-ink">{r.course}</Link> · {r.cohort} · {relativeTime(r.review.updatedAt)}</p>
                     <span className="flex" aria-label={`${r.review.rating} out of 5`}>{[1, 2, 3, 4, 5].map((i) => <Star key={i} filled={i <= r.review.rating} className="size-4" />)}</span>
                     <p className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed text-body">{r.review.body}</p>
                   </div>

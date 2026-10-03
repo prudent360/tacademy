@@ -14,7 +14,7 @@ export function GradeForm({ action, maxScore, score, feedback, aiDraft }: { acti
       <fieldset className="flex flex-wrap gap-2">
         <legend className="mb-2 text-sm font-semibold text-ink">Outcome</legend>
         {([["graded", "Grade it"], ["resubmit", "Request changes"]] as const).map(([value, label]) => (
-          <label key={value} className={`flex h-10 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold ${decision === value ? "border-accent bg-accent-soft text-accent" : "border-edge-strong text-body"}`}>
+          <label key={value} className={`flex h-10 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold ${decision === value ? "border-accent bg-accent-soft text-accent-ink" : "border-edge-strong text-body"}`}>
             <input type="radio" name="decision" value={value} checked={decision === value} onChange={() => setDecision(value)} className="sr-only" />
             {label}
           </label>

@@ -17,7 +17,7 @@ export function SessionFields({ defaults, repeat = false }: {
         <legend className="mb-1.5 text-sm font-semibold text-ink">Format</legend>
         <div className="flex flex-wrap gap-2">
           {(["virtual", "physical"] as const).map((m) => (
-            <label key={m} className={`flex h-10 cursor-pointer items-center gap-2 rounded-lg border px-4 text-sm font-semibold ${mode === m ? "border-accent bg-accent-soft text-accent" : "border-edge-strong text-body"}`}>
+            <label key={m} className={`flex h-10 cursor-pointer items-center gap-2 rounded-lg border px-4 text-sm font-semibold ${mode === m ? "border-accent bg-accent-soft text-accent-ink" : "border-edge-strong text-body"}`}>
               <input type="radio" name="mode" value={m} checked={mode === m} onChange={() => setMode(m)} className="sr-only" />
               {m === "virtual" ? "Live online" : "In person"}
             </label>

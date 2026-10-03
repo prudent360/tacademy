@@ -21,7 +21,7 @@ export function SessionRow({ session, timeZone, courseTitle, attendance, now = n
 
   return (
     <li className={`flex flex-wrap items-start gap-4 py-4 sm:flex-nowrap ${session.cancelled ? "opacity-60" : ""}`}>
-      <div className={`flex w-14 shrink-0 flex-col items-center rounded-xl py-2 ${past ? "bg-page text-muted" : "bg-accent-soft text-accent"}`}>
+      <div className={`flex w-14 shrink-0 flex-col items-center rounded-xl py-2 ${past ? "bg-page text-muted" : "bg-accent-soft text-accent-ink"}`}>
         <span className="font-mono text-[10px] uppercase tracking-wider">{weekday}</span>
         <span className="font-display text-xl font-bold leading-tight">{day}</span>
         <span className="font-mono text-[10px] uppercase tracking-wider">{month}</span>
@@ -44,22 +44,22 @@ export function SessionRow({ session, timeZone, courseTitle, attendance, now = n
       {showActions && !session.cancelled && (
         <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:items-end">
           {session.mode === "virtual" && session.meetingUrl && !past && (
-            <a href={session.meetingUrl} target="_blank" rel="noopener noreferrer" className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold ${live ? "bg-accent text-white hover:bg-accent-dark" : "border border-edge-strong bg-white text-ink hover:bg-page"}`}>
+            <a href={session.meetingUrl} target="_blank" rel="noopener noreferrer" className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold ${live ? "bg-accent text-white hover:bg-accent-dark" : "border border-edge-strong bg-surface text-ink hover:bg-page"}`}>
               <VideoIcon className="size-4" /> {live ? "Join now" : "Joining link"}
             </a>
           )}
           {session.mode === "physical" && session.venue && !past && (
-            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.venue)}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-strong bg-white px-3.5 text-sm font-semibold text-ink hover:bg-page">
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.venue)}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-strong bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-page">
               <PinIcon className="size-4" /> Directions
             </a>
           )}
           {past && session.recordingUrl && (
-            <a href={session.recordingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-strong bg-white px-3.5 text-sm font-semibold text-ink hover:bg-page">
+            <a href={session.recordingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edge-strong bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-page">
               <VideoIcon className="size-4" /> Recording
             </a>
           )}
           {!past && (
-            <a href={`/api/sessions/${session.id}/ics`} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-accent hover:bg-accent-soft">
+            <a href={`/api/sessions/${session.id}/ics`} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-accent-ink hover:bg-accent-soft">
               <CalendarIcon className="size-4" /> Add to calendar
             </a>
           )}

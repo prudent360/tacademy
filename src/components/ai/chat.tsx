@@ -55,13 +55,13 @@ export function AiChat({ send, intro, placeholder = "Ask a question…", suggest
       </div>
       {turns.length === 0 && suggestions.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {suggestions.map((s) => <button key={s} type="button" onClick={() => ask(s)} className="cursor-pointer rounded-full border border-edge-strong px-3 py-1.5 text-xs font-semibold text-body hover:border-accent hover:text-accent">{s}</button>)}
+          {suggestions.map((s) => <button key={s} type="button" onClick={() => ask(s)} className="cursor-pointer rounded-full border border-edge-strong px-3 py-1.5 text-xs font-semibold text-body hover:border-accent hover:text-accent-ink">{s}</button>)}
         </div>
       )}
       {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
       <form onSubmit={(e) => { e.preventDefault(); ask(draft); }} className="flex gap-2">
         <label className="sr-only" htmlFor="ai-chat-input">Your question</label>
-        <input id="ai-chat-input" value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={2000} placeholder={placeholder} autoComplete="off" className="h-11 min-w-0 grow rounded-lg border border-edge-strong bg-white px-3.5 text-sm focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
+        <input id="ai-chat-input" value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={2000} placeholder={placeholder} autoComplete="off" className="h-11 min-w-0 grow rounded-lg border border-edge-strong bg-surface px-3.5 text-sm focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
         <button type="submit" disabled={busy || !draft.trim()} className="h-11 shrink-0 cursor-pointer rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60">Send</button>
       </form>
       <p className="text-[11px] text-muted">AI answers can be wrong. Check anything important.</p>

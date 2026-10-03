@@ -21,7 +21,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
       <PageHeader title="Timetable" description={`All your classes across every course. Times are shown in ${settings.timezone.replace("_", " ")} time.`} />
       <Tabs current={showPast ? "past" : "upcoming"} items={[{ key: "upcoming", label: "Upcoming", href: "/dashboard/schedule" }, { key: "past", label: "Past", href: "/dashboard/schedule?view=past" }]} />
       {rows.length ? (
-        <div className="rounded-[14px] border border-edge bg-white px-5 md:px-6">
+        <div className="rounded-[14px] border border-edge bg-surface px-5 md:px-6">
           <ul className="divide-y divide-line">
             {rows.map(({ session, course }) => <SessionRow key={session.id} session={session} courseTitle={course.title} timeZone={settings.timezone} attendance={marks.get(session.id)} />)}
           </ul>

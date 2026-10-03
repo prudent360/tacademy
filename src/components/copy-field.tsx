@@ -13,7 +13,7 @@ export function CopyField({ label, value }: { label: string; value: string }) {
         <button
           type="button"
           onClick={async () => { await navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-          className="h-11 shrink-0 cursor-pointer rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page"
+          className="h-11 shrink-0 cursor-pointer rounded-lg border border-edge-strong bg-surface px-4 text-sm font-semibold text-ink hover:bg-page"
         >
           {copied ? "Copied" : "Copy"}
         </button>

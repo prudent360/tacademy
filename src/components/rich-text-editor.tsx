@@ -83,7 +83,7 @@ export function RichTextEditor({ label, name, defaultValue = "", hint, placehold
     contentType: "markdown",
     immediatelyRender: false,
     // The typing area fills the editor's height, so clicking anywhere in the box starts typing.
-    editorProps: { attributes: { class: "tiptap-content prose prose-slate max-w-none px-4 py-3 focus:outline-none", style: `min-height: ${minHeight}px`, "aria-labelledby": `${id}-label` } },
+    editorProps: { attributes: { class: "tiptap-content prose prose-slate dark:prose-invert max-w-none px-4 py-3 focus:outline-none", style: `min-height: ${minHeight}px`, "aria-labelledby": `${id}-label` } },
     // Programmatic changes use emitUpdate: false, so this only runs for the person's own edits.
     onUpdate: ({ editor: e }) => {
       dirty.current = true;
@@ -171,12 +171,12 @@ export function RichTextEditor({ label, name, defaultValue = "", hint, placehold
         <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           <span>You have unsaved changes to this from {ago(draft.savedAt)}.</span>
           <span className="flex gap-2">
-            <button type="button" onClick={restoreDraft} className="cursor-pointer rounded-md bg-amber-900 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-950">Restore</button>
+            <button type="button" onClick={restoreDraft} className="cursor-pointer rounded-md bg-amber-900 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-950 dark:bg-[#78350f] dark:hover:bg-[#451a03]">Restore</button>
             <button type="button" onClick={discardDraft} className="cursor-pointer rounded-md border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-950 hover:bg-amber-100">Discard</button>
           </span>
         </div>
       )}
-      <div className="overflow-hidden rounded-lg border border-edge-strong bg-white transition focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/10">
+      <div className="overflow-hidden rounded-lg border border-edge-strong bg-surface transition focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/10">
         <Toolbar editor={editor} source={source} onToggleSource={toggleSource} />
         {source ? (
           <textarea aria-labelledby={`${id}-label`} value={value} onChange={(e) => { dirty.current = true; setValue(e.target.value); }} spellCheck className="block w-full resize-y px-4 py-3 font-mono text-sm text-ink focus:outline-none" style={{ minHeight }} />
@@ -216,7 +216,7 @@ function Toolbar({ editor, source, onToggleSource }: { editor: Editor | null; so
   });
   const off = source || !editor || !state;
   const chain = () => editor!.chain().focus();
-  const btn = (active: boolean | undefined) => `flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-md px-1.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-accent-soft text-accent" : "text-body hover:bg-page"}`;
+  const btn = (active: boolean | undefined) => `flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-md px-1.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-accent-soft text-accent-ink" : "text-body hover:bg-page"}`;
   const sep = <span aria-hidden="true" className="mx-1 h-5 w-px bg-edge" />;
 
   function editLink() {
@@ -237,7 +237,7 @@ function Toolbar({ editor, source, onToggleSource }: { editor: Editor | null; so
         const v = e.target.value;
         if (v === "p") chain().setParagraph().run();
         else chain().setHeading({ level: Number(v.slice(1)) as 2 | 3 | 4 }).run();
-      }} className="h-8 cursor-pointer rounded-md border border-edge bg-white px-2 text-sm text-ink disabled:opacity-40">
+      }} className="h-8 cursor-pointer rounded-md border border-edge bg-surface px-2 text-sm text-ink disabled:opacity-40">
         <option value="p">Paragraph</option>
         <option value="h2">Heading</option>
         <option value="h3">Subheading</option>

@@ -37,7 +37,7 @@ export default async function EditEmailPage({ params, searchParams }: { params: 
               <p>A button: put <code>[[Button label|{"{{url}}"}]]</code> on its own line.</p>
               <p className="mt-2">Available values:</p>
               <ul className="mt-1 flex flex-wrap gap-1.5">
-                {Object.keys(variables).map((v) => <li key={v}><code className="rounded bg-white px-1.5 py-0.5 text-accent">{`{{${v}}}`}</code></li>)}
+                {Object.keys(variables).map((v) => <li key={v}><code className="rounded bg-surface px-1.5 py-0.5 text-accent-ink">{`{{${v}}}`}</code></li>)}
               </ul>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3">

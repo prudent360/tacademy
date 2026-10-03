@@ -16,11 +16,11 @@ export default async function TeachSchedulePage() {
     <>
       <PageHeader title="Teaching timetable" description={`Upcoming classes across your cohorts (${settings.timezone.replace("_", " ")} time).`} />
       {rows.length ? (
-        <div className="rounded-[14px] border border-edge bg-white px-5 md:px-6">
+        <div className="rounded-[14px] border border-edge bg-surface px-5 md:px-6">
           <ul className="divide-y divide-line">
             {rows.map(({ session, course }) => (
               <SessionRow key={session.id} session={session} courseTitle={course.title} timeZone={settings.timezone}>
-                <Link href={`/teach/sessions/${session.id}`} className="w-fit text-sm font-semibold text-accent hover:text-accent-dark">Edit class & take attendance →</Link>
+                <Link href={`/teach/sessions/${session.id}`} className="w-fit text-sm font-semibold text-accent-ink hover:text-accent-ink-strong">Edit class & take attendance →</Link>
               </SessionRow>
             ))}
           </ul>

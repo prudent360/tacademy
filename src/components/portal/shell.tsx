@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AvatarArt, type Gender } from "@/components/avatar-art";
 import { BrandMark } from "@/components/brand-mark";
-import { AwardIcon, TrendIcon, BellIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, PaletteIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
+import { AwardIcon, TrendIcon, BellIcon, MoonIcon, MonitorIcon, SunIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
 import type { Role } from "@/db/schema";
 import type { Permission } from "@/lib/permissions";
 
@@ -190,13 +190,13 @@ function NotificationMenu({ items, unread, markAllRead }: { items: ShellNotifica
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} className="relative flex size-10 cursor-pointer items-center justify-center rounded-full text-body hover:bg-page">
         <BellIcon />
-        {unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-white">{unread > 9 ? "9+" : unread}</span>}
+        {unread > 0 && <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-surface">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-[14px] border border-edge bg-white shadow-[0_24px_48px_-16px_rgba(24,19,64,0.3)]">
+        <div className="absolute right-0 top-12 z-50 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-[14px] border border-edge bg-surface shadow-[0_24px_48px_-16px_rgba(24,19,64,0.3)]">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <p className="font-display font-bold text-ink">Notifications</p>
-            {unread > 0 && <button type="button" onClick={async () => { await markAllRead(); }} className="cursor-pointer text-xs font-semibold text-accent hover:text-accent-dark">Mark all read</button>}
+            {unread > 0 && <button type="button" onClick={async () => { await markAllRead(); }} className="cursor-pointer text-xs font-semibold text-accent-ink hover:text-accent-ink-strong">Mark all read</button>}
           </div>
           <ul className="max-h-[360px] divide-y divide-line overflow-y-auto">
             {items.length ? items.map((n) => (
@@ -212,7 +212,7 @@ function NotificationMenu({ items, unread, markAllRead }: { items: ShellNotifica
               </li>
             )) : <li className="px-4 py-8 text-center text-sm text-muted">You&apos;re all caught up.</li>}
           </ul>
-          <Link href="/notifications" onClick={() => setOpen(false)} className="block border-t border-line px-4 py-3 text-center text-sm font-semibold text-accent hover:bg-panel">View all notifications</Link>
+          <Link href="/notifications" onClick={() => setOpen(false)} className="block border-t border-line px-4 py-3 text-center text-sm font-semibold text-accent-ink hover:bg-panel">View all notifications</Link>
         </div>
       )}
     </div>
@@ -229,7 +229,7 @@ function UserMenu({ user, studentId, logout }: { user: { name: string; email: st
         <Avatar name={user.name} src={user.avatarUrl} gender={user.gender} className="size-9" />
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-60 overflow-hidden rounded-[14px] border border-edge bg-white p-1.5 shadow-[0_24px_48px_-16px_rgba(24,19,64,0.3)]">
+        <div className="absolute right-0 top-12 z-50 w-60 overflow-hidden rounded-[14px] border border-edge bg-surface p-1.5 shadow-[0_24px_48px_-16px_rgba(24,19,64,0.3)]">
           <div className="border-b border-line px-3 py-2.5">
             <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
             <p className="truncate text-xs text-muted">{ROLE_LABEL[user.role]} · {user.email}</p>
@@ -262,7 +262,7 @@ function LevelBadge({ xp }: { xp: { level: number; total: number; percent: numbe
           <circle cx="18" cy="18" r={radius} fill="none" stroke="currentColor" strokeWidth="3" className="text-accent-soft" />
           <circle cx="18" cy="18" r={radius} fill="none" stroke="url(#level-ring)" strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - filled / 100)} className="transition-[stroke-dashoffset] duration-700" />
         </svg>
-        <span className="font-display text-[13px] font-extrabold text-accent">{xp.level}</span>
+        <span className="font-display text-[13px] font-extrabold text-accent-ink">{xp.level}</span>
       </span>
       <span className="hidden flex-col leading-tight sm:flex">
         <span className="text-sm font-bold text-ink">{xp.total.toLocaleString("en-GB")} <span className="font-semibold text-muted">XP</span></span>
@@ -278,57 +278,47 @@ function StudentIdPill({ id }: { id: string }) {
     <button
       type="button"
       onClick={() => navigator.clipboard?.writeText(id).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }, () => {})}
-      className="flex cursor-pointer items-center gap-2 rounded-full border border-accent-muted/60 bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent shadow-sm transition hover:border-accent"
+      className="flex cursor-pointer items-center gap-2 rounded-full border border-accent-muted/60 bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent-ink shadow-sm transition hover:border-accent"
       aria-label={`Student ID ${id}. Copy`}
     >
       <IdCardIcon className="size-4" />
-      <span className="text-accent/70">Student ID</span>
+      <span className="text-accent-ink/70">Student ID</span>
       <span className="font-mono tracking-wide">{copied ? "Copied" : id}</span>
     </button>
   );
 }
 
-/** Sidebar colours: the default white rail, or the purple brand rail people can switch to. */
-const SIDEBAR_TONES = {
-  light: {
-    aside: "border-r border-edge bg-white text-ink shadow-[12px_0_40px_-36px_rgba(24,19,64,.35)]",
-    wordmark: "text-ink", wordmarkAccent: "text-accent",
+/** Sidebar colours. They follow the theme tokens, so the same classes work in light and dark mode. */
+const SIDEBAR = {
+    aside: "border-r border-edge bg-surface text-ink shadow-[12px_0_40px_-36px_rgba(24,19,64,.35)]",
+    wordmark: "text-ink", wordmarkAccent: "text-accent-ink",
     close: "text-muted hover:bg-panel hover:text-ink",
-    collapse: "border-edge bg-white text-muted hover:text-accent",
-    group: "text-muted/80 hover:bg-panel hover:text-ink", groupActive: "text-accent",
+    collapse: "border-edge bg-surface text-muted hover:text-accent-ink",
+    group: "text-muted/80 hover:bg-panel hover:text-ink", groupActive: "text-accent-ink",
     divider: "border-line",
-    item: "text-body hover:bg-accent-soft/70 hover:text-accent", itemIcon: "text-muted group-hover:text-accent",
+    item: "text-body hover:bg-accent-soft/70 hover:text-accent-ink", itemIcon: "text-muted group-hover:text-accent-ink",
     active: "bg-accent text-white shadow-[0_12px_24px_-14px_rgba(79,63,215,.9)]", activeIcon: "bg-white/20 text-white",
-    railItem: "text-muted hover:bg-accent-soft hover:text-accent", railDot: "bg-accent ring-white",
-    parentActive: "text-accent", parentActiveIcon: "bg-accent-soft text-accent",
-    sub: "text-muted hover:bg-panel hover:text-ink", subActive: "bg-accent-soft font-semibold text-accent",
+    railItem: "text-muted hover:bg-accent-soft hover:text-accent-ink", railDot: "bg-accent ring-surface",
+    parentActive: "text-accent-ink", parentActiveIcon: "bg-accent-soft text-accent-ink",
+    sub: "text-muted hover:bg-panel hover:text-ink", subActive: "bg-accent-soft font-semibold text-accent-ink",
     subLine: "border-line", dot: "bg-edge-strong", dotActive: "bg-accent",
-    badge: "bg-accent text-white", activeBadge: "bg-white text-accent",
+    badge: "bg-accent text-white", activeBadge: "bg-surface text-accent-ink",
     promo: "border border-line bg-gradient-to-br from-accent-soft to-panel text-ink",
     support: "bg-accent text-white shadow-[0_12px_24px_-14px_rgba(79,63,215,.9)] hover:bg-accent-dark",
-    themeRow: "bg-page text-body hover:bg-accent-soft/60",
-    track: "bg-white ring-1 ring-edge", knob: "bg-accent",
-  },
-  brand: {
-    aside: "bg-accent-mid text-white shadow-[12px_0_40px_-28px_rgba(24,19,64,.6)]",
-    wordmark: "text-white", wordmarkAccent: "text-cyan-light",
-    close: "text-white/80 hover:bg-white/10 hover:text-white",
-    collapse: "border-white bg-white text-accent hover:text-accent-dark",
-    group: "text-white/60 hover:bg-white/10 hover:text-white", groupActive: "text-white",
-    divider: "border-white/15",
-    item: "text-white/85 hover:bg-white/10 hover:text-white", itemIcon: "text-white/75 group-hover:text-white",
-    active: "bg-accent-dark text-white shadow-[0_12px_24px_-14px_rgba(24,19,64,.8)]", activeIcon: "bg-white/15 text-white",
-    railItem: "text-white/80 hover:bg-white/10 hover:text-white", railDot: "bg-cyan ring-accent-mid",
-    parentActive: "text-white", parentActiveIcon: "bg-white/15 text-white",
-    sub: "text-white/70 hover:bg-white/10 hover:text-white", subActive: "bg-white/15 font-semibold text-white",
-    subLine: "border-white/20", dot: "bg-white/40", dotActive: "bg-cyan",
-    badge: "bg-white text-accent", activeBadge: "bg-white text-accent",
-    promo: "bg-white text-ink shadow-[0_16px_32px_-20px_rgba(24,19,64,.6)]",
-    support: "bg-white text-accent hover:bg-accent-soft",
-    themeRow: "bg-accent text-white hover:bg-accent-dark",
-    track: "bg-white", knob: "bg-accent",
-  },
-};
+    themeRow: "bg-page text-body",
+  };
+
+export type Theme = "light" | "dark" | "system";
+const THEME_COOKIE = "tk-theme";
+const THEME_CLASS: Record<Theme, string> = { light: "", dark: "theme-dark", system: "theme-system" };
+function saveTheme(theme: Theme) {
+  document.cookie = `${THEME_COOKIE}=${theme}; path=/; max-age=31536000; samesite=lax`;
+}
+const THEMES: { value: Theme; label: string; icon: Icon }[] = [
+  { value: "light", label: "Light", icon: SunIcon },
+  { value: "dark", label: "Dark", icon: MoonIcon },
+  { value: "system", label: "System", icon: MonitorIcon },
+];
 
 /** The little stack of course cards in the sidebar's promo card. */
 function PromoArt() {
@@ -351,12 +341,16 @@ function PromoArt() {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, unread, toGrade, newApplications = 0, newInstructorApplications = 0, permissions = [], notifications, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl = null, theme: initialTheme = "light", unread, toGrade, newApplications = 0, newInstructorApplications = 0, permissions = [], notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null; gender?: Gender | null };
   siteName: string;
   logoUrl: string | null;
+  /** Shown instead of `logoUrl` in dark mode (Settings → "Logo for dark backgrounds"). */
+  logoDarkUrl?: string | null;
+  /** The saved theme from the `tk-theme` cookie. */
+  theme?: Theme;
   unread: number;
   toGrade: number;
   /** Admins: internship applications waiting for review. */
@@ -392,21 +386,30 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
   const [first, ...rest] = siteName.split(" ");
 
   const collapsed = isOpen("rail:collapsed", false);
-  const brand = isOpen("rail:brand", false);
-  const t = SIDEBAR_TONES[brand ? "brand" : "light"];
+  const t = SIDEBAR;
+  // Remembered per device in a cookie, so the server renders the right theme first time (no flash).
+  const [theme, setThemeState] = useState<Theme>(initialTheme);
+  function setTheme(next: Theme) {
+    setThemeState(next);
+    saveTheme(next);
+  }
 
   const sidebar = (compact: boolean) => (
     <aside className={`relative flex h-full flex-col transition-[width,background-color] duration-300 ${compact ? "w-[88px]" : "w-[276px]"} ${t.aside}`}>
       <div className={`flex h-20 shrink-0 items-center ${compact ? "justify-center" : "justify-between pl-6 pr-4"}`}>
         <Link href={home} className="flex items-center gap-2.5" onClick={() => setDrawer(false)} aria-label={compact ? `${siteName} home` : undefined}>
           {compact ? (
-            <BrandMark className="size-9" tone={brand ? "reversed" : "primary"} />
+            <><BrandMark className="size-9 dark:hidden" /><BrandMark className="hidden size-9 dark:block" tone="reversed" /></>
           ) : logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={siteName} className={`h-11 w-auto max-w-[200px] object-contain ${brand ? "rounded-lg bg-white px-2 py-1" : ""}`} />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoUrl} alt={siteName} className={`h-11 w-auto max-w-[200px] object-contain ${logoDarkUrl ? "dark:hidden" : "dark:rounded-lg dark:bg-white dark:px-2 dark:py-1"}`} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {logoDarkUrl && <img src={logoDarkUrl} alt="" aria-hidden="true" className="hidden h-11 w-auto max-w-[200px] object-contain dark:block" />}
+            </>
           ) : (
             <>
-              <BrandMark className="size-8" tone={brand ? "reversed" : "primary"} />
+              <BrandMark className="size-8 dark:hidden" /><BrandMark className="hidden size-8 dark:block" tone="reversed" />
               <span className={`font-display text-lg font-extrabold tracking-[-0.4px] ${t.wordmark}`}>{first}{rest.length > 0 && <span className={`ml-1 font-semibold ${t.wordmarkAccent}`}>{rest.join(" ")}</span>}</span>
             </>
           )}
@@ -462,7 +465,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
                     className={`relative flex size-12 shrink-0 items-center justify-center rounded-xl transition duration-200 ${active ? t.active : t.railItem}`}
                   >
                     <IconComponent className="size-[22px]" />
-                    {badge > 0 && <span className={`absolute right-2 top-2 size-2 rounded-full ring-2 ${active ? "bg-white ring-accent" : t.railDot}`} />}
+                    {badge > 0 && <span className={`absolute right-2 top-2 size-2 rounded-full ring-2 ${active ? "bg-surface ring-accent" : t.railDot}`} />}
                   </Link>
                 );
               }
@@ -533,7 +536,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
       <div className={`flex shrink-0 flex-col gap-4 ${compact ? "items-center px-3 pb-6 pt-2" : "px-4 pb-5 pt-2"}`}>
         {role === "student" && !compact && (
           <Link href="/courses" onClick={() => setDrawer(false)} className={`group relative block min-h-[150px] overflow-hidden rounded-2xl p-4 transition hover:-translate-y-0.5 ${t.promo}`}>
-            <p className="relative z-[1] max-w-[150px] text-[15px] leading-snug">Keep growing with a <span className="font-bold text-accent">new course</span> this term!</p>
+            <p className="relative z-[1] max-w-[150px] text-[15px] leading-snug">Keep growing with a <span className="font-bold text-accent-ink">new course</span> this term!</p>
             <span className="relative z-[1] mt-3 flex size-8 items-center justify-center rounded-full bg-accent text-white shadow-[0_8px_16px_-8px_rgba(79,63,215,.9)] transition group-hover:translate-x-1"><ChevronRight className="size-4" /></span>
             <PromoArt />
           </Link>
@@ -548,26 +551,38 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
           <MessageIcon className="size-5" />
           {!compact && "Support"}
         </Link>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={brand}
-          aria-label="Purple sidebar"
-          title={compact ? "Purple sidebar" : undefined}
-          onClick={() => toggleNav("rail:brand", brand)}
-          className={`flex cursor-pointer items-center rounded-xl transition ${compact ? "" : `h-12 w-full gap-2.5 px-3 text-sm font-medium ${t.themeRow}`}`}
-        >
-          {!compact && <><PaletteIcon className="size-5" /><span className="grow text-left">Purple sidebar</span></>}
-          <span className={`flex h-6 w-11 items-center rounded-full p-1 transition ${t.track}`}>
-            <span className={`size-4 rounded-full transition-transform duration-300 ${brand ? "translate-x-5" : ""} ${t.knob}`} />
-          </span>
-        </button>
+        {compact ? (
+          <button
+            type="button"
+            onClick={() => setTheme(THEMES[(THEMES.findIndex((o) => o.value === theme) + 1) % THEMES.length].value)}
+            title={`Theme: ${THEMES.find((o) => o.value === theme)!.label}. Click to change.`}
+            aria-label={`Theme: ${THEMES.find((o) => o.value === theme)!.label}. Click to change.`}
+            className={`flex size-12 cursor-pointer items-center justify-center rounded-xl transition hover:text-accent-ink ${t.themeRow}`}
+          >
+            {(() => { const I = THEMES.find((o) => o.value === theme)!.icon; return <I className="size-5" />; })()}
+          </button>
+        ) : (
+          <div role="radiogroup" aria-label="Theme" className={`grid w-full grid-cols-3 gap-1 rounded-xl p-1 ${t.themeRow}`}>
+            {THEMES.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                role="radio"
+                aria-checked={theme === o.value}
+                onClick={() => setTheme(o.value)}
+                className={`flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition ${theme === o.value ? "bg-surface text-accent-ink shadow-[0_2px_8px_-3px_rgba(24,19,64,.35)]" : "text-muted hover:text-ink"}`}
+              >
+                <o.icon className="size-4" />{o.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </aside>
   );
 
   return (
-    <div className="min-h-dvh bg-page">
+    <div className={`min-h-dvh bg-page ${THEME_CLASS[theme]}`}>
       {/* Desktop sidebar */}
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar(collapsed)}</div>
 
@@ -580,7 +595,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
       )}
 
       <div className={`transition-[padding] duration-300 ${collapsed ? "lg:pl-[88px]" : "lg:pl-[276px]"}`}>
-        <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between gap-3 border-b border-edge/80 bg-white/85 px-4 shadow-[0_1px_12px_rgba(24,19,64,.035)] backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between gap-3 border-b border-edge/80 bg-surface/85 px-4 shadow-[0_1px_12px_rgba(24,19,64,.035)] backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setDrawer(true)} className="flex size-10 items-center justify-center rounded-lg text-ink hover:bg-page lg:hidden" aria-label="Open menu"><MenuIcon /></button>
             <Link href={home} className="flex items-center gap-2 lg:hidden" aria-label={`${siteName} home`}><BrandMark className="size-8" /></Link>
@@ -600,12 +615,12 @@ export function PortalShell({ children, role, user, siteName, logoUrl, unread, t
       </div>
 
       {/* Mobile bottom tab bar */}
-      <nav aria-label="Quick" className="fixed inset-x-0 bottom-0 z-40 flex border-t border-edge bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(24,19,64,0.08)] backdrop-blur-xl lg:hidden">
+      <nav aria-label="Quick" className="fixed inset-x-0 bottom-0 z-40 flex border-t border-edge bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(24,19,64,0.08)] backdrop-blur-xl lg:hidden">
         {bottom.map((item) => {
           const active = isActive(pathname, tab, item);
           const IconComponent = item.icon;
           return (
-            <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold transition ${active ? "text-accent" : "text-muted active:scale-95"}`}>
+            <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-semibold transition ${active ? "text-accent-ink" : "text-muted active:scale-95"}`}>
               {active && <span className="absolute top-0 h-[3px] w-8 rounded-b-full bg-accent" />}
               <IconComponent className={`size-[22px] transition ${active ? "-translate-y-0.5" : ""}`} />
               {item.label}

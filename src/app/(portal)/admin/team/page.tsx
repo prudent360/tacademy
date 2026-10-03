@@ -145,7 +145,7 @@ export default async function TeamPage() {
 function PermissionGroupRows({ title, items, roles }: { title: string; items: (typeof PERMISSION_GROUPS)[number]["items"]; roles: { key: string; name: string; permissions: string[] }[] }) {
   return (
     <>
-      <tr className="border-b border-line"><td colSpan={roles.length + 2} className="bg-page/60 px-5 pb-1.5 pt-4 font-mono text-[11px] font-semibold uppercase tracking-[1.4px] text-accent md:px-6">{title}</td></tr>
+      <tr className="border-b border-line"><td colSpan={roles.length + 2} className="bg-page/60 px-5 pb-1.5 pt-4 font-mono text-[11px] font-semibold uppercase tracking-[1.4px] text-accent-ink md:px-6">{title}</td></tr>
       {items.map((item) => (
         <tr key={item.key} className="border-b border-line last:border-0 hover:bg-panel/60">
           <td className="px-5 py-3 md:px-6"><span className="block font-semibold text-ink">{item.label}</span><span className="block text-xs text-muted">{item.hint}</span></td>

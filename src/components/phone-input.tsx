@@ -23,7 +23,7 @@ export function PhoneInput({ id, defaultCountry = "GB", defaultValue, placeholde
     onCountryChange?.(code);
   }
   return (
-    <div className="flex h-12 rounded-[5px] border border-edge-strong bg-white transition hover:border-accent-muted focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/10">
+    <div className="flex h-12 rounded-[5px] border border-edge-strong bg-surface transition hover:border-accent-muted focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/10">
       <div className="relative flex shrink-0 items-center gap-1 pl-3 pr-2">
         <span aria-hidden="true" className="text-lg leading-none">{flag(country.code)}</span>
         <span className="text-sm text-muted">{country.dial}</span>

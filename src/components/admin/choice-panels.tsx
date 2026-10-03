@@ -14,7 +14,7 @@ export function ChoicePanels<T extends string>({ name, legend, options, initial,
         <legend className="mb-1.5 text-sm font-semibold text-ink">{legend}</legend>
         <div className="inline-flex w-fit flex-wrap rounded-lg border border-edge-strong bg-panel p-1">
           {options.map((o) => (
-            <label key={o.value} className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-semibold text-muted has-[:checked]:bg-white has-[:checked]:text-accent has-[:checked]:shadow-sm">
+            <label key={o.value} className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-semibold text-muted has-[:checked]:bg-surface has-[:checked]:text-accent-ink has-[:checked]:shadow-sm">
               <input type="radio" name={name} value={o.value} checked={choice === o.value} onChange={() => setChoice(o.value)} className="sr-only" />
               {o.label}
             </label>

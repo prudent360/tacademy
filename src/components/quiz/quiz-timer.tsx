@@ -22,7 +22,7 @@ export function QuizTimer({ deadline, formId }: { deadline: string; formId: stri
   const minutes = Math.floor(left / 60_000);
   const seconds = Math.floor((left % 60_000) / 1000);
   return (
-    <span role="timer" aria-live="off" className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-sm font-semibold ${left < 60_000 ? "bg-red-50 text-red-700" : "bg-accent-soft text-accent"}`}>
+    <span role="timer" aria-live="off" className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-sm font-semibold ${left < 60_000 ? "bg-red-50 text-red-700" : "bg-accent-soft text-accent-ink"}`}>
       <ClockIcon className="size-4" /> {minutes}:{String(seconds).padStart(2, "0")}
     </span>
   );

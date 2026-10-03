@@ -78,7 +78,7 @@ export function DeleteButton({ action, label = "Delete" }: { action: () => Promi
         type="button"
         disabled={pending}
         onClick={async () => { setPending(true); await action(); setPending(false); setArmed(false); }}
-        className="inline-flex h-11 cursor-pointer items-center rounded-lg bg-red-700 px-4 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-70"
+        className="inline-flex h-11 cursor-pointer items-center rounded-lg bg-red-700 px-4 text-sm font-semibold text-white hover:bg-red-800 dark:bg-[#b91c1c] dark:hover:bg-[#991b1b] disabled:opacity-70"
       >
         {pending ? "Deleting…" : "Confirm delete"}
       </button>
@@ -89,7 +89,7 @@ export function DeleteButton({ action, label = "Delete" }: { action: () => Promi
   );
 }
 
-const inputClass = "w-full rounded-[5px] border border-edge-strong bg-white px-3.5 py-2.5 text-[15px] text-ink shadow-[0_1px_2px_rgba(24,19,64,.02)] transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
+const inputClass = "w-full rounded-[5px] border border-edge-strong bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-[0_1px_2px_rgba(24,19,64,.02)] transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
 
 type FieldProps = { label: string; name: string; hint?: string; className?: string };
 
@@ -158,12 +158,12 @@ export function FileField({ label, name, current, accept = "image/*", hint, remo
             // eslint-disable-next-line @next/next/no-img-element
             <img src={current} alt="" className={previewClassName} />
           ) : (
-            <a href={current} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-accent underline">View current file</a>
+            <a href={current} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-accent-ink underline">View current file</a>
           )}
           <Checkbox label="Remove" name={removeName} />
         </div>
       )}
-      <input id={id} type="file" name={name} accept={accept} className="text-sm text-body file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-accent hover:file:bg-[#dddafa]" />
+      <input id={id} type="file" name={name} accept={accept} className="text-sm text-body file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-accent-ink hover:file:bg-accent-muted/40" />
       <p className="text-[13px] text-muted">{hint ?? (isImage ? "JPG, PNG, WebP, GIF or AVIF, up to 4 MB." : "PDF, Office, image, ZIP or text file, up to 4 MB.")}</p>
     </div>
   );
@@ -175,8 +175,8 @@ export function ActionButton({ action, children, pendingText, doneText, variant 
   const [done, setDone] = useState(false);
   const styles = {
     primary: "bg-accent text-white hover:bg-accent-dark",
-    secondary: "border border-edge-strong bg-white text-ink hover:bg-page",
-    danger: "border border-edge-strong bg-white text-red-700 hover:border-red-300 hover:bg-red-50",
+    secondary: "border border-edge-strong bg-surface text-ink hover:bg-page",
+    danger: "border border-edge-strong bg-surface text-red-700 hover:border-red-300 hover:bg-red-50",
   }[variant];
   return (
     <button
@@ -208,7 +208,7 @@ export function Switch({ label, name, defaultChecked, hint }: { label: string; n
       <span className="relative mt-0.5 inline-flex shrink-0">
         <input id={id} type="checkbox" name={name} defaultChecked={defaultChecked} className="peer sr-only" />
         <span className="h-6 w-11 rounded-full bg-edge-strong transition peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-offset-2" />
-        <span className="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+        <span className="absolute left-0.5 top-0.5 size-5 rounded-full bg-surface shadow transition peer-checked:translate-x-5" />
       </span>
     </label>
   );
@@ -242,7 +242,7 @@ export function SecretInput({ label, name, masked, hint, placeholder }: { label:
 /** Button that opens its children in a modal dialog. */
 export function ModalButton({ label, title, children, variant = "primary", icon }: { label: string; title: string; children: React.ReactNode; variant?: "primary" | "secondary"; icon?: React.ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const styles = variant === "primary" ? "bg-accent text-white hover:bg-accent-dark" : "border border-edge-strong bg-white text-ink hover:bg-page";
+  const styles = variant === "primary" ? "bg-accent text-white hover:bg-accent-dark" : "border border-edge-strong bg-surface text-ink hover:bg-page";
   return (
     <>
       <button type="button" onClick={() => ref.current?.showModal()} className={`inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-5 text-[15px] font-semibold ${styles}`}>
@@ -251,7 +251,7 @@ export function ModalButton({ label, title, children, variant = "primary", icon 
       <dialog
         ref={ref}
         onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}
-        className="m-auto w-[min(560px,calc(100vw-2rem))] rounded-[18px] border border-edge bg-white p-0 text-left shadow-2xl backdrop:bg-navy/50 backdrop:backdrop-blur-sm"
+        className="m-auto w-[min(560px,calc(100vw-2rem))] rounded-[18px] border border-edge bg-surface p-0 text-left shadow-2xl backdrop:bg-navy/50 backdrop:backdrop-blur-sm"
       >
         <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 className="font-display text-lg font-bold text-ink">{title}</h2>

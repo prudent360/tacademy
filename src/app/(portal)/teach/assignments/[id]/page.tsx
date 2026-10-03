@@ -52,7 +52,7 @@ export default async function TeachAssignmentPage({ params, searchParams }: { pa
                         <td className="whitespace-nowrap text-muted">{formatDateTime(submission.submittedAt, tz, { zone: false })} {late && <Badge tone="amber">Late</Badge>}</td>
                         <td><StatusBadge status={submission.status} label={submission.status === "submitted" ? "To grade" : submission.status === "resubmit" ? "Changes requested" : "Graded"} /></td>
                         <td className="font-semibold">{submission.score !== null ? `${submission.score}/${assignment.maxScore}` : "–"}</td>
-                        <td className="text-right"><Link href={`/teach/submissions/${submission.id}`} className="text-sm font-semibold text-accent">{submission.status === "submitted" ? "Grade" : "View"}</Link></td>
+                        <td className="text-right"><Link href={`/teach/submissions/${submission.id}`} className="text-sm font-semibold text-accent-ink">{submission.status === "submitted" ? "Grade" : "View"}</Link></td>
                       </tr>
                     );
                   })}

@@ -11,8 +11,8 @@ type Drag = { type: "lesson"; lessonId: number } | { type: "module"; moduleId: n
 type Target = { type: "lesson"; moduleId: number; index: number } | { type: "module"; index: number };
 
 const KIND = {
-  video: { icon: PlayIcon, label: "Video lesson", tone: "bg-accent-soft text-accent" },
-  reading: { icon: FileIcon, label: "Reading lesson", tone: "bg-cyan/10 text-[#0e7fa3]" },
+  video: { icon: PlayIcon, label: "Video lesson", tone: "bg-accent-soft text-accent-ink" },
+  reading: { icon: FileIcon, label: "Reading lesson", tone: "bg-cyan/10 text-cyan-ink" },
   quiz: { icon: ClipboardIcon, label: "Quiz", tone: "bg-amber-50 text-amber-700" },
 } as const;
 
@@ -136,7 +136,7 @@ export function CurriculumBuilder({ courseId, modules: initial, lessonHref, canD
               onDragOver={(e) => {
                 if (drag.current?.type === "module") { e.preventDefault(); const r = e.currentTarget.getBoundingClientRect(); setTarget({ type: "module", index: e.clientY < r.top + r.height / 2 ? mi : mi + 1 }); }
               }}
-              className="overflow-hidden rounded-xl border border-edge bg-white"
+              className="overflow-hidden rounded-xl border border-edge bg-surface"
             >
               <ModuleHeader
                 module={module}
@@ -219,7 +219,7 @@ export function CurriculumBuilder({ courseId, modules: initial, lessonHref, canD
         label="Add module"
         placeholder="Module title, e.g. Week 2: Cleaning data"
         pending={pending}
-        className="rounded-xl border border-dashed border-edge-strong bg-white/60 p-3"
+        className="rounded-xl border border-dashed border-edge-strong bg-surface/60 p-3"
         onAdd={(title, done) => run(() => addModule(courseId, title), done)}
         startOpen={!modules.length}
       />
@@ -248,10 +248,10 @@ function ModuleHeader({ module, open, grip, summary, onToggle, onSave, onMove, f
         onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); onSave(String(f.get("title")), String(f.get("summary")), () => setEditing(false)); }}
       >
         <label className="flex flex-col gap-1.5 text-sm font-semibold text-ink">Module title
-          <input name="title" defaultValue={module.title} required maxLength={160} autoFocus className="h-10 rounded-lg border border-edge-strong bg-white px-3 font-normal focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
+          <input name="title" defaultValue={module.title} required maxLength={160} autoFocus className="h-10 rounded-lg border border-edge-strong bg-surface px-3 font-normal focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-semibold text-ink">Summary <span className="font-normal text-muted">(optional, shown to students and on the course page)</span>
-          <textarea name="summary" defaultValue={module.summary} maxLength={500} rows={2} className="rounded-lg border border-edge-strong bg-white px-3 py-2 font-normal focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
+          <textarea name="summary" defaultValue={module.summary} maxLength={500} rows={2} className="rounded-lg border border-edge-strong bg-surface px-3 py-2 font-normal focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
         </label>
         <div className="flex gap-2">
           <button type="submit" className="inline-flex h-9 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-dark">Save</button>
@@ -299,7 +299,7 @@ function LessonRow({ lesson, href, grip, dragProps, onDragOver, onMove, canUp, c
       {grip}
       <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${kind.tone}`} title={kind.label}><Icon className="size-4" /><span className="sr-only">{kind.label}</span></span>
       <Link href={href} className="flex min-w-0 grow flex-col">
-        <span className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{lesson.title}</span>
+        <span className="truncate text-[15px] font-semibold text-ink group-hover:text-accent-ink">{lesson.title}</span>
         <span className="truncate text-xs text-muted">
           {lesson.kind === "quiz" ? "Quiz" : lesson.kind === "video" ? "Video" : "Reading"} · {lesson.minutes} min
           {lesson.quizQuestions !== null && (lesson.quizQuestions ? ` · Quiz, ${lesson.quizQuestions} question${lesson.quizQuestions === 1 ? "" : "s"}` : " · Quiz has no questions yet")}
@@ -344,8 +344,8 @@ function AddItems({ pending, onAdd }: { pending: boolean; onAdd: (title: string,
   }
   return (
     <div className="mt-1 flex flex-wrap gap-2 px-1 pb-1">
-      <button type="button" onClick={() => setAdding("lesson")} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-accent-soft"><PlusIcon className="size-4" /> Lesson</button>
-      <button type="button" onClick={() => setAdding("quiz")} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-accent-soft"><PlusIcon className="size-4" /> Quiz</button>
+      <button type="button" onClick={() => setAdding("lesson")} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-accent-ink hover:bg-accent-soft"><PlusIcon className="size-4" /> Lesson</button>
+      <button type="button" onClick={() => setAdding("quiz")} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-accent-ink hover:bg-accent-soft"><PlusIcon className="size-4" /> Quiz</button>
     </div>
   );
 }
@@ -364,7 +364,7 @@ function InlineAdd({ label, placeholder, pending, onAdd, onCancel, startOpen = f
   if (!open) {
     return (
       <div className={className}>
-        <button type="button" onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-accent hover:bg-accent-soft"><PlusIcon className="size-4" /> {label}</button>
+        <button type="button" onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-accent-ink hover:bg-accent-soft"><PlusIcon className="size-4" /> {label}</button>
       </div>
     );
   }
@@ -381,7 +381,7 @@ function InlineAdd({ label, placeholder, pending, onAdd, onCancel, startOpen = f
         aria-label={label}
         maxLength={160}
         autoFocus={!startOpen || Boolean(onCancel)}
-        className="h-10 min-w-0 grow rounded-lg border border-edge-strong bg-white px-3 text-[15px] focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10"
+        className="h-10 min-w-0 grow rounded-lg border border-edge-strong bg-surface px-3 text-[15px] focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10"
       />
       <button type="submit" disabled={pending || !title.trim()} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-dark disabled:opacity-50"><PlusIcon className="size-4" /> {label}</button>
       {onCancel && <button type="button" onClick={onCancel} className="inline-flex h-10 items-center rounded-lg px-3 text-sm font-semibold text-muted hover:text-ink">Cancel</button>}

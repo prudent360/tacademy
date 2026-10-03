@@ -25,7 +25,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-const link = (url: string | null) => url && <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 break-all font-semibold text-accent hover:text-accent-dark">{url.replace(/^https?:\/\//, "")} <ExternalIcon className="size-3.5 shrink-0" /></a>;
+const link = (url: string | null) => url && <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 break-all font-semibold text-accent-ink hover:text-accent-ink-strong">{url.replace(/^https?:\/\//, "")} <ExternalIcon className="size-3.5 shrink-0" /></a>;
 
 export default async function ApplicationPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission("applications.review");
@@ -55,8 +55,8 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
         <div className="flex min-w-0 flex-col gap-6">
           <Card title="About them">
             <dl className="divide-y divide-line">
-              <Row label="Email"><a href={`mailto:${application.email}`} className="font-semibold text-accent">{application.email}</a></Row>
-              <Row label="Phone / WhatsApp"><a href={`https://wa.me/${application.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">{application.phone}</a></Row>
+              <Row label="Email"><a href={`mailto:${application.email}`} className="font-semibold text-accent-ink">{application.email}</a></Row>
+              <Row label="Phone / WhatsApp"><a href={`https://wa.me/${application.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">{application.phone}</a></Row>
               <Row label="Location">{country ? `${flag(country.code)} ${application.city ? `${application.city}, ` : ""}${country.name}` : application.country}</Row>
               <Row label="Qualification">{application.qualification}</Row>
               <Row label="Currently">{application.currentStatus}</Row>
@@ -80,7 +80,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
             <dl className="divide-y divide-line">
               <Row label="Portfolio">{link(application.portfolioUrl)}</Row>
               <Row label="LinkedIn">{link(application.linkedinUrl)}</Row>
-              <Row label="CV">{application.cvUrl && <a href={application.cvUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-accent">Open CV <ExternalIcon className="size-3.5" /></a>}</Row>
+              <Row label="CV">{application.cvUrl && <a href={application.cvUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-accent-ink">Open CV <ExternalIcon className="size-3.5" /></a>}</Row>
             </dl>
           </Card>
         </div>

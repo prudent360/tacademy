@@ -5,15 +5,31 @@ import { basicSetup, EditorView } from "codemirror";
 import { keymap } from "@codemirror/view";
 import { EditorState, Prec } from "@codemirror/state";
 import { PostgreSQL, sql } from "@codemirror/lang-sql";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 import type { SqlTableInfo } from "@/db/schema";
 
+// Colours come from the theme tokens (and the --sql-* variables in globals.css), so the editor follows light and dark mode.
 const theme = EditorView.theme({
-  "&": { fontSize: "14px", backgroundColor: "#fff" },
+  "&": { fontSize: "14px", backgroundColor: "var(--color-surface)", color: "var(--color-ink)" },
   "&.cm-focused": { outline: "none" },
-  ".cm-content": { fontFamily: "var(--font-mono, ui-monospace, monospace)", padding: "10px 0" },
-  ".cm-gutters": { backgroundColor: "#f9f9fd", borderRight: "1px solid #eae9f3", color: "#9593a8" },
-  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "#f3f2ff" },
+  ".cm-content": { fontFamily: "var(--font-mono, ui-monospace, monospace)", padding: "10px 0", caretColor: "var(--color-ink)" },
+  ".cm-cursor": { borderLeftColor: "var(--color-ink)" },
+  ".cm-gutters": { backgroundColor: "var(--color-panel)", borderRight: "1px solid var(--color-line)", color: "var(--color-muted)" },
+  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "color-mix(in srgb, var(--color-accent-soft) 70%, transparent)" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": { backgroundColor: "color-mix(in srgb, var(--color-accent) 25%, transparent)" },
+  ".cm-tooltip": { backgroundColor: "var(--color-surface)", color: "var(--color-ink)", border: "1px solid var(--color-edge)" },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "var(--color-accent)", color: "#fff" },
 });
+
+const highlight = HighlightStyle.define([
+  { tag: [tags.keyword, tags.operatorKeyword, tags.modifier], color: "var(--sql-keyword)", fontWeight: "600" },
+  { tag: [tags.string, tags.special(tags.string)], color: "var(--sql-string)" },
+  { tag: [tags.number, tags.bool, tags.null], color: "var(--sql-number)" },
+  { tag: [tags.comment, tags.lineComment, tags.blockComment], color: "var(--color-muted)", fontStyle: "italic" },
+  { tag: [tags.typeName, tags.standard(tags.name)], color: "var(--sql-type)" },
+  { tag: [tags.function(tags.variableName), tags.special(tags.name)], color: "var(--sql-function)" },
+]);
 
 /** A SQL editor with highlighting and table/column suggestions. Ctrl/Cmd+Enter runs the query. */
 export function SqlEditor({ value, onChange, onRun, tables, label, minHeight = 140 }: { value: string; onChange: (value: string) => void; onRun?: () => void; tables?: SqlTableInfo[]; label: string; minHeight?: number }) {
@@ -39,6 +55,7 @@ export function SqlEditor({ value, onChange, onRun, tables, label, minHeight = 1
           EditorView.updateListener.of((update) => { if (update.docChanged) handlers.current.onChange(update.state.doc.toString()); }),
           EditorView.contentAttributes.of({ "aria-label": label }),
           theme,
+          syntaxHighlighting(highlight),
           EditorView.theme({ ".cm-content, .cm-gutter": { minHeight: `${minHeight}px` } }),
         ],
       }),

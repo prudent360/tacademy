@@ -26,7 +26,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-const link = (url: string | null) => url && <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 break-all font-semibold text-accent hover:text-accent-dark">{url.replace(/^https?:\/\//, "")} <ExternalIcon className="size-3.5 shrink-0" /></a>;
+const link = (url: string | null) => url && <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 break-all font-semibold text-accent-ink hover:text-accent-ink-strong">{url.replace(/^https?:\/\//, "")} <ExternalIcon className="size-3.5 shrink-0" /></a>;
 
 export default async function InstructorApplicationPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePermission("instructors.review");
@@ -57,8 +57,8 @@ export default async function InstructorApplicationPage({ params }: { params: Pr
         <div className="flex min-w-0 flex-col gap-6">
           <Card title="About them">
             <dl className="divide-y divide-line">
-              <Row label="Email"><a href={`mailto:${application.email}`} className="font-semibold text-accent">{application.email}</a></Row>
-              <Row label="Phone / WhatsApp"><a href={`https://wa.me/${application.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">{application.phone}</a></Row>
+              <Row label="Email"><a href={`mailto:${application.email}`} className="font-semibold text-accent-ink">{application.email}</a></Row>
+              <Row label="Phone / WhatsApp"><a href={`https://wa.me/${application.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">{application.phone}</a></Row>
               <Row label="Location">{country ? `${flag(country.code)} ${application.city ? `${application.city}, ` : ""}${country.name}` : application.country}</Row>
               <Row label="Current role">{application.currentRole}</Row>
             </dl>
@@ -70,7 +70,7 @@ export default async function InstructorApplicationPage({ params }: { params: Pr
               <Row label="Teaching experience">{application.teachingExperience}</Row>
               <Row label="LinkedIn">{link(application.linkedinUrl)}</Row>
               <Row label="Portfolio">{link(application.portfolioUrl)}</Row>
-              <Row label="CV">{application.cvUrl && <a href={application.cvUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-accent">Open CV <ExternalIcon className="size-3.5" /></a>}</Row>
+              <Row label="CV">{application.cvUrl && <a href={application.cvUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-accent-ink">Open CV <ExternalIcon className="size-3.5" /></a>}</Row>
             </dl>
           </Card>
           <Card title="What they'd teach">
@@ -88,7 +88,7 @@ export default async function InstructorApplicationPage({ params }: { params: Pr
             {decided ? (
               <div className="flex flex-col gap-3 text-sm text-body">
                 <p>{application.status === "accepted" ? "Accepted" : "Declined"}{decidedBy ? ` by ${decidedBy.name}` : ""}{application.decidedAt ? ` on ${formatDateOnly(application.decidedAt.toISOString().slice(0, 10))}` : ""}. {application.status === "accepted" ? "They were emailed a link to their instructor account." : "They were sent the “not successful” email."}</p>
-                {application.status === "accepted" && application.userId && <Link href={`/admin/users/${application.userId}`} className="font-semibold text-accent">Open their account →</Link>}
+                {application.status === "accepted" && application.userId && <Link href={`/admin/users/${application.userId}`} className="font-semibold text-accent-ink">Open their account →</Link>}
               </div>
             ) : (
               <div className="flex flex-col gap-5">

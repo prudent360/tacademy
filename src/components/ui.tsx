@@ -8,7 +8,7 @@ export function PageHeader({ title, description, actions, back }: { title: strin
   return (
     <div className="flex flex-col gap-3 border-b border-line pb-5">
       {back && (
-        <Link href={back.href} className="w-fit text-sm font-semibold text-accent hover:text-accent-dark">
+        <Link href={back.href} className="w-fit text-sm font-semibold text-accent-ink hover:text-accent-ink-strong">
           ← {back.label}
         </Link>
       )}
@@ -25,7 +25,7 @@ export function PageHeader({ title, description, actions, back }: { title: strin
 
 export function Card({ children, className = "", title, action, padded = true, id }: { children: React.ReactNode; className?: string; title?: string; action?: React.ReactNode; padded?: boolean; id?: string }) {
   return (
-    <section id={id} className={`rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(24,19,64,.025)] ${className}`}>
+    <section id={id} className={`rounded-[5px] border border-edge bg-surface shadow-[0_1px_2px_rgba(24,19,64,.025)] ${className}`}>
       {title && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4 md:px-6">
           <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
@@ -39,7 +39,7 @@ export function Card({ children, className = "", title, action, padded = true, i
 
 const TONES = {
   neutral: "bg-page text-body border-edge",
-  accent: "bg-accent-soft text-accent border-transparent",
+  accent: "bg-accent-soft text-accent-ink border-transparent",
   green: "bg-emerald-50 text-emerald-800 border-emerald-100",
   amber: "bg-amber-50 text-amber-800 border-amber-100",
   red: "bg-red-50 text-red-800 border-red-100",
@@ -85,7 +85,7 @@ export function EmptyState({ title, children, action, icon: IconComponent }: { t
   return (
     <div className="flex flex-col items-center gap-3 rounded-[5px] border border-dashed border-edge-strong bg-panel px-6 py-12 text-center">
       {IconComponent && (
-        <span className="flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent">
+        <span className="flex size-12 items-center justify-center rounded-full bg-accent-soft text-accent-ink">
           <IconComponent className="size-6" />
         </span>
       )}
@@ -98,10 +98,10 @@ export function EmptyState({ title, children, action, icon: IconComponent }: { t
 
 export function StatCard({ label, value, hint, icon: IconComponent }: { label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: Icon }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[5px] border border-edge bg-white p-5 shadow-[0_1px_2px_rgba(24,19,64,.025)] transition duration-200 hover:-translate-y-0.5 hover:border-accent-muted hover:shadow-[0_14px_34px_-24px_rgba(24,19,64,.4)]">
+    <div className="flex flex-col gap-2 rounded-[5px] border border-edge bg-surface p-5 shadow-[0_1px_2px_rgba(24,19,64,.025)] transition duration-200 hover:-translate-y-0.5 hover:border-accent-muted hover:shadow-[0_14px_34px_-24px_rgba(24,19,64,.4)]">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold text-muted">{label}</p>
-        {IconComponent && <IconComponent className="size-5 text-accent" />}
+        {IconComponent && <IconComponent className="size-5 text-accent-ink" />}
       </div>
       <p className="font-display text-3xl font-bold tracking-tight text-ink">{value}</p>
       {hint && <p className="text-[13px] text-muted">{hint}</p>}
@@ -129,7 +129,7 @@ export function Tabs({ items, current }: { items: { href: string; label: string;
             key={item.key}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={`-mb-px flex h-11 shrink-0 items-center gap-2 border-b-2 px-3.5 text-[15px] font-semibold ${active ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"}`}
+            className={`-mb-px flex h-11 shrink-0 items-center gap-2 border-b-2 px-3.5 text-[15px] font-semibold ${active ? "border-accent text-accent-ink" : "border-transparent text-muted hover:text-ink"}`}
           >
             {item.icon && <item.icon className="size-[18px]" />}
             {item.label}
@@ -153,14 +153,14 @@ export function Notice({ tone = "green", children }: { tone?: "green" | "amber" 
 
 export const buttonClass = {
   primary: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] bg-accent px-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_-12px_rgba(79,63,215,.85)] transition hover:-translate-y-0.5 hover:bg-accent-dark hover:shadow-md active:translate-y-0",
-  secondary: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] border border-edge-strong bg-white px-5 text-[15px] font-semibold text-ink transition hover:-translate-y-0.5 hover:border-accent-muted hover:bg-page active:translate-y-0",
-  ghost: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] px-3 text-[15px] font-semibold text-accent transition hover:bg-accent-soft",
-  small: "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-edge-strong bg-white px-3 text-sm font-semibold text-ink transition hover:border-accent-muted hover:bg-page",
+  secondary: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] border border-edge-strong bg-surface px-5 text-[15px] font-semibold text-ink transition hover:-translate-y-0.5 hover:border-accent-muted hover:bg-page active:translate-y-0",
+  ghost: "inline-flex h-11 items-center justify-center gap-2 rounded-[5px] px-3 text-[15px] font-semibold text-accent-ink transition hover:bg-accent-soft",
+  small: "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-edge-strong bg-surface px-3 text-sm font-semibold text-ink transition hover:border-accent-muted hover:bg-page",
 };
 
 export function DataTable({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(24,19,64,.025)]">
+    <div className="overflow-x-auto rounded-[5px] border border-edge bg-surface shadow-[0_1px_2px_rgba(24,19,64,.025)]">
       <table className="w-full min-w-[720px] border-collapse text-left text-sm [&_tbody_tr:hover]:bg-accent-soft/25 [&_tbody_tr]:transition-colors [&_td]:border-t [&_td]:border-line [&_td]:px-5 [&_td]:py-4 [&_td]:align-middle [&_th]:whitespace-nowrap [&_th]:bg-panel [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-[11px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[1px] [&_th]:text-muted">
         {children}
       </table>
@@ -179,7 +179,7 @@ export function PersonCell({ name, email, src, gender, href }: { name: string; e
       </span>
     </span>
   );
-  return href ? <Link href={href} className="block hover:[&_span.font-semibold]:text-accent">{inner}</Link> : inner;
+  return href ? <Link href={href} className="block hover:[&_span.font-semibold]:text-accent-ink">{inner}</Link> : inner;
 }
 
 /**
@@ -195,18 +195,18 @@ export function TableToolbar({ action, q, placeholder, hidden = {}, filters, rig
   right?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-[5px] border border-edge bg-white p-4 shadow-[0_1px_2px_rgba(24,19,64,.025)] lg:flex-row lg:items-center">
+    <div className="flex flex-col gap-3 rounded-[5px] border border-edge bg-surface p-4 shadow-[0_1px_2px_rgba(24,19,64,.025)] lg:flex-row lg:items-center">
       <form action={action} className="relative flex-1">
         {Object.entries(hidden).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
         <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted" />
-        <input name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} className="h-11 w-full rounded-lg border border-edge-strong bg-white pl-10 pr-3 text-sm text-ink placeholder:text-[#878598] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
+        <input name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} className="h-11 w-full rounded-lg border border-edge-strong bg-surface pl-10 pr-3 text-sm text-ink placeholder:text-[#878598] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
       </form>
       {filters && (
         <div className="flex flex-wrap items-center gap-1.5">
           {filters.map((f) => (
             <Link key={f.label} href={f.href} aria-current={f.active ? "true" : undefined} className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors ${f.active ? "bg-accent text-white" : "bg-page text-muted hover:bg-edge hover:text-ink"}`}>
               {f.label}
-              {f.count !== undefined && <span className={`rounded-full px-1.5 text-[11px] ${f.active ? "bg-white/20" : "bg-white"}`}>{f.count}</span>}
+              {f.count !== undefined && <span className={`rounded-full px-1.5 text-[11px] ${f.active ? "bg-white/20" : "bg-surface"}`}>{f.count}</span>}
             </Link>
           ))}
         </div>

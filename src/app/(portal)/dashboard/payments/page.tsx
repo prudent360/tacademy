@@ -48,7 +48,7 @@ export default async function PaymentsPage() {
                 <td className="font-semibold text-ink">{p.description}</td>
                 <td className="whitespace-nowrap font-semibold">{formatMoney(p.amount, p.currency)}</td>
                 <td className="text-muted">{PLAN_LABEL[p.paymentPlan]}</td>
-                <td><StatusBadge status={p.status} label={p.status === "pending" && p.gateway === "manual" ? "Awaiting transfer" : p.status === "paid" && p.refundedAmount > 0 ? "Part refunded" : undefined} />{p.refundedAmount > 0 && <span className="mt-1 block text-xs text-muted">Refunded {formatMoney(p.refundedAmount, p.currency)}</span>}{p.status === "pending" && p.gateway === "manual" && <Link href={`/checkout/transfer?ref=${p.reference}`} className="mt-1 block text-xs font-semibold text-accent">Bank details →</Link>}</td>
+                <td><StatusBadge status={p.status} label={p.status === "pending" && p.gateway === "manual" ? "Awaiting transfer" : p.status === "paid" && p.refundedAmount > 0 ? "Part refunded" : undefined} />{p.refundedAmount > 0 && <span className="mt-1 block text-xs text-muted">Refunded {formatMoney(p.refundedAmount, p.currency)}</span>}{p.status === "pending" && p.gateway === "manual" && <Link href={`/checkout/transfer?ref=${p.reference}`} className="mt-1 block text-xs font-semibold text-accent-ink">Bank details →</Link>}</td>
                 <td className="font-mono text-xs text-muted">{p.reference}</td>
               </tr>
             ))}

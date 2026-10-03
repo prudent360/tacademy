@@ -116,13 +116,13 @@ export default async function MyCoursesPage() {
               const freeForYou = isFree(cohort) || (cohort.graduatesFree && graduateOf.get(course.id));
               const price = fromPrice([cohort], currencies);
               return (
-                <article key={course.id} className="flex flex-col overflow-hidden rounded-[14px] border border-edge bg-white">
+                <article key={course.id} className="flex flex-col overflow-hidden rounded-[14px] border border-edge bg-surface">
                   <div className="relative aspect-[16/7] overflow-hidden bg-accent-soft">
                     {course.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={course.imageUrl} alt="" className="size-full object-cover" />
                     ) : <CourseArt seed={course.id} className="size-full" />}
-                    {course.category && <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-accent">{course.category}</span>}
+                    {course.category && <span className="absolute left-3 top-3 rounded-full bg-surface/95 px-2.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-accent-ink">{course.category}</span>}
                   </div>
                   <div className="flex grow flex-col gap-3 p-5">
                     <div className="flex flex-wrap gap-1.5">

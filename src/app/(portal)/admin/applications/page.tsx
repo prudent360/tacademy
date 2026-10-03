@@ -65,7 +65,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                   <td className="whitespace-nowrap text-body">{countryByCode(a.country) ? `${flag(a.country)} ${countryByCode(a.country)!.name}` : a.country}</td>
                   <td className="whitespace-nowrap text-muted">{relativeTime(a.createdAt)}</td>
                   <td><Badge tone={STATUS_TONE[a.status]}>{STATUS_LABELS[a.status]}</Badge></td>
-                  <td className="text-right"><Link href={`/admin/applications/${a.id}`} className="inline-flex h-9 items-center rounded-lg border border-edge-strong bg-white px-3 text-sm font-semibold text-ink hover:bg-page">Review</Link></td>
+                  <td className="text-right"><Link href={`/admin/applications/${a.id}`} className="inline-flex h-9 items-center rounded-lg border border-edge-strong bg-surface px-3 text-sm font-semibold text-ink hover:bg-page">Review</Link></td>
                 </tr>
               ))}
             </tbody>
@@ -73,7 +73,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
           <Pagination page={page} pages={Math.ceil(total / PAGE_SIZE)} href={(n) => url({ page: String(n) })} />
         </>
       ) : (
-        <EmptyState icon={BriefcaseIcon} title={q || status ? "No applications match" : "No applications yet"}>{q || status ? "Try a different search or filter." : <>Applications from <Link href="/internships/apply" className="font-semibold text-accent">/internships/apply</Link> will appear here.</>}</EmptyState>
+        <EmptyState icon={BriefcaseIcon} title={q || status ? "No applications match" : "No applications yet"}>{q || status ? "Try a different search or filter." : <>Applications from <Link href="/internships/apply" className="font-semibold text-accent-ink">/internships/apply</Link> will appear here.</>}</EmptyState>
       )}
     </>
   );

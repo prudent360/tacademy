@@ -21,7 +21,7 @@ export function SqlOutput({ outcome, running }: { outcome: RunOutcome | null; ru
           </thead>
           <tbody>
             {result.rows.slice(0, SHOWN_ROWS).map((row, i) => (
-              <tr key={i} className="odd:bg-white even:bg-panel/50">
+              <tr key={i} className="odd:bg-surface even:bg-panel/50">
                 {row.map((v, j) => <td key={j} className="whitespace-nowrap border-b border-line px-3 py-1.5 text-body">{v === null ? <span className="text-muted">NULL</span> : v}</td>)}
               </tr>
             ))}
@@ -42,7 +42,7 @@ export function SqlTables({ tables }: { tables: SqlTableInfo[] }) {
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">Tables</p>
       <div className="flex flex-wrap gap-2">
         {tables.map((t) => (
-          <details key={t.name} className="group rounded-[8px] border border-edge bg-white text-sm open:w-full sm:open:w-auto">
+          <details key={t.name} className="group rounded-[8px] border border-edge bg-surface text-sm open:w-full sm:open:w-auto">
             <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 font-mono font-semibold text-ink">{t.name}<span className="font-sans text-xs font-normal text-muted">{t.rows} rows</span></summary>
             <ul className="border-t border-line px-3 py-2 font-mono text-[12.5px]">
               {t.columns.map((c) => <li key={c.name} className="flex justify-between gap-6 py-0.5"><span className="text-ink">{c.name}</span><span className="text-muted">{c.type}</span></li>)}

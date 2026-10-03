@@ -26,7 +26,7 @@ export default async function AdminCoursesPage() {
           <tbody>
             {rows.map((c) => (
               <tr key={c.id}>
-                <td><Link href={`/admin/courses/${c.id}`} className="font-semibold text-ink hover:text-accent">{c.title}</Link><p className="text-sm text-muted">/courses/{c.slug}</p></td>
+                <td><Link href={`/admin/courses/${c.id}`} className="font-semibold text-ink hover:text-accent-ink">{c.title}</Link><p className="text-sm text-muted">/courses/{c.slug}</p></td>
                 <td className="text-muted">{c.category || "–"}</td>
                 <td>{counts.find((x) => x.courseId === c.id)?.n ?? 0}</td>
                 <td className="flex flex-wrap gap-1.5">{c.published ? <Badge tone="green">Published</Badge> : <Badge>Draft</Badge>}{c.featured && <Badge tone="accent">Featured</Badge>}</td>

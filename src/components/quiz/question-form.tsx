@@ -13,7 +13,7 @@ const KINDS: { value: QuestionKind; label: string }[] = [
   { value: "sql", label: "SQL query" },
 ];
 
-const input = "h-10 min-w-0 grow rounded-[5px] border border-edge-strong bg-white px-3 text-sm text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
+const input = "h-10 min-w-0 grow rounded-[5px] border border-edge-strong bg-surface px-3 text-sm text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10";
 
 /** Adds or edits one question. Options left blank are dropped when saved. */
 export function QuestionForm({ action, question, submitLabel, datasets }: { action: (state: FormState, formData: FormData) => Promise<FormState>; question?: QuizQuestion; submitLabel: string; datasets: DatasetOption[] }) {
@@ -24,7 +24,7 @@ export function QuestionForm({ action, question, submitLabel, datasets }: { acti
       <fieldset className="flex flex-wrap gap-2">
         <legend className="mb-2 text-sm font-semibold text-ink">Question type</legend>
         {KINDS.map((k) => (
-          <label key={k.value} className={`flex h-9 cursor-pointer items-center rounded-lg border px-3 text-sm font-semibold ${kind === k.value ? "border-accent bg-accent-soft text-accent" : "border-edge-strong text-body"}`}>
+          <label key={k.value} className={`flex h-9 cursor-pointer items-center rounded-lg border px-3 text-sm font-semibold ${kind === k.value ? "border-accent bg-accent-soft text-accent-ink" : "border-edge-strong text-body"}`}>
             <input type="radio" name="kind" value={k.value} checked={kind === k.value} onChange={() => setKind(k.value)} className="sr-only" />{k.label}
           </label>
         ))}
@@ -36,7 +36,7 @@ export function QuestionForm({ action, question, submitLabel, datasets }: { acti
         <fieldset className="flex gap-2">
           <legend className="mb-2 text-sm font-semibold text-ink">The statement is</legend>
           {(["true", "false"] as const).map((v) => (
-            <label key={v} className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-edge-strong px-3 text-sm font-semibold text-body has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent">
+            <label key={v} className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-edge-strong px-3 text-sm font-semibold text-body has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent-ink">
               <input type="radio" name="truth" value={v} defaultChecked={question ? (v === "false") === (question.correct[0] === 1) : v === "true"} className="accent-accent" />{v === "true" ? "True" : "False"}
             </label>
           ))}

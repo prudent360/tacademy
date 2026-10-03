@@ -37,7 +37,7 @@ export default async function StudentCertificatesPage() {
         <div className="grid gap-5 md:grid-cols-2">
           {rows.map(({ certificate, course, cohort }) => (
             <Card key={certificate.id} className="relative overflow-hidden">
-              <span className="flex size-11 items-center justify-center rounded-[5px] bg-accent-soft text-accent"><AwardIcon className="size-6" /></span>
+              <span className="flex size-11 items-center justify-center rounded-[5px] bg-accent-soft text-accent-ink"><AwardIcon className="size-6" /></span>
               <p className="mt-5 font-display text-xl font-bold text-ink">{course.title}</p>
               <p className="mt-1 text-sm text-muted">{cohort.name} · issued {formatDateOnly(certificate.issuedAt.toISOString().slice(0, 10))}</p>
               <p className="mt-4 font-mono text-xs text-muted">{certificate.code}</p>

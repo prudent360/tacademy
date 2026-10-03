@@ -70,8 +70,8 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
             <div className="mb-5 flex flex-col gap-3 border-b border-line pb-5">
               <p className="text-sm text-muted">Submitted {formatDateTime(submission.submittedAt, tz)}</p>
               {submission.body && <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-body">{submission.body}</p>}
-              {submission.fileUrl && <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-accent"><FileIcon className="size-4" /> {submission.fileName ?? "Attached file"}</a>}
-              {submission.linkUrl && <a href={submission.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 break-all text-sm font-semibold text-accent"><LinkIcon className="size-4 shrink-0" /> {submission.linkUrl}</a>}
+              {submission.fileUrl && <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-accent-ink"><FileIcon className="size-4" /> {submission.fileName ?? "Attached file"}</a>}
+              {submission.linkUrl && <a href={submission.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 break-all text-sm font-semibold text-accent-ink"><LinkIcon className="size-4 shrink-0" /> {submission.linkUrl}</a>}
             </div>
           )}
           {canSubmit ? (

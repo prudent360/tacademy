@@ -16,7 +16,7 @@ import { idParam } from "@/lib/validation";
 export const metadata: Metadata = { title: "Quiz" };
 
 const button = "inline-flex h-11 cursor-pointer items-center justify-center rounded-lg bg-accent px-5 font-semibold text-white hover:bg-accent-dark";
-const secondary = "inline-flex h-11 items-center justify-center rounded-lg border border-edge-strong bg-white px-5 font-semibold text-ink hover:bg-page";
+const secondary = "inline-flex h-11 items-center justify-center rounded-lg border border-edge-strong bg-surface px-5 font-semibold text-ink hover:bg-page";
 
 export default async function QuizPage({ params, searchParams }: { params: Promise<{ id: string; lessonId: string }>; searchParams: Promise<{ attempt?: string }> }) {
   const [{ id: rawCohort, lessonId: rawLesson }, { attempt: rawAttempt }, user] = await Promise.all([params, searchParams, requireUser()]);

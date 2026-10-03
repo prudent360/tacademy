@@ -101,7 +101,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   <td className="text-body">{courseCounts.find((c) => c.userId === u.id)?.n ?? 0}</td>
                   <td>{!u.active ? <Badge tone="red">Deactivated</Badge> : !u.passwordHash ? <Badge tone="amber">Invitation sent</Badge> : u.emailVerifiedAt ? <Badge tone="green">Verified</Badge> : <Badge>Email unverified</Badge>}</td>
                   <td className="whitespace-nowrap text-muted">{relativeTime(u.createdAt)}</td>
-                  <td className="text-right"><Link href={`/admin/users/${u.id}`} className="inline-flex h-9 items-center rounded-lg border border-edge-strong bg-white px-3 text-sm font-semibold text-ink hover:bg-page">Manage</Link></td>
+                  <td className="text-right"><Link href={`/admin/users/${u.id}`} className="inline-flex h-9 items-center rounded-lg border border-edge-strong bg-surface px-3 text-sm font-semibold text-ink hover:bg-page">Manage</Link></td>
                 </tr>
               ))}
             </tbody>

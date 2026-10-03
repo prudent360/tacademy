@@ -269,7 +269,7 @@ Certificate ID: **{{certificateCode}}**
 
 Thanks for your interest in **{{courseTitle}}**. Here's the full curriculum:
 
-[[Download the curriculum|{{curriculumUrl}}]]
+[[View the curriculum|{{curriculumUrl}}]]
 
 When you're ready, you can see upcoming dates and fees on the course page: {{courseUrl}}
 

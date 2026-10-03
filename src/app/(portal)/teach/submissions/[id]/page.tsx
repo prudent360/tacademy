@@ -42,7 +42,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ id:
             <div className="flex flex-col gap-4">
               {submission.body ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-body">{submission.body}</p> : <p className="text-muted">No written answer.</p>}
               {submission.fileUrl && <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 w-fit items-center gap-2 rounded-lg border border-edge-strong px-4 text-sm font-semibold text-ink hover:bg-page"><FileIcon className="size-4" /> {submission.fileName ?? "Download file"}</a>}
-              {submission.linkUrl && <a href={submission.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 break-all text-sm font-semibold text-accent"><LinkIcon className="size-4 shrink-0" /> {submission.linkUrl}</a>}
+              {submission.linkUrl && <a href={submission.linkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 break-all text-sm font-semibold text-accent-ink"><LinkIcon className="size-4 shrink-0" /> {submission.linkUrl}</a>}
             </div>
           </Card>
           <Card title="Assignment brief">

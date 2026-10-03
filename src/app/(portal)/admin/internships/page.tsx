@@ -32,7 +32,7 @@ export default async function AdminInternshipsPage() {
               const waiting = pending.find((p) => p.area === r.title)?.n ?? 0;
               return (
                 <tr key={r.id}>
-                  <td><Link href={`/admin/internships/${r.id}`} className="font-semibold text-ink hover:text-accent">{r.title}</Link><p className="text-sm text-muted">/courses/{r.slug}</p></td>
+                  <td><Link href={`/admin/internships/${r.id}`} className="font-semibold text-ink hover:text-accent-ink">{r.title}</Link><p className="text-sm text-muted">/courses/{r.slug}</p></td>
                   <td className="text-sm text-body">{linked.length ? linked.join(", ") : <span className="text-muted">Any course</span>}</td>
                   <td>{intakes.find((x) => x.courseId === r.id)?.n ?? 0}</td>
                   <td>{waiting ? <Link href={`/admin/applications?q=${encodeURIComponent(r.title)}`}><Badge tone="accent">{waiting} new</Badge></Link> : <span className="text-muted">–</span>}</td>

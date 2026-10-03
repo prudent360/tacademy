@@ -27,12 +27,12 @@ export default async function NotificationsPage() {
     <>
       <PageHeader title="Notifications" description="Reminders, feedback and updates from your classes." actions={unread > 0 && <ActionButton action={markAllRead} pendingText="Marking…">Mark all as read</ActionButton>} />
       {rows.length ? (
-        <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-[14px] border border-edge bg-white">
+        <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-[14px] border border-edge bg-surface">
           {rows.map((n) => {
             const IconComponent = ICONS[n.kind] ?? BellIcon;
             const content = (
               <div className="flex gap-4 px-5 py-4">
-                <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${n.readAt ? "bg-page text-muted" : "bg-accent-soft text-accent"}`}><IconComponent className="size-5" /></span>
+                <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${n.readAt ? "bg-page text-muted" : "bg-accent-soft text-accent-ink"}`}><IconComponent className="size-5" /></span>
                 <div className="flex min-w-0 grow flex-col gap-0.5">
                   <p className={`text-[15px] ${n.readAt ? "text-body" : "font-semibold text-ink"}`}>{n.title}</p>
                   {n.body && <p className="text-sm text-muted">{n.body}</p>}
@@ -47,7 +47,7 @@ export default async function NotificationsPage() {
       ) : (
         <EmptyState icon={BellIcon} title="No notifications yet">Class reminders, new assignments and feedback will show up here.</EmptyState>
       )}
-      {rows.length === 100 && <p className="text-sm text-muted">Showing your latest 100 notifications. <Link href="/dashboard" className="text-accent">Back to dashboard</Link></p>}
+      {rows.length === 100 && <p className="text-sm text-muted">Showing your latest 100 notifications. <Link href="/dashboard" className="text-accent-ink">Back to dashboard</Link></p>}
     </>
   );
 }

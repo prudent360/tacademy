@@ -37,7 +37,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         actions={<a href={`/api/admin/reports/export?range=${range}`} className={buttonClass.secondary}><DownloadIcon className="size-4" /> Export CSV</a>}
       />
       <nav aria-label="Period" className="flex flex-wrap gap-2">
-        {RANGES.map((r) => <Link key={r.key} href={`/admin/reports?range=${r.key}`} className={`inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold ${range === r.key ? "border-accent bg-accent text-white" : "border-edge-strong bg-white text-body hover:border-accent hover:text-accent"}`}>{r.label}</Link>)}
+        {RANGES.map((r) => <Link key={r.key} href={`/admin/reports?range=${r.key}`} className={`inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold ${range === r.key ? "border-accent bg-accent text-white" : "border-edge-strong bg-surface text-body hover:border-accent hover:text-accent-ink"}`}>{r.label}</Link>)}
       </nav>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

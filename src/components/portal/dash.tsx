@@ -30,14 +30,14 @@ export function GreetingBanner({ title, subtitle, children, aside, tone = "stude
 
 export function BannerButton({ href, children, variant = "light" }: { href: string; children: React.ReactNode; variant?: "light" | "ghost" }) {
   return (
-    <Link href={href} className={`inline-flex h-10 items-center gap-2 rounded-[5px] px-4 text-sm font-semibold transition duration-200 hover:-translate-y-0.5 active:translate-y-0 ${variant === "light" ? "bg-white text-accent shadow-sm hover:bg-accent-soft hover:shadow-md" : "border border-white/30 bg-white/[.04] text-white hover:border-white/50 hover:bg-white/10"}`}>
+    <Link href={href} className={`inline-flex h-10 items-center gap-2 rounded-[5px] px-4 text-sm font-semibold transition duration-200 hover:-translate-y-0.5 active:translate-y-0 ${variant === "light" ? "bg-surface text-accent-ink shadow-sm hover:bg-accent-soft hover:shadow-md" : "border border-white/30 bg-white/[.04] text-white hover:border-white/50 hover:bg-white/10"}`}>
       {children}
     </Link>
   );
 }
 
 const TILE_TONES = {
-  purple: { icon: "bg-accent-soft text-accent", mark: "text-accent-soft" },
+  purple: { icon: "bg-accent-soft text-accent-ink", mark: "text-accent-soft" },
   cyan: { icon: "bg-cyan-soft text-cyan-ink", mark: "text-cyan-soft" },
   green: { icon: "bg-emerald-50 text-emerald-700", mark: "text-emerald-50" },
   amber: { icon: "bg-amber-50 text-amber-700", mark: "text-amber-50" },
@@ -60,7 +60,7 @@ export function StatTile({ label, value, icon: IconComponent, tone = "purple", h
       </span>
     </>
   );
-  const cls = "stat-tile relative flex items-center gap-4 overflow-hidden rounded-[5px] border border-edge bg-white p-5 shadow-[0_1px_2px_rgba(24,19,64,.03)]";
+  const cls = "stat-tile relative flex items-center gap-4 overflow-hidden rounded-[5px] border border-edge bg-surface p-5 shadow-[0_1px_2px_rgba(24,19,64,.03)]";
   return href ? <Link href={href} className={`${cls} group transition duration-200 hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_16px_40px_-24px_rgba(24,19,64,.4)]`}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
@@ -84,13 +84,13 @@ export function ProgressBar({ value, max = 100, tone = "purple", label, detail }
 
 export function QuickAction({ href, icon: IconComponent, title, text, tone = "purple" }: { href: string; icon: Icon; title: string; text: string; tone?: TileTone }) {
   return (
-    <Link href={href} className="group flex items-center gap-4 rounded-[5px] border border-edge bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:border-accent-muted hover:bg-accent-soft/35 hover:shadow-[0_12px_30px_-22px_rgba(24,19,64,.45)]">
+    <Link href={href} className="group flex items-center gap-4 rounded-[5px] border border-edge bg-surface p-4 transition duration-200 hover:-translate-y-0.5 hover:border-accent-muted hover:bg-accent-soft/35 hover:shadow-[0_12px_30px_-22px_rgba(24,19,64,.45)]">
       <span className={`flex size-11 shrink-0 items-center justify-center rounded-[5px] transition duration-200 group-hover:scale-105 ${TILE_TONES[tone].icon}`}><IconComponent className="size-5" /></span>
       <span className="flex min-w-0 grow flex-col">
         <span className="font-semibold text-ink">{title}</span>
         <span className="text-sm text-muted">{text}</span>
       </span>
-      <ArrowRight className="size-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-accent" />
+      <ArrowRight className="size-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-accent-ink" />
     </Link>
   );
 }
@@ -98,10 +98,10 @@ export function QuickAction({ href, icon: IconComponent, title, text, tone = "pu
 /** A panel with a title row and optional "View all" link. */
 export function Panel({ title, href, linkLabel = "View all", children, className = "", icon: IconComponent, padded = true }: { title: string; href?: string; linkLabel?: string; children: React.ReactNode; className?: string; icon?: Icon; padded?: boolean }) {
   return (
-    <section className={`portal-panel flex flex-col rounded-[5px] border border-edge bg-white shadow-[0_1px_2px_rgba(24,19,64,.025)] ${className}`}>
+    <section className={`portal-panel flex flex-col rounded-[5px] border border-edge bg-surface shadow-[0_1px_2px_rgba(24,19,64,.025)] ${className}`}>
       <div className="flex items-center justify-between gap-3 px-5 pb-1 pt-5 md:px-6 md:pt-6">
-        <h2 className="flex items-center gap-2 font-display text-[17px] font-bold text-ink">{IconComponent && <IconComponent className="size-[18px] text-accent" />}{title}</h2>
-        {href && <Link href={href} className="flex items-center gap-1 text-sm font-semibold text-accent hover:text-accent-dark">{linkLabel} <ArrowRight className="size-3.5" /></Link>}
+        <h2 className="flex items-center gap-2 font-display text-[17px] font-bold text-ink">{IconComponent && <IconComponent className="size-[18px] text-accent-ink" />}{title}</h2>
+        {href && <Link href={href} className="flex items-center gap-1 text-sm font-semibold text-accent-ink hover:text-accent-ink-strong">{linkLabel} <ArrowRight className="size-3.5" /></Link>}
       </div>
       <div className={padded ? "grow p-5 pt-3 md:px-6 md:pb-6" : "grow pt-3"}>{children}</div>
     </section>
@@ -142,7 +142,7 @@ export function BarChart({ data, format = (v) => String(v), tone = "purple", hei
 /** Date block used in compact lists. */
 export function DateChip({ day, month, muted = false }: { day: string; month: string; muted?: boolean }) {
   return (
-    <span className={`flex size-12 shrink-0 flex-col items-center justify-center rounded-[5px] ${muted ? "bg-page text-muted" : "bg-accent-soft text-accent"}`}>
+    <span className={`flex size-12 shrink-0 flex-col items-center justify-center rounded-[5px] ${muted ? "bg-page text-muted" : "bg-accent-soft text-accent-ink"}`}>
       <span className="font-display text-lg font-bold leading-none">{day}</span>
       <span className="text-[10px] font-semibold uppercase tracking-wider">{month}</span>
     </span>

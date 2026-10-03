@@ -211,6 +211,13 @@
       "when": 1790977308936,
       "tag": "0029_discount_deleted",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791071197415,
+      "tag": "0030_curriculum_lead_details",
+      "breakpoints": true
     }
   ]
 }

@@ -50,7 +50,7 @@ export function SqlQuestionFields({ question, datasets }: { question?: QuizQuest
     <div ref={anchor} className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-col gap-2">
         <label htmlFor="sql-dataset" className="text-sm font-semibold text-ink">Dataset</label>
-        <select id="sql-dataset" name="datasetId" value={datasetId} onChange={(e) => { setDatasetId(Number(e.target.value)); setOutcome(null); }} className="h-10 rounded-[5px] border border-edge-strong bg-white px-3 text-sm text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10">
+        <select id="sql-dataset" name="datasetId" value={datasetId} onChange={(e) => { setDatasetId(Number(e.target.value)); setOutcome(null); }} className="h-10 rounded-[5px] border border-edge-strong bg-surface px-3 text-sm text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10">
           {datasets.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
         {dataset && <SqlTables tables={dataset.tables} />}

@@ -38,7 +38,7 @@ export function CourseForm({ action, course, ai = false, kind = "course", linkab
           {linkable.length ? (
             <div className="grid gap-2 sm:grid-cols-2">
               {linkable.map((c) => (
-                <label key={c.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-edge bg-white px-3.5 py-2.5 text-sm font-semibold text-ink hover:bg-page has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
+                <label key={c.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-edge bg-surface px-3.5 py-2.5 text-sm font-semibold text-ink hover:bg-page has-[:checked]:border-accent has-[:checked]:bg-accent-soft">
                   <input type="checkbox" name="linkedCourseIds" value={c.id} defaultChecked={linked.includes(c.id)} className="size-4 accent-accent" />{c.title}
                 </label>
               ))}

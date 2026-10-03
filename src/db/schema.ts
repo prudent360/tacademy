@@ -335,6 +335,12 @@ export const curriculumRequests = pgTable("curriculum_requests", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
+  /** "Which best describes you?" (optional), e.g. "Working professional". */
+  background: text("background").notNull().default(""),
+  /** Ticked "send me updates and offers". Only these leads may get marketing emails. */
+  marketingOptIn: boolean("marketing_opt_in").notNull().default(false),
+  /** Where they came from: UTM tags, else the referring site. */
+  source: text("source").notNull().default(""),
   createdAt: createdAt(),
 }, (t) => [index("curriculum_requests_created_idx").on(t.createdAt)]);
 

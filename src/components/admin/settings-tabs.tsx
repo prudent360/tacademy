@@ -24,7 +24,7 @@ import { relativeTime } from "@/lib/time";
 
 function Section({ title, description, icon, badge, children, footer }: { title: string; description?: React.ReactNode; icon?: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
-    <section className="rounded-[14px] border border-edge bg-white">
+    <section className="rounded-[14px] border border-edge bg-surface">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4 md:px-6">
         <div className="flex items-start gap-3">
           {icon}
@@ -57,7 +57,7 @@ function ModePicker({ name, value }: { name: string; value: "test" | "live" }) {
       <legend className="mb-1.5 text-sm font-semibold text-ink">Mode</legend>
       <div className="inline-flex w-fit rounded-lg border border-edge-strong bg-panel p-1">
         {(["test", "live"] as const).map((m) => (
-          <label key={m} className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-semibold text-muted has-[:checked]:bg-white has-[:checked]:text-accent has-[:checked]:shadow-sm">
+          <label key={m} className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-semibold text-muted has-[:checked]:bg-surface has-[:checked]:text-accent-ink has-[:checked]:shadow-sm">
             <input type="radio" name={name} value={m} defaultChecked={value === m} className="sr-only" />
             {m === "test" ? "Test" : "Live"}
           </label>
@@ -100,7 +100,7 @@ export async function GeneralTab({ s }: { s: Settings }) {
           <legend className="mb-1.5 text-sm font-semibold text-ink">Currencies you accept</legend>
           <div className="flex flex-wrap gap-2">
             {CURRENCIES.map((c) => (
-              <label key={c.code} className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-edge-strong px-3.5 text-sm font-semibold has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent">
+              <label key={c.code} className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-edge-strong px-3.5 text-sm font-semibold has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-accent-ink">
                 <input type="checkbox" name="currencies" value={c.code} defaultChecked={s.currencies.includes(c.code)} className="size-4 accent-accent" />
                 {c.code} {takenBy(c.code).length ? <span className="font-normal text-muted">{takenBy(c.code).join(" · ")}</span> : <span className="font-normal text-amber-700">No gateway on</span>}
               </label>
@@ -162,7 +162,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
           { name: "TransactPay", logo: <Logo text="T" color="#1F4ED8" />, badge: transactpayBadge(true), text: transactpay.currencies?.length ? `First for ${transactpay.currencies.join(" · ")}` : "African currencies, detected" },
           { name: "Bank transfer", logo: <span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>, badge: bank.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : <Badge>Off</Badge>, text: bank.enabled ? `${bank.currency}, confirmed by admins` : "Manual confirmation" },
         ].map((g) => (
-          <div key={g.name} className="flex items-center gap-3 rounded-[14px] border border-edge bg-white p-4">
+          <div key={g.name} className="flex items-center gap-3 rounded-[14px] border border-edge bg-surface p-4">
             {g.logo}
             <div className="flex min-w-0 flex-col gap-1"><span className="font-semibold text-ink">{g.name}</span><span className="whitespace-nowrap text-xs text-muted">{g.text}</span></div>
             <span className="ml-auto">{g.badge}</span>
@@ -171,7 +171,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
       </div>
 
       <Section title="Stripe" description="Cards, Apple Pay and Google Pay for GBP, USD, EUR and CAD." icon={<Logo text="S" color="#635BFF" />} badge={gatewayBadge(stripe)}
-        footer={<>Find your keys in the <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">Stripe Dashboard → Developers → API keys</a>. Create the webhook under Developers → Webhooks with the events <code className="font-mono">checkout.session.completed</code> and <code className="font-mono">checkout.session.async_payment_succeeded</code>.</>}>
+        footer={<>Find your keys in the <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">Stripe Dashboard → Developers → API keys</a>. Create the webhook under Developers → Webhooks with the events <code className="font-mono">checkout.session.completed</code> and <code className="font-mono">checkout.session.async_payment_succeeded</code>.</>}>
         <Switch label="Accept payments with Stripe" name="stripeEnabled" defaultChecked={stripe.enabled} hint="When off, Stripe currencies aren't offered at checkout." />
         {envNote(stripe, "STRIPE_SECRET_KEY")}
         <ModePicker name="stripeMode" value={stripe.mode} />
@@ -194,7 +194,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
       </Section>
 
       <Section title="Paystack" description="Card, bank transfer and USSD for NGN. A Paystack account only takes its own country’s currency, so other African currencies go through TransactPay." icon={<Logo text="P" color="#0BA4DB" />} badge={gatewayBadge(paystack)}
-        footer={<>Find your keys in the <a href="https://dashboard.paystack.com/#/settings/developers" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">Paystack Dashboard → Settings → API Keys & Webhooks</a>, and paste the webhook URL there.</>}>
+        footer={<>Find your keys in the <a href="https://dashboard.paystack.com/#/settings/developers" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">Paystack Dashboard → Settings → API Keys & Webhooks</a>, and paste the webhook URL there.</>}>
         <Switch label="Accept payments with Paystack" name="paystackEnabled" defaultChecked={paystack.enabled} hint="When off, Paystack currencies aren't offered at checkout." />
         {envNote(paystack, "PAYSTACK_SECRET_KEY")}
         <ModePicker name="paystackMode" value={paystack.mode} />
@@ -215,7 +215,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
       </Section>
 
       <Section title="TransactPay" description="Card, bank transfer, OPay and mobile money across Africa. When switched on, every currency your TransactPay account takes goes through TransactPay first, with Paystack as the backup." icon={<Logo text="T" color="#1F4ED8" />} badge={transactpayBadge()}
-        footer={<>Find all three keys in the <a href="https://app.transactpay.ai/sign-in" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">TransactPay Dashboard → Settings → API Keys &amp; Webhooks</a> (switch between Test and Live at the top right; each has its own keys). Paste the webhook URL there too.</>}>
+        footer={<>Find all three keys in the <a href="https://app.transactpay.ai/sign-in" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">TransactPay Dashboard → Settings → API Keys &amp; Webhooks</a> (switch between Test and Live at the top right; each has its own keys). Paste the webhook URL there too.</>}>
         <Switch label="Take payments with TransactPay first" name="transactpayEnabled" defaultChecked={transactpay.enabled} hint="Students paying in a currency TransactPay takes get its checkout. If TransactPay is off, doesn't take a currency or can't start a payment, Paystack (or Stripe) is used instead." />
         {envNote(transactpay, "TRANSACTPAY_SECRET_KEY")}
         <ModePicker name="transactpayMode" value={transactpay.mode} />
@@ -259,7 +259,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
         <Textarea label="Instructions" name="bankInstructions" defaultValue={bank.instructions} rows={3} placeholder="Use your payment reference as the transfer description. Places are confirmed within one working day." />
       </Section>
 
-      <div className="sticky bottom-20 z-10 flex items-center justify-between gap-4 rounded-[14px] border border-edge bg-white/95 px-5 py-3 shadow-lg backdrop-blur lg:bottom-4">
+      <div className="sticky bottom-20 z-10 flex items-center justify-between gap-4 rounded-[14px] border border-edge bg-surface/95 px-5 py-3 shadow-lg backdrop-blur lg:bottom-4">
         <p className="text-sm text-muted">Secret keys are encrypted before they&apos;re stored and are never shown again in full.</p>
         <SubmitButton>Save payment settings</SubmitButton>
       </div>
@@ -282,7 +282,7 @@ export async function EmailTab({ s }: { s: Settings }) {
             resend={<>
               {cfg.source === "environment" && <Notice tone="accent">Currently using the <code className="font-mono">RESEND_API_KEY</code> environment variable. A key saved here takes priority.</Notice>}
               <SecretInput label="Resend API key" name="apiKey" masked={maskSecret(s.email.apiKey)} placeholder="re_…" />
-              <p className="text-xs text-muted">Create an API key at <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">resend.com/api-keys</a> and verify your domain under Domains so emails come from your own address.</p>
+              <p className="text-xs text-muted">Create an API key at <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">resend.com/api-keys</a> and verify your domain under Domains so emails come from your own address.</p>
             </>}
             smtp={<>
               <div className="grid gap-5 md:grid-cols-[2fr_1fr_1fr]">
@@ -320,7 +320,7 @@ export async function EmailTab({ s }: { s: Settings }) {
               <tr key={e.id}>
                 <td className="whitespace-nowrap text-muted">{relativeTime(e.createdAt)}</td>
                 <td className="text-body">{e.to}</td>
-                <td><Link href={`/admin/emails/log/${e.id}`} className="font-semibold text-ink hover:text-accent">{e.subject}</Link></td>
+                <td><Link href={`/admin/emails/log/${e.id}`} className="font-semibold text-ink hover:text-accent-ink">{e.subject}</Link></td>
                 <td className="text-muted">{EMAIL_TEMPLATES[e.template as TemplateKey]?.name ?? e.template}</td>
                 <td><StatusBadge status={e.status} label={e.status === "logged" ? "Logged only" : e.status === "skipped" ? "Switched off" : undefined} />{e.error && e.status === "failed" && <p className="mt-1 max-w-[260px] text-xs text-red-700">{e.error}</p>}</td>
               </tr>
@@ -348,7 +348,7 @@ export async function TemplatesTab() {
           const customised = Boolean(row && (row.subject !== def.subject || row.body !== def.body));
           const vars = Object.keys({ ...COMMON_VARIABLES, ...def.variables });
           return (
-            <li key={key} className={`rounded-[14px] border bg-white p-5 transition-colors ${enabled ? "border-edge hover:border-accent-muted" : "border-dashed border-edge-strong bg-panel"}`}>
+            <li key={key} className={`rounded-[14px] border bg-surface p-5 transition-colors ${enabled ? "border-edge hover:border-accent-muted" : "border-dashed border-edge-strong bg-panel"}`}>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <div className="flex flex-wrap items-center gap-2">
@@ -363,7 +363,7 @@ export async function TemplatesTab() {
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  <Link href={`/admin/emails/${key}#preview`} className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-edge-strong bg-white px-3.5 text-sm font-semibold text-ink hover:bg-page"><EyeIcon className="size-4" /> Preview</Link>
+                  <Link href={`/admin/emails/${key}#preview`} className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-edge-strong bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-page"><EyeIcon className="size-4" /> Preview</Link>
                   <Link href={`/admin/emails/${key}`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-sm font-semibold text-white hover:bg-accent-dark"><EditIcon className="size-4" /> Edit</Link>
                   {!required && (enabled
                     ? <ActionButton action={setTemplateEnabled.bind(null, key, false)} variant="danger" pendingText="…">Turn off</ActionButton>
@@ -396,12 +396,12 @@ export async function AiTab({ s }: { s: Settings }) {
             openai={<>
               <SecretInput label="OpenAI API key" name="openaiApiKey" masked={maskSecret(s.ai?.openaiApiKey)} placeholder="sk-…" />
               <Select label="Model" name="openaiModel" defaultValue={cfg.openaiModel} options={AI_MODELS.openai.map((m) => ({ value: m.id, label: m.label }))} hint="Sol is a good balance. Luna costs far less, which suits the public course advisor; Astra is the most capable." className="max-w-[420px]" />
-              <p className="text-xs text-muted">Create a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">platform.openai.com/api-keys</a> and add credit under Billing.</p>
+              <p className="text-xs text-muted">Create a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">platform.openai.com/api-keys</a> and add credit under Billing.</p>
             </>}
             anthropic={<>
               <SecretInput label="Anthropic API key" name="aiApiKey" masked={maskSecret(s.ai?.apiKey)} placeholder="sk-ant-…" />
               <Select label="Model" name="aiModel" defaultValue={cfg.model} options={AI_MODELS.anthropic.map((m) => ({ value: m.id, label: m.label }))} hint="Opus gives the best answers and grading. Sonnet or Haiku cost less." className="max-w-[420px]" />
-              <p className="text-xs text-muted">Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent">console.anthropic.com</a>.</p>
+              <p className="text-xs text-muted">Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">console.anthropic.com</a>.</p>
             </>}
           />
         </Section>
@@ -433,7 +433,7 @@ export async function SeoTab({ s }: { s: Settings }) {
   return (
     <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
       <ActionForm action={saveSeo} className="flex flex-col gap-6">
-        <Section title="Search appearance" description="How your pages look in Google and other search results." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><SearchIcon className="size-5" /></span>}>
+        <Section title="Search appearance" description="How your pages look in Google and other search results." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink"><SearchIcon className="size-5" /></span>}>
           <Input label="Home page title" name="homeTitle" defaultValue={saved.homeTitle} maxLength={90} placeholder={seo.siteName} hint="The headline for your home page in search results. Aim for under 60 characters, e.g. Tekskillup Academy | Data & Tech Training in Nigeria." />
           <Textarea label="Home page description" name="homeDescription" defaultValue={saved.homeDescription} rows={3} maxLength={300} placeholder={seo.description} hint="The text under the headline. Aim for 120–160 characters that make someone want to click." />
           <Input label="Title pattern for other pages" name="titleTemplate" defaultValue={saved.titleTemplate} maxLength={120} placeholder={`%s | ${seo.siteName}`} hint="%s is replaced by the page name, e.g. “Courses | Tekskillup Academy”." className="[&_input]:font-mono [&_input]:text-sm" />
@@ -519,7 +519,7 @@ export async function RemindersTab() {
   return (
     <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
       <ActionForm action={saveReminders} className="flex flex-col gap-6">
-        <Section title="Class reminders" description="Sent by email and in-app to every active student in the cohort." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><ClockIcon className="size-5" /></span>}>
+        <Section title="Class reminders" description="Sent by email and in-app to every active student in the cohort." icon={<span className="flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink"><ClockIcon className="size-5" /></span>}>
           <Switch label="The day before" name="dayBefore" defaultChecked={r.dayBefore} hint="Sent within 24 hours of each class." />
           <Switch label="Shortly before class starts" name="hourBefore" defaultChecked={r.hourBefore} hint="Includes the joining link or venue." />
           <Input label="Minutes before class" name="hourLeadMinutes" type="number" min={15} max={360} step={5} defaultValue={r.hourLeadMinutes} className="max-w-[240px]" />
@@ -528,7 +528,7 @@ export async function RemindersTab() {
           <Switch label="Remind before the deadline" name="assignmentDue" defaultChecked={r.assignmentDue} />
           <Input label="Hours before the deadline" name="assignmentLeadHours" type="number" min={1} max={168} defaultValue={r.assignmentLeadHours} className="max-w-[240px]" />
         </Section>
-        <p className="text-sm text-muted">Students can turn reminder emails off in their account; in-app notifications are always created. The wording is in the <Link href="/admin/settings?tab=templates" className="font-semibold text-accent">Class reminder</Link> and <Link href="/admin/settings?tab=templates" className="font-semibold text-accent">Assignment due soon</Link> templates.</p>
+        <p className="text-sm text-muted">Students can turn reminder emails off in their account; in-app notifications are always created. The wording is in the <Link href="/admin/settings?tab=templates" className="font-semibold text-accent-ink">Class reminder</Link> and <Link href="/admin/settings?tab=templates" className="font-semibold text-accent-ink">Assignment due soon</Link> templates.</p>
         <div><SubmitButton>Save reminder settings</SubmitButton></div>
       </ActionForm>
       <Section title="Scheduler" badge={cron ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> Protected</Badge> : <Badge tone="amber"><AlertIcon className="size-3.5" /> CRON_SECRET missing</Badge>}>

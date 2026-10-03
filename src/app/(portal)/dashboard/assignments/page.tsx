@@ -30,7 +30,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
           <tbody>
             {shown.map(({ assignment, course, submission, state }) => (
               <tr key={assignment.id}>
-                <td><Link href={`/dashboard/assignments/${assignment.id}`} className="font-semibold text-ink hover:text-accent">{assignment.title}</Link></td>
+                <td><Link href={`/dashboard/assignments/${assignment.id}`} className="font-semibold text-ink hover:text-accent-ink">{assignment.title}</Link></td>
                 <td className="text-muted">{course.title}</td>
                 <td className="whitespace-nowrap text-muted">{assignment.dueAt ? formatDateTime(assignment.dueAt, settings.timezone, { zone: false }) : "–"}</td>
                 <td><Badge tone={STATE_LABEL[state].tone}>{STATE_LABEL[state].label}</Badge></td>

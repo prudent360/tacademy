@@ -36,7 +36,7 @@ export function ReviewForm({ action, initial }: { action: Action; initial?: { ra
         </span>
         <span className="text-sm font-semibold text-muted">{LABELS[shown] || "Tap to rate"}</span>
       </fieldset>
-      <textarea name="body" required minLength={10} maxLength={1000} rows={3} defaultValue={initial?.body} placeholder="What did you enjoy? What could be better? Would you recommend it?" className="w-full rounded-[5px] border border-edge-strong bg-white px-3.5 py-3 text-[15px] text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
+      <textarea name="body" required minLength={10} maxLength={1000} rows={3} defaultValue={initial?.body} placeholder="What did you enjoy? What could be better? Would you recommend it?" className="w-full rounded-[5px] border border-edge-strong bg-surface px-3.5 py-3 text-[15px] text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
       {state?.error && <p role="alert" className="text-sm text-red-700">{state.error}</p>}
       <div><button type="submit" disabled={pending || !rating} className="inline-flex h-10 cursor-pointer items-center rounded-[5px] bg-accent px-5 text-sm font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-50">{pending ? "Sending…" : initial ? "Update review" : "Submit review"}</button></div>
     </form>

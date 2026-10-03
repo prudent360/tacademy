@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { markAllRead } from "@/app/actions/account";
 import { logout, resendVerification } from "@/app/actions/auth";
 import { ActionButton } from "@/components/forms";
-import { PortalShell } from "@/components/portal/shell";
+import { PortalShell, type Theme } from "@/components/portal/shell";
 import { permissionsFor, requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
 import { latestNotifications, toGradeCount, unreadCount } from "@/lib/portal";
@@ -22,6 +23,8 @@ export default async function PortalLayout({ children }: { children: React.React
   const [settings, unread, toGrade, recent] = await Promise.all([getSettings(), unreadCount(user.id), toGradeCount(user), latestNotifications(user.id)]);
   const xp = user.role === "student" ? await xpForUser(user.id, 0) : null;
   const perms = await permissionsFor(user);
+  const savedTheme = (await cookies()).get("tk-theme")?.value;
+  const theme: Theme = savedTheme === "dark" || savedTheme === "system" ? savedTheme : "light";
   const newApplications = perms.has("applications.review") ? (await (await getDb()).select({ n: count() }).from(internshipApplications).where(eq(internshipApplications.status, "new")))[0]?.n ?? 0 : 0;
   const newInstructorApplications = perms.has("instructors.review") ? (await (await getDb()).select({ n: count() }).from(instructorApplications).where(eq(instructorApplications.status, "new")))[0]?.n ?? 0 : 0;
 
@@ -31,6 +34,8 @@ export default async function PortalLayout({ children }: { children: React.React
       user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl, gender: user.gender }}
       siteName={settings.siteName}
       logoUrl={settings.logoUrl}
+      logoDarkUrl={settings.logoDarkUrl}
+      theme={theme}
       unread={unread}
       toGrade={toGrade}
       newApplications={newApplications}

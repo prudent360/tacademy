@@ -67,7 +67,7 @@ export async function QuizEditor({ lessonId }: { lessonId: number }) {
                         </span>
                       )}
                     </span>
-                    <span className="shrink-0 text-sm font-semibold text-accent">Edit</span>
+                    <span className="shrink-0 text-sm font-semibold text-accent-ink">Edit</span>
                   </summary>
                   <div className="flex flex-col gap-4 border-t border-line p-4">
                     <QuestionForm action={saveQuestion.bind(null, quiz.id, q.id)} question={q} submitLabel="Save question" datasets={datasets} />
@@ -90,7 +90,7 @@ export async function QuizEditor({ lessonId }: { lessonId: number }) {
         </Card>
       )}
 
-      <Card title="Add a question" action={<Link href="/teach/datasets" className="text-sm font-semibold text-accent hover:text-accent-dark">SQL datasets</Link>}>
+      <Card title="Add a question" action={<Link href="/teach/datasets" className="text-sm font-semibold text-accent-ink hover:text-accent-ink-strong">SQL datasets</Link>}>
         <QuestionForm action={saveQuestion.bind(null, quiz.id, null)} submitLabel="Add question" datasets={datasets} />
       </Card>
     </div>

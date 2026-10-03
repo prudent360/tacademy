@@ -65,7 +65,7 @@ export function DatasetForm({ action, dataset, canReplaceData = true, lockedReas
   }
 
   const tab = (value: Source, label: string) => (
-    <button type="button" onClick={() => setSource(value)} aria-pressed={source === value} className={`h-9 cursor-pointer rounded-lg px-3.5 text-sm font-semibold ${source === value ? "bg-accent-soft text-accent" : "text-muted hover:text-ink"}`}>{label}</button>
+    <button type="button" onClick={() => setSource(value)} aria-pressed={source === value} className={`h-9 cursor-pointer rounded-lg px-3.5 text-sm font-semibold ${source === value ? "bg-accent-soft text-accent-ink" : "text-muted hover:text-ink"}`}>{label}</button>
   );
 
   return (
@@ -77,7 +77,7 @@ export function DatasetForm({ action, dataset, canReplaceData = true, lockedReas
         {!replacing ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-edge bg-panel px-4 py-3 text-sm">
             <span className="text-body">{canReplaceData ? "Keeping the current data." : lockedReason}</span>
-            {canReplaceData && <button type="button" onClick={() => { setReplacing(true); setSetupSql(""); setChecked(null); }} className="cursor-pointer font-semibold text-accent hover:text-accent-dark">Replace the data</button>}
+            {canReplaceData && <button type="button" onClick={() => { setReplacing(true); setSetupSql(""); setChecked(null); }} className="cursor-pointer font-semibold text-accent-ink hover:text-accent-ink-strong">Replace the data</button>}
           </div>
         ) : (
           <fieldset className="flex min-w-0 flex-col gap-3">
@@ -85,13 +85,13 @@ export function DatasetForm({ action, dataset, canReplaceData = true, lockedReas
             <div className="flex gap-1">{tab("csv", "Upload CSV files")}{tab("sql", "Paste SQL")}</div>
             {source === "csv" ? (
               <div className="flex flex-col gap-2">
-                <input type="file" accept=".csv,text/csv" multiple onChange={(e) => readFiles(e.target.files)} className="w-full min-w-0 text-sm text-body file:mr-3 file:h-10 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-4 file:font-semibold file:text-accent" />
+                <input type="file" accept=".csv,text/csv" multiple onChange={(e) => readFiles(e.target.files)} className="w-full min-w-0 text-sm text-body file:mr-3 file:h-10 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:px-4 file:font-semibold file:text-accent-ink" />
                 <p className="text-[13px] text-muted">One file per table; the file name becomes the table name (orders.csv → orders). The first row must be the column names. Column types are worked out from the values.</p>
                 {files.length > 0 && <p className="text-sm text-body">Ready: {files.map((f) => `${f.table} (${f.rows} rows)`).join(", ")}</p>}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <textarea value={setupSql} onChange={(e) => { setSetupSql(e.target.value); setChecked(null); }} rows={10} spellCheck={false} aria-label="SQL that creates and fills the tables" placeholder={"CREATE TABLE sales (id integer, region text, amount numeric);\nINSERT INTO sales VALUES (1, 'North', 120.50), (2, 'South', 98.00);"} className="w-full rounded-[8px] border border-edge-strong bg-white p-3 font-mono text-[13px] text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
+                <textarea value={setupSql} onChange={(e) => { setSetupSql(e.target.value); setChecked(null); }} rows={10} spellCheck={false} aria-label="SQL that creates and fills the tables" placeholder={"CREATE TABLE sales (id integer, region text, amount numeric);\nINSERT INTO sales VALUES (1, 'North', 120.50), (2, 'South', 98.00);"} className="w-full rounded-[8px] border border-edge-strong bg-surface p-3 font-mono text-[13px] text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10" />
                 <p className="text-[13px] text-muted">CREATE TABLE and INSERT statements, as many as you need.</p>
               </div>
             )}

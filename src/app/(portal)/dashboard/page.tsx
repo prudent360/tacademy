@@ -91,7 +91,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
             </span>
             <Countdown to={new Date(next.session.startsAt).toISOString()} />
             {next.session.mode === "virtual" && next.session.meetingUrl ? (
-              <a href={next.session.meetingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-white text-sm font-semibold text-accent hover:bg-accent-soft"><VideoIcon className="size-4" /> Joining link</a>
+              <a href={next.session.meetingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-surface text-sm font-semibold text-accent-ink hover:bg-accent-soft"><VideoIcon className="size-4" /> Joining link</a>
             ) : next.session.venue ? (
               <p className="flex max-w-[260px] items-start gap-2 text-sm text-white/80"><PinIcon className="mt-0.5 size-4 shrink-0" /> {next.session.venue}</p>
             ) : null}
@@ -131,7 +131,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
               {xp.recent.map((item, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 py-2">
                   <span className="min-w-0 truncate text-body">{item.label}</span>
-                  <span className="shrink-0 font-semibold text-accent">+{item.points} XP</span>
+                  <span className="shrink-0 font-semibold text-accent-ink">+{item.points} XP</span>
                 </li>
               ))}
             </ul>
@@ -140,9 +140,9 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
       </Panel>
 
       {(nextLearning || due[0] || next) && (
-        <Link href={nextLearning ? `/dashboard/cohorts/${nextLearning.cohortId}/learn/${nextLearning.lesson.id}` : due[0] ? `/dashboard/assignments/${due[0].assignment.id}` : `/dashboard/cohorts/${next!.session.cohortId}`} className="group flex items-center justify-between gap-5 rounded-[5px] border border-accent-muted/50 bg-[linear-gradient(100deg,#efedff,#eefcff)] p-5 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_16px_35px_-28px_rgba(79,63,215,.75)]">
-          <span className="flex min-w-0 flex-col gap-1"><span className="text-xs font-bold uppercase tracking-[1.2px] text-accent">Continue learning</span><span className="truncate font-display text-lg font-bold text-ink">{nextLearning?.lesson.title ?? due[0]?.assignment.title ?? next!.session.title}</span><span className="truncate text-sm text-muted">{nextLearning ? `${nextLearning.courseModule.title} · ${nextLearning.lesson.estimatedMinutes} min` : due[0] ? `${due[0].course.title} · ${STATE_LABEL[due[0].state].label}` : `${next!.course.title} · ${formatSessionRange(next!.session.startsAt, next!.session.endsAt, tz)}`}</span></span>
-          <span className="shrink-0 font-semibold text-accent transition group-hover:translate-x-1">Continue →</span>
+        <Link href={nextLearning ? `/dashboard/cohorts/${nextLearning.cohortId}/learn/${nextLearning.lesson.id}` : due[0] ? `/dashboard/assignments/${due[0].assignment.id}` : `/dashboard/cohorts/${next!.session.cohortId}`} className="group flex items-center justify-between gap-5 rounded-[5px] border border-accent-muted/50 bg-[linear-gradient(100deg,var(--color-accent-soft),var(--color-cyan-soft))] p-5 transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_16px_35px_-28px_rgba(79,63,215,.75)]">
+          <span className="flex min-w-0 flex-col gap-1"><span className="text-xs font-bold uppercase tracking-[1.2px] text-accent-ink">Continue learning</span><span className="truncate font-display text-lg font-bold text-ink">{nextLearning?.lesson.title ?? due[0]?.assignment.title ?? next!.session.title}</span><span className="truncate text-sm text-muted">{nextLearning ? `${nextLearning.courseModule.title} · ${nextLearning.lesson.estimatedMinutes} min` : due[0] ? `${due[0].course.title} · ${STATE_LABEL[due[0].state].label}` : `${next!.course.title} · ${formatSessionRange(next!.session.startsAt, next!.session.endsAt, tz)}`}</span></span>
+          <span className="shrink-0 font-semibold text-accent-ink transition group-hover:translate-x-1">Continue →</span>
         </Link>
       )}
 
@@ -153,7 +153,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
               <Link key={p.cohort.id} href={`/dashboard/cohorts/${p.cohort.id}`} className="group flex flex-col gap-4 rounded-[5px] border border-edge p-5 transition hover:-translate-y-0.5 hover:border-accent-muted hover:bg-panel">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-col gap-1">
-                    <p className="font-display text-[17px] font-bold text-ink group-hover:text-accent">{p.course.title}</p>
+                    <p className="font-display text-[17px] font-bold text-ink group-hover:text-accent-ink">{p.course.title}</p>
                     <p className="text-sm text-muted">{p.cohort.name}{p.cohort.startDate ? ` · ${formatDateOnly(p.cohort.startDate)} – ${formatDateOnly(p.cohort.endDate)}` : ""}</p>
                   </div>
                   {p.enrollment.status === "completed" ? <Badge tone="accent">Completed</Badge> : <ModeBadge mode={p.cohort.deliveryMode} />}
@@ -194,7 +194,7 @@ export default async function StudentDashboard({ searchParams }: { searchParams:
                 );
               })}
             </ul>
-          ) : <PanelEmpty icon={CalendarIcon} action={cohorts.length ? undefined : <Link href="/dashboard/courses" className="text-sm font-semibold text-accent">Find a course →</Link>}>{cohorts.length ? "No upcoming classes yet." : "Enrol on a cohort to see your classes here."}</PanelEmpty>}
+          ) : <PanelEmpty icon={CalendarIcon} action={cohorts.length ? undefined : <Link href="/dashboard/courses" className="text-sm font-semibold text-accent-ink">Find a course →</Link>}>{cohorts.length ? "No upcoming classes yet." : "Enrol on a cohort to see your classes here."}</PanelEmpty>}
         </Panel>
 
         <div className="flex flex-col gap-6">

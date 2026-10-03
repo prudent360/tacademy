@@ -33,9 +33,9 @@ export default async function CurriculumRequestsPage({ searchParams }: { searchP
         <tr key={row.id}>
           <td className="whitespace-nowrap text-body">{formatDateTime(row.createdAt, settings.timezone, { zone: false })}</td>
           <td className="font-semibold text-ink">{row.name}</td>
-          <td><a href={`mailto:${row.email}`} className="text-accent hover:underline">{row.email}</a></td>
-          <td className="whitespace-nowrap"><a href={`tel:${row.phone.replace(/\s/g, "")}`} className="text-body hover:text-accent">{row.phone}</a></td>
-          <td>{row.courseId ? <Link href={`/admin/courses/${row.courseId}`} className="text-body hover:text-accent">{row.courseTitle}</Link> : row.courseTitle}</td>
+          <td><a href={`mailto:${row.email}`} className="text-accent-ink hover:underline">{row.email}</a></td>
+          <td className="whitespace-nowrap"><a href={`tel:${row.phone.replace(/\s/g, "")}`} className="text-body hover:text-accent-ink">{row.phone}</a></td>
+          <td>{row.courseId ? <Link href={`/admin/courses/${row.courseId}`} className="text-body hover:text-accent-ink">{row.courseTitle}</Link> : row.courseTitle}</td>
         </tr>
       ))}</tbody></DataTable>
       <Pagination page={page} pages={Math.ceil(total / PAGE_SIZE)} href={(n) => `/admin/leads?page=${n}`} />

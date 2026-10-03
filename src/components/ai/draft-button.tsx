@@ -35,7 +35,7 @@ export function AiDraftButton({ draft, label = "Draft with AI", confirmReplace =
 
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <button ref={ref} type="button" onClick={run} disabled={state.busy} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-accent-muted/70 bg-accent-soft px-3 text-xs font-semibold text-accent transition hover:border-accent disabled:cursor-wait disabled:opacity-70">
+      <button ref={ref} type="button" onClick={run} disabled={state.busy} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-accent-muted/70 bg-accent-soft px-3 text-xs font-semibold text-accent-ink transition hover:border-accent disabled:cursor-wait disabled:opacity-70">
         <SparkIcon className="size-3.5" /> {state.busy ? "Drafting…" : label}
       </button>
       {state.error && <span role="alert" className="text-xs text-red-700">{state.error}</span>}

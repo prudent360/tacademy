@@ -35,7 +35,7 @@ export default async function AdminCertificatesPage() {
                 <td className="font-mono text-xs text-muted">{certificate.code}</td>
                 <td className="whitespace-nowrap text-muted">{formatDateOnly(certificate.issuedAt.toISOString().slice(0, 10))}</td>
                 <td><StatusBadge status={certificate.revokedAt ? "cancelled" : "completed"} label={certificate.revokedAt ? "Revoked" : "Verified"} /></td>
-                <td className="text-right"><Link href={`/certificates/${certificate.code}`} target="_blank" className="inline-flex h-9 items-center gap-1.5 rounded-[5px] border border-edge-strong bg-white px-3 text-sm font-semibold text-ink hover:border-accent-muted hover:text-accent">Open <ExternalIcon className="size-3.5" /></Link></td>
+                <td className="text-right"><Link href={`/certificates/${certificate.code}`} target="_blank" className="inline-flex h-9 items-center gap-1.5 rounded-[5px] border border-edge-strong bg-surface px-3 text-sm font-semibold text-ink hover:border-accent-muted hover:text-accent-ink">Open <ExternalIcon className="size-3.5" /></Link></td>
               </tr>
             ))}
           </tbody>

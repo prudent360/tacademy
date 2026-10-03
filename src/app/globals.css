@@ -35,6 +35,139 @@
   --color-cyan-soft: #e4f7fd;
   --color-cyan-ink: #0a6d8c;
   --color-cyan-light: #8fdff7;
+  /* Cards and panels: white in light mode, dark in dark mode. */
+  --color-surface: #ffffff;
+  /* Accent-coloured text, kept readable on dark cards in dark mode. */
+  --color-accent-ink: #4f3fd7;
+  --color-accent-ink-strong: #3d2fb8;
+}
+
+/* ---------- Dark mode (portal only) ----------
+   The portal shell carries .theme-dark, or .theme-system (follows the device). Re-pointing the colour
+   tokens darkens every page without per-page changes; `dark:` is there for the odd exception. */
+@custom-variant dark {
+  &:where(:root:has(.theme-dark) *) { @slot; }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:has(.theme-system) *) { @slot; }
+  }
+}
+
+:root:has(.theme-dark) {
+  color-scheme: dark;
+  --color-accent: #6a5ce8;
+  --color-accent-dark: #5a4bdc;
+  --color-accent-soft: #252048;
+  --color-accent-muted: #4b4392;
+  --color-accent-mid: #7a6eef;
+  --color-accent-ink: #a49cf6;
+  --color-accent-ink-strong: #c4befa;
+  --color-ink: #f2f1fa;
+  --color-body: #c8c5dc;
+  --color-muted: #9c99b6;
+  --color-page: #0e0c1d;
+  --color-panel: #1d1a35;
+  --color-surface: #17152b;
+  --color-line: #2a2745;
+  --color-edge: #312e4f;
+  --color-edge-strong: #3d3a60;
+  --color-navy: #2b2563;
+  --color-navy-soft: #352e74;
+  --color-cyan-soft: #0d2833;
+  --color-cyan-ink: #7fd8f5;
+  --color-emerald-50: #0b2a1f;
+  --color-emerald-100: #0f3527;
+  --color-emerald-200: #17513b;
+  --color-emerald-300: #1f6b4e;
+  --color-emerald-600: #34d399;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+  --color-emerald-950: #ecfdf5;
+  --color-red-50: #2d1215;
+  --color-red-100: #3b161b;
+  --color-red-200: #5c2228;
+  --color-red-300: #7f2d35;
+  --color-red-600: #f87171;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-red-900: #fee2e2;
+  --color-amber-50: #2a1f07;
+  --color-amber-100: #38290a;
+  --color-amber-200: #5a4210;
+  --color-amber-300: #7a5a14;
+  --color-amber-600: #fbbf24;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+  --color-amber-950: #fffbeb;
+  --color-sky-50: #0b2536;
+  --color-sky-700: #7dd3fc;
+  --color-indigo-50: #1c1b45;
+  --color-indigo-700: #a5b4fc;
+  --color-rose-50: #2d1220;
+  --color-rose-600: #fb7185;
+  --color-slate-100: #23213a;
+  --color-slate-700: #cbd5e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:has(.theme-system) {
+    color-scheme: dark;
+    --color-accent: #6a5ce8;
+    --color-accent-dark: #5a4bdc;
+    --color-accent-soft: #252048;
+    --color-accent-muted: #4b4392;
+    --color-accent-mid: #7a6eef;
+    --color-accent-ink: #a49cf6;
+    --color-accent-ink-strong: #c4befa;
+    --color-ink: #f2f1fa;
+    --color-body: #c8c5dc;
+    --color-muted: #9c99b6;
+    --color-page: #0e0c1d;
+    --color-panel: #1d1a35;
+    --color-surface: #17152b;
+    --color-line: #2a2745;
+    --color-edge: #312e4f;
+    --color-edge-strong: #3d3a60;
+    --color-navy: #2b2563;
+    --color-navy-soft: #352e74;
+    --color-cyan-soft: #0d2833;
+    --color-cyan-ink: #7fd8f5;
+    --color-emerald-50: #0b2a1f;
+    --color-emerald-100: #0f3527;
+    --color-emerald-200: #17513b;
+    --color-emerald-300: #1f6b4e;
+    --color-emerald-600: #34d399;
+    --color-emerald-700: #6ee7b7;
+    --color-emerald-800: #a7f3d0;
+    --color-emerald-900: #d1fae5;
+    --color-emerald-950: #ecfdf5;
+    --color-red-50: #2d1215;
+    --color-red-100: #3b161b;
+    --color-red-200: #5c2228;
+    --color-red-300: #7f2d35;
+    --color-red-600: #f87171;
+    --color-red-700: #fca5a5;
+    --color-red-800: #fecaca;
+    --color-red-900: #fee2e2;
+    --color-amber-50: #2a1f07;
+    --color-amber-100: #38290a;
+    --color-amber-200: #5a4210;
+    --color-amber-300: #7a5a14;
+    --color-amber-600: #fbbf24;
+    --color-amber-700: #fcd34d;
+    --color-amber-800: #fde68a;
+    --color-amber-900: #fef3c7;
+    --color-amber-950: #fffbeb;
+    --color-sky-50: #0b2536;
+    --color-sky-700: #7dd3fc;
+    --color-indigo-50: #1c1b45;
+    --color-indigo-700: #a5b4fc;
+    --color-rose-50: #2d1220;
+    --color-rose-600: #fb7185;
+    --color-slate-100: #23213a;
+    --color-slate-700: #cbd5e1;
+  }
 }
 
 html {
@@ -169,6 +302,31 @@ body:has([data-under-header]) #main { margin-top: -4.75rem; }
   [data-under-header] { padding-top: 5.5rem; }
 }
 
+/* SQL editor syntax colours (components/sql/sql-editor.tsx). */
+:root {
+  --sql-keyword: #4f3fd7;
+  --sql-string: #a31515;
+  --sql-number: #0a6d8c;
+  --sql-type: #0e7a4f;
+  --sql-function: #7a3e9d;
+}
+:root:has(.theme-dark) {
+  --sql-keyword: #b2abf8;
+  --sql-string: #f9a8a8;
+  --sql-number: #7fd8f5;
+  --sql-type: #6ee7b7;
+  --sql-function: #e9b7ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:has(.theme-system) {
+    --sql-keyword: #b2abf8;
+    --sql-string: #f9a8a8;
+    --sql-number: #7fd8f5;
+    --sql-type: #6ee7b7;
+    --sql-function: #e9b7ff;
+  }
+}
+
 /* Rich text editor (components/rich-text-editor.tsx). The whole editor shows the focus ring, so the typing area doesn't need its own. */
 .tiptap-content:focus-visible {
   outline: none;
@@ -178,7 +336,7 @@ body:has([data-under-header]) #main { margin-top: -4.75rem; }
   float: left;
   height: 0;
   pointer-events: none;
-  color: #878598;
+  color: var(--color-muted);
 }
 .tiptap-content table {
   border-collapse: collapse;

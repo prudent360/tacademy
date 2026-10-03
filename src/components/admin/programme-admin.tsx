@@ -78,7 +78,7 @@ export async function ProgrammeAdmin({ course, created }: { course: Course; crea
               </li>
             ))}
           </ul>
-        ) : <p className="p-6 text-muted">No {w.run}s yet. <Link href={`/admin/cohorts/new?course=${course.id}`} className="font-semibold text-accent">Add the first one</Link>.</p>}
+        ) : <p className="p-6 text-muted">No {w.run}s yet. <Link href={`/admin/cohorts/new?course=${course.id}`} className="font-semibold text-accent-ink">Add the first one</Link>.</p>}
       </Card>
       <div id="curriculum" className="scroll-mt-24">
         <Card title="Curriculum" action={<span className="hidden text-sm text-muted sm:block">Shared by every {w.run} of this {kind === "internship" ? "programme" : "course"}</span>}>

@@ -45,7 +45,7 @@ export default async function StudentCohortPage({ params, searchParams }: { para
         back={{ href: "/dashboard", label: "Dashboard" }}
         title={course.title}
         description={<span className="flex flex-wrap items-center gap-2">{cohort.name}{cohort.startDate && <> · {formatDateOnly(cohort.startDate)}{cohort.endDate && ` – ${formatDateOnly(cohort.endDate)}`}</>} <ModeBadge mode={cohort.deliveryMode} /></span>}
-        actions={<><Link href={`/dashboard/cohorts/${id}/learn`} className={buttonClass.primary}><BookIcon className="size-4" /> Start learning</Link>{firstSession && <a href={`/api/sessions/${firstSession.id}/ics?all=1`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-edge-strong bg-white px-4 text-sm font-semibold text-ink hover:bg-page"><CalendarIcon className="size-4" /> Add timetable to calendar</a>}</>}
+        actions={<><Link href={`/dashboard/cohorts/${id}/learn`} className={buttonClass.primary}><BookIcon className="size-4" /> Start learning</Link>{firstSession && <a href={`/api/sessions/${firstSession.id}/ics?all=1`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-edge-strong bg-surface px-4 text-sm font-semibold text-ink hover:bg-page"><CalendarIcon className="size-4" /> Add timetable to calendar</a>}</>}
       />
       {welcome && <Notice>You&apos;re enrolled. We&apos;ve emailed your confirmation, and you&apos;ll get reminders before every class.</Notice>}
 
@@ -64,9 +64,9 @@ export default async function StudentCohortPage({ params, searchParams }: { para
                   const state = assignmentState(assignment, submission);
                   return (
                     <li key={assignment.id}>
-                      <Link href={`/dashboard/assignments/${assignment.id}`} className="flex flex-wrap items-center justify-between gap-3 py-3.5 hover:text-accent">
+                      <Link href={`/dashboard/assignments/${assignment.id}`} className="flex flex-wrap items-center justify-between gap-3 py-3.5 hover:text-accent-ink">
                         <span className="flex items-start gap-3">
-                          <ClipboardIcon className="mt-0.5 size-5 text-accent" />
+                          <ClipboardIcon className="mt-0.5 size-5 text-accent-ink" />
                           <span className="flex flex-col gap-0.5">
                             <span className="font-semibold text-ink">{assignment.title}</span>
                             <span className="text-sm text-muted">{assignment.dueAt ? `Due ${formatDateTime(assignment.dueAt, tz)}` : "No deadline"}</span>
@@ -116,10 +116,10 @@ export default async function StudentCohortPage({ params, searchParams }: { para
               <ol className="-my-1 flex flex-col gap-1">
                 {shownBoard.map((row) => (
                   <li key={row.userId} className={`flex items-center gap-3 rounded-lg px-2 py-1.5 ${row.userId === user.id ? "bg-accent-soft" : ""}`}>
-                    <span className={`w-6 text-center font-display text-sm font-bold ${row.rank <= 3 ? "text-accent" : "text-muted"}`}>{row.rank}</span>
+                    <span className={`w-6 text-center font-display text-sm font-bold ${row.rank <= 3 ? "text-accent-ink" : "text-muted"}`}>{row.rank}</span>
                     <Avatar name={row.name} src={row.avatarUrl} gender={row.gender} seed={row.avatarSeed} size="sm" />
                     <span className="min-w-0 grow truncate text-sm font-semibold text-ink">{row.userId === user.id ? "You" : row.name}</span>
-                    <span className="shrink-0 text-sm font-semibold text-accent">{row.points.toLocaleString("en-GB")} XP</span>
+                    <span className="shrink-0 text-sm font-semibold text-accent-ink">{row.points.toLocaleString("en-GB")} XP</span>
                   </li>
                 ))}
               </ol>
@@ -134,7 +134,7 @@ export default async function StudentCohortPage({ params, searchParams }: { para
                     <Avatar name={i.name} src={i.avatarUrl} gender={i.gender} />
                     <div className="flex min-w-0 flex-col">
                       <span className="font-semibold text-ink">{i.name}</span>
-                      <a href={`mailto:${i.email}`} className="truncate text-sm text-accent">{i.email}</a>
+                      <a href={`mailto:${i.email}`} className="truncate text-sm text-accent-ink">{i.email}</a>
                     </div>
                   </li>
                 ))}
