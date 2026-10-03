@@ -83,7 +83,19 @@ export default async function CoursePage({ params, searchParams }: Props) {
         lead={course.summary}
         actions={<>
           {open ? <Link href={`/enroll?course=${course.slug}`} className={heroButton.primary}>Enrol now <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></Link> : <a href="#cohorts" className={heroButton.primary}>See dates <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></a>}
-          {course.curriculumUrl ? <CurriculumRequest courseId={course.id} courseTitle={course.title} defaultCountry={phoneCountry} className={`${heroButton.secondary} cursor-pointer`} /> : curriculum.length > 0 && <a href="#curriculum" className={heroButton.secondary}>View curriculum</a>}
+          {(course.curriculumUrl || curriculum.length > 0) && (
+            <CurriculumRequest
+              courseId={course.id}
+              courseTitle={course.title}
+              modules={curriculum}
+              weeks={course.durationWeeks}
+              level={course.level}
+              defaultCountry={phoneCountry}
+              prefill={user ? { name: user.name, email: user.email } : undefined}
+              enrol={open ? { href: `/enroll?course=${course.slug}`, label: "Enrol now" } : { href: "#cohorts", label: "See dates and fees" }}
+              className={`${heroButton.secondary} cursor-pointer`}
+            />
+          )}
         </>}
         facts={[
           { icon: ClockIcon, label: "Duration", value: course.durationWeeks ? `${course.durationWeeks} weeks` : "Flexible" },
