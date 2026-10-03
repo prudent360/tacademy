@@ -65,3 +65,22 @@ export async function verifyPendingSignIn(token: string | undefined): Promise<Pe
     return null;
   }
 }
+
+/** Between creating an account (or signing in to an unconfirmed one) and entering the emailed code. */
+export const VERIFY_COOKIE = "academy_verify";
+export type PendingVerification = { userId: number; remember: boolean; next: string | null; welcome: boolean };
+
+export async function signPendingVerification(payload: PendingVerification): Promise<string> {
+  return new SignJWT({ ...payload, purpose: "email-code" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("1h").sign(secretKey());
+}
+
+export async function verifyPendingVerification(token: string | undefined): Promise<PendingVerification | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
+    if (payload.purpose !== "email-code" || typeof payload.userId !== "number") return null;
+    return { userId: payload.userId, remember: payload.remember === true, next: typeof payload.next === "string" ? payload.next : null, welcome: payload.welcome === true };
+  } catch {
+    return null;
+  }
+}

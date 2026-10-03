@@ -29,8 +29,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <SubmitButton pendingText="Signing in…" block>Sign in</SubmitButton>
       </ActionForm>
       <p className="text-center text-sm text-muted">
-        New here? Accounts are created when you enrol.{" "}
-        <Link href="/enroll" className="whitespace-nowrap font-semibold text-accent hover:text-accent-dark">Enrol on a course</Link>
+        New here?{" "}
+        <Link href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"} className="whitespace-nowrap font-semibold text-accent hover:text-accent-dark">Create an account</Link>
       </p>
     </>
   );

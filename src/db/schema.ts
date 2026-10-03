@@ -79,7 +79,7 @@ export const users = pgTable("users", {
 export const authTokens = pgTable("auth_tokens", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  purpose: text("purpose").$type<"verify" | "reset" | "invite">().notNull(),
+  purpose: text("purpose").$type<"verify" | "reset" | "invite" | "code">().notNull(),
   tokenHash: text("token_hash").notNull().unique(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   usedAt: timestamp("used_at", { withTimezone: true }),

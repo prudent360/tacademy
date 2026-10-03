@@ -23,18 +23,31 @@ export const COMMON_VARIABLES: Record<string, string> = {
 };
 
 export const EMAIL_TEMPLATES = {
+  email_code: {
+    name: "Sign-up code",
+    description: "The 6-digit code someone enters to confirm their email after creating an account.",
+    variables: { code: "482913" },
+    subject: "{{code}} is your {{siteName}} code",
+    body: `Hi {{name}},
+
+Use this code to confirm your email address and finish creating your account:
+
+# {{code}}
+
+The code expires in 10 minutes. If you didn't sign up, you can ignore this email.`,
+  },
   welcome: {
     name: "Welcome",
-    description: "Sent when a student creates an account. Includes the email verification link.",
-    variables: { verifyUrl: "https://example.com/verify-email?token=sample" },
+    description: "Sent when a student has created an account and confirmed their email.",
+    variables: { dashboardUrl: "https://example.com/dashboard", coursesUrl: "https://example.com/courses" },
     subject: "Welcome to {{siteName}}",
     body: `Hi {{name}},
 
 Welcome to **{{siteName}}**. Your account is ready, so you can browse upcoming cohorts and enrol whenever you're ready.
 
-Please confirm your email address so we can send you class reminders and feedback:
+[[Go to my dashboard|{{dashboardUrl}}]]
 
-[[Confirm my email|{{verifyUrl}}]]
+Not sure where to start? [See all our courses]({{coursesUrl}}).
 
 See you in class,
 The {{siteName}} team`,

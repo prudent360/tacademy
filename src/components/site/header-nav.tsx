@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, BookIcon, BriefcaseIcon, ChevronDown, LayersIcon, MenuIcon, MessageIcon, SparkIcon, SwapIcon, XIcon, type Icon } from "@/components/icons";
+import { ArrowRight, BookIcon, BriefcaseIcon, ChartIcon, ChevronDown, CodeIcon, DatabaseIcon, LayersIcon, MenuIcon, MessageIcon, PaletteIcon, ShieldIcon, SparkIcon, SwapIcon, TrendIcon, XIcon, type Icon } from "@/components/icons";
 
 export type MenuCourse = { slug: string; title: string; category: string; next: string };
 
@@ -13,6 +13,28 @@ const ABOUT: { href: string; label: string; text: string; icon: Icon }[] = [
   { href: "/#faq", label: "FAQ", text: "Fees, schedules, certificates", icon: SparkIcon },
   { href: "/contact", label: "Contact us", text: "Talk to the team", icon: MessageIcon },
 ];
+
+/** An icon and colour for a course from its category (and title), so the list is easy to scan. First match wins. */
+const COURSE_ICONS: { match: RegExp; icon: Icon; tone: string }[] = [
+  { match: /\b(sql|database|postgres|mysql)\b/i, icon: DatabaseIcon, tone: "bg-cyan-soft text-cyan-ink" },
+  { match: /\b(ai|artificial intelligence|machine learning|ml|deep learning|llm|prompt)\b/i, icon: SparkIcon, tone: "bg-amber-50 text-amber-700" },
+  { match: /\b(web|full[- ]?stack|front[- ]?end|back[- ]?end|software|programming|python|javascript|react|coding|developer|development)\b/i, icon: CodeIcon, tone: "bg-emerald-50 text-emerald-700" },
+  { match: /\b(design|ui|ux|graphic|figma|photoshop)\b/i, icon: PaletteIcon, tone: "bg-rose-50 text-rose-600" },
+  { match: /\b(cyber|security)\b/i, icon: ShieldIcon, tone: "bg-slate-100 text-slate-700" },
+  { match: /\b(engineering|cloud|devops|aws|azure)\b/i, icon: LayersIcon, tone: "bg-indigo-50 text-indigo-700" },
+  { match: /\b(data|analytics|analysis|power ?bi|excel|tableau|statistics)\b/i, icon: ChartIcon, tone: "bg-accent-soft text-accent" },
+  { match: /\b(business|marketing|product|management|sales|finance)\b/i, icon: TrendIcon, tone: "bg-sky-50 text-sky-700" },
+];
+
+function courseIcon(course: MenuCourse): { icon: Icon; tone: string } {
+  // The title is more specific than the category (a "Data" course about SQL), so it's checked first.
+  return COURSE_ICONS.find((c) => c.match.test(course.title)) ?? COURSE_ICONS.find((c) => c.match.test(course.category)) ?? { icon: BookIcon, tone: "bg-accent-soft text-accent" };
+}
+
+function CourseIcon({ course, className }: { course: MenuCourse; className: string }) {
+  const { icon: CategoryIcon, tone } = courseIcon(course);
+  return <span className={`flex shrink-0 items-center justify-center rounded-[5px] ${tone} ${className}`}><CategoryIcon className="size-[18px]" /></span>;
+}
 
 type Panel = "courses" | "about" | null;
 
@@ -59,6 +81,12 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
 
   return (
     <div ref={root} className="contents">
+      {/* Softens the page behind an open panel so it stands out; clicking it closes the panel. */}
+      <div
+        aria-hidden="true"
+        onClick={() => setPanel(null)}
+        className={`fixed inset-0 -z-10 hidden bg-white/60 backdrop-blur-[2px] transition-opacity duration-200 lg:block ${panel ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      />
       <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex">
         <div className="relative" onMouseEnter={() => hoverOpen("courses")} onMouseLeave={hoverClose}>
           <button type="button" aria-expanded={panel === "courses"} aria-controls="menu-courses" onClick={() => setPanel(panel === "courses" ? null : "courses")} className={itemClass(is("/courses"), panel === "courses")}>
@@ -66,12 +94,12 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
           </button>
           {panel === "courses" && (
             <div id="menu-courses" className="absolute left-1/2 top-full z-40 w-[680px] -translate-x-1/2 pt-4">
-              <div className="grid grid-cols-[1.45fr_1fr] overflow-hidden rounded-[5px] border border-edge bg-white shadow-[0_30px_70px_-30px_rgba(24,19,64,.45)]">
+              <div className="grid grid-cols-[1.45fr_1fr] overflow-hidden rounded-[5px] border border-edge-strong bg-white shadow-[0_40px_90px_-28px_rgba(24,19,64,.55),0_12px_24px_-12px_rgba(24,19,64,.18)]">
                 <div className="flex flex-col gap-1 p-3">
                   <p className="px-3 pb-1 pt-2 font-mono text-[11px] font-semibold uppercase tracking-[1.4px] text-muted">Courses</p>
                   {courses.map((c) => (
                     <Link key={c.slug} href={`/courses/${c.slug}`} className="group flex items-start gap-3 rounded-[5px] px-3 py-2.5 transition hover:bg-panel">
-                      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[5px] bg-accent-soft text-accent"><BookIcon className="size-[18px]" /></span>
+                      <CourseIcon course={c} className="mt-0.5 size-9" />
                       <span className="flex min-w-0 flex-col">
                         <span className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{c.title}</span>
                         <span className="text-xs text-muted">{c.category ? `${c.category} · ` : ""}{c.next}</span>
@@ -100,7 +128,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
           </button>
           {panel === "about" && (
             <div id="menu-about" className="absolute left-1/2 top-full z-40 w-[340px] -translate-x-1/2 pt-4">
-              <div className="flex flex-col gap-1 rounded-[5px] border border-edge bg-white p-2 shadow-[0_30px_70px_-30px_rgba(24,19,64,.45)]">
+              <div className="flex flex-col gap-1 rounded-[5px] border border-edge-strong bg-white p-2 shadow-[0_40px_90px_-28px_rgba(24,19,64,.55),0_12px_24px_-12px_rgba(24,19,64,.18)]">
                 {ABOUT.map(({ href, label, text, icon: ItemIcon }) => (
                   <Link key={href} href={href} onClick={() => setPanel(null)} className="group flex items-start gap-3 rounded-[5px] px-3 py-2.5 transition hover:bg-panel">
                     <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[5px] bg-accent-soft text-accent"><ItemIcon className="size-[18px]" /></span>
@@ -128,7 +156,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
               <p className="pb-1 font-mono text-[11px] font-semibold uppercase tracking-[1.4px] text-muted">Courses</p>
               {courses.map((c) => (
                 <Link key={c.slug} href={`/courses/${c.slug}`} className="flex items-center gap-3 rounded-[5px] py-2.5">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-[5px] bg-accent-soft text-accent"><BookIcon className="size-5" /></span>
+                  <CourseIcon course={c} className="size-10" />
                   <span className="flex min-w-0 flex-col"><span className="truncate text-base font-semibold text-ink">{c.title}</span><span className="text-xs text-muted">{c.next}</span></span>
                 </Link>
               ))}
@@ -152,6 +180,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
               : <>
                   <Link href="/enroll" className="flex h-12 items-center justify-center rounded-[5px] bg-accent text-base font-semibold text-white">Enrol now</Link>
                   <Link href="/login" className="flex h-12 items-center justify-center rounded-[5px] border border-edge-strong text-base font-semibold text-ink">Sign in</Link>
+                  <p className="pt-1 text-center text-sm text-muted">New here? <Link href="/register" className="font-semibold text-accent">Create a free account</Link></p>
                 </>}
           </div>
         </div>

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { homeFor, SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
 const PROTECTED = ["/dashboard", "/teach", "/admin", "/account", "/notifications", "/api/upload", "/api/sessions"];
-const GUEST_ONLY = ["/login"];
+const GUEST_ONLY = ["/login", "/register"];
 
 /**
  * Sends signed-out visitors to sign in and signed-in users away from the sign-in pages.
@@ -25,5 +25,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/teach/:path*", "/admin/:path*", "/account/:path*", "/notifications/:path*", "/api/upload/:path*", "/api/sessions/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/teach/:path*", "/admin/:path*", "/account/:path*", "/notifications/:path*", "/api/upload/:path*", "/api/sessions/:path*", "/login", "/register"],
 };

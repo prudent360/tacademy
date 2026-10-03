@@ -20,7 +20,7 @@ export async function emailConfigured(): Promise<boolean> {
 }
 
 /** Account-security emails can't be switched off. */
-export const REQUIRED_TEMPLATES: TemplateKey[] = ["password_reset", "verify_email", "invite", "welcome", "account_setup"];
+export const REQUIRED_TEMPLATES: TemplateKey[] = ["password_reset", "verify_email", "invite", "welcome", "account_setup", "email_code"];
 
 export async function getTemplate(key: TemplateKey): Promise<{ subject: string; body: string; customised: boolean; enabled: boolean }> {
   const [row] = await (await getDb()).select().from(emailTemplates).where(eq(emailTemplates.key, key));
@@ -82,7 +82,8 @@ export async function renderEmail(
   const withValues = fill(source.body, all, true);
   // [[Label|url]] on its own line becomes a button (an HTML block Markdown passes through).
   const withButtons = withValues.replace(/^\s*\[\[([^|\]]+)\|([^\]]+)\]\]\s*$/gm, (_, label: string, url: string) => `\n${button(label.trim(), url.trim())}\n`);
-  const content = await marked.parse(withButtons, { gfm: true, breaks: true });
+  // A "# heading" line shows as a large, spaced-out code box (used for sign-up codes).
+  const content = (await marked.parse(withButtons, { gfm: true, breaks: true })).replace(/<h1>/g, '<h1 style="margin:8px 0 24px;display:inline-block;padding:14px 22px;border-radius:5px;background:#f1effd;color:#181340;font-size:32px;font-weight:700;letter-spacing:8px;font-family:Menlo,Consolas,monospace">');
   const text = fill(source.body, all, false).replace(/^\s*\[\[([^|\]]+)\|([^\]]+)\]\]\s*$/gm, "$1: $2").replace(/\*\*/g, "");
 
   const brand = escapeHtml(settings.siteName);
