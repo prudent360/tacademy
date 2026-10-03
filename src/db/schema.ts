@@ -534,6 +534,8 @@ export const discountCodes = pgTable("discount_codes", {
   maxUses: integer("max_uses"),
   usedCount: integer("used_count").notNull().default(0),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
+  /** Deleted codes that had been used are kept (hidden, switched off) so balances on their deposits stay right. */
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: createdAt(),
 });
 

@@ -57,7 +57,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         { icon: AwardIcon, label: "On completion", value: "Verified certificate" },
       ]}
     >
-      {query && <p className="text-sm font-semibold text-cyan-light">Showing results for “{q.trim()}” · <Link href="/courses" className="underline underline-offset-4">Clear search</Link></p>}
+      {query && <p className="text-sm font-semibold text-white">Showing results for “{q.trim()}” · <Link href="/courses" className="underline underline-offset-4">Clear search</Link></p>}
     </PageHero>
     <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-5 py-12 sm:px-8 md:py-16">
       <div className="flex flex-col gap-3">

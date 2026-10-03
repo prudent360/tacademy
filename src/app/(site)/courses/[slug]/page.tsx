@@ -105,10 +105,10 @@ export default async function CoursePage({ params, searchParams }: Props) {
           </HeroVisual>
         )}
       >
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/80">
-          {open && <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-300/25"><span className="size-1.5 rounded-full bg-emerald-300" />Registration open</span>}
-          {startingPrice && <span><span className="text-white/55">{startingPrice === "Free" ? "Course fee" : "From"} </span><strong className="font-display text-2xl font-bold text-white">{startingPrice}</strong></span>}
-          <span className="flex items-center gap-1.5"><CalendarIcon className="size-4 text-cyan-light" />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/90">
+          {open && <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700"><span className="size-1.5 rounded-full bg-emerald-500" />Registration open</span>}
+          {startingPrice && <span><span className="text-white/75">{startingPrice === "Free" ? "Course fee" : "From"} </span><strong className="font-display text-2xl font-bold text-white">{startingPrice}</strong></span>}
+          <span className="flex items-center gap-1.5"><CalendarIcon className="size-4 text-white" />{cohorts.length ? `${cohorts.length} upcoming ${cohorts.length === 1 ? "cohort" : "cohorts"}` : "New dates soon"}</span>
           {rating && rating.count > 0 && <a href="#reviews" className="flex items-center gap-1.5 hover:text-white"><Star filled className="size-4" /><strong className="text-white">{rating.average.toFixed(1)}</strong> ({rating.count} review{rating.count === 1 ? "" : "s"})</a>}
         </div>
       </PageHero>

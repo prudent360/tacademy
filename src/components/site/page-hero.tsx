@@ -16,7 +16,7 @@ export const heroButton = {
 
 /** Key words in a hero title, picked out in the cyan-to-lavender brand light. */
 export function HeroHighlight({ children }: { children: ReactNode }) {
-  return <span className="bg-[linear-gradient(100deg,#8fdff7_0%,#bcb5f7_55%,#e1def8_100%)] bg-clip-text text-transparent">{children}</span>;
+  return <span className="bg-[linear-gradient(100deg,#b9f0ff_0%,#ffffff_70%)] bg-clip-text text-transparent">{children}</span>;
 }
 
 function Rise({ delay, className = "", children }: { delay: number; className?: string; children: ReactNode }) {
@@ -56,7 +56,7 @@ export function PageHero({ eyebrow, breadcrumb, title, lead, actions, facts, asi
   children?: ReactNode;
 }) {
   return (
-    <section data-under-header className="relative isolate overflow-hidden bg-[#120f33] text-white">
+    <section data-under-header className="relative isolate overflow-hidden bg-[#4f3fd7] text-white">
       <div aria-hidden="true" className="absolute inset-0 -z-10">
         {photo ? (
           <>
@@ -65,7 +65,7 @@ export function PageHero({ eyebrow, breadcrumb, title, lead, actions, facts, asi
             <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(18,15,51,.95)_0%,rgba(18,15,51,.82)_45%,rgba(18,15,51,.45)_100%)]" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_88%_-8%,rgba(79,63,215,.62),transparent_62%),radial-gradient(700px_420px_at_-8%_108%,rgba(49,196,240,.24),transparent_60%),linear-gradient(180deg,#181340_0%,#120f33_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_88%_-8%,rgba(255,255,255,.2),transparent_62%),radial-gradient(700px_420px_at_-8%_108%,rgba(49,196,240,.35),transparent_60%),linear-gradient(135deg,#5b4be0_0%,#4f3fd7_45%,#3d2fb8_100%)]" />
         )}
         {/* A fine dot grid, strongest top right and fading out towards the text. */}
         <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.13)_1px,transparent_1.2px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_70%_80%_at_85%_20%,#000_10%,transparent_70%)]" />
@@ -78,23 +78,23 @@ export function PageHero({ eyebrow, breadcrumb, title, lead, actions, facts, asi
           {breadcrumb && <Rise delay={0} className="text-sm text-white/65">{breadcrumb}</Rise>}
           {eyebrow && (
             <Rise delay={40}>
-              <span className="inline-flex items-center gap-2.5 rounded-[5px] bg-white/[.07] px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[1.6px] text-cyan-light ring-1 ring-white/15 md:text-xs">
-                <span className="hero-dot size-1.5 rounded-full bg-cyan" />{eyebrow}
+              <span className="inline-flex items-center gap-2.5 rounded-[5px] bg-white/[.14] px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[1.6px] text-white ring-1 ring-white/25 md:text-xs">
+                <span className="hero-dot size-1.5 rounded-full bg-white" />{eyebrow}
               </span>
             </Rise>
           )}
           <Rise delay={120}>
             <h1 className={`font-display text-[40px] font-extrabold leading-[1.06] tracking-[-1.4px] sm:text-5xl lg:text-[60px] ${center ? "mx-auto max-w-[820px]" : "max-w-[760px]"}`}>{title}</h1>
           </Rise>
-          {lead && <Rise delay={200}><p className={`text-lg leading-relaxed text-white/75 ${center ? "mx-auto max-w-[640px]" : "max-w-[600px]"}`}>{lead}</p></Rise>}
+          {lead && <Rise delay={200}><p className={`text-lg leading-relaxed text-white/85 ${center ? "mx-auto max-w-[640px]" : "max-w-[600px]"}`}>{lead}</p></Rise>}
           {children && <Rise delay={260}>{children}</Rise>}
           {actions && <Rise delay={300} className={`flex flex-wrap gap-3 pt-1 ${center ? "justify-center" : ""}`}>{actions}</Rise>}
           {facts && facts.length > 0 && (
             <Rise delay={380} className={`grid w-full grid-cols-2 gap-2.5 pt-3 ${!aside && facts.length > 2 ? "lg:grid-cols-4" : ""}`}>
               {facts.map(({ icon: FactIcon, label, value }) => (
-                <div key={label} className="flex items-center gap-3 rounded-[5px] bg-white/[.06] px-3 py-2.5 ring-1 ring-white/10 backdrop-blur-sm sm:px-4 sm:py-3">
-                  <span className="hidden size-9 shrink-0 items-center justify-center rounded-[5px] bg-white/[.08] text-cyan-light sm:flex"><FactIcon className="size-[18px]" /></span>
-                  <span className="min-w-0 text-left"><span className="block text-xs text-white/55">{label}</span><span className="block text-[15px] font-semibold leading-snug text-white">{value}</span></span>
+                <div key={label} className="flex items-center gap-3 rounded-[5px] bg-white/[.1] px-3 py-2.5 ring-1 ring-white/20 backdrop-blur-sm sm:px-4 sm:py-3">
+                  <span className="hidden size-9 shrink-0 items-center justify-center rounded-[5px] bg-white/[.14] text-white sm:flex"><FactIcon className="size-[18px]" /></span>
+                  <span className="min-w-0 text-left"><span className="block text-xs text-white/70">{label}</span><span className="block text-[15px] font-semibold leading-snug text-white">{value}</span></span>
                 </div>
               ))}
             </Rise>

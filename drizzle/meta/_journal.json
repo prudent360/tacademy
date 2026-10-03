@@ -204,6 +204,13 @@
       "when": 1790953686014,
       "tag": "0028_course_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1790977308936,
+      "tag": "0029_discount_deleted",
+      "breakpoints": true
     }
   ]
 }

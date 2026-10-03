@@ -13,7 +13,8 @@ import {
 import { can, requirePermission } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { offerOpenPlaces } from "@/lib/waitlist";
-import { getCohortWithCourse } from "@/lib/data";
+import { getCohortWithCourse, getSettings } from "@/lib/data";
+import { fromZonedInput } from "@/lib/time";
 import { REQUIRED_TEMPLATES, sendEmail } from "@/lib/email";
 import { certificateEligibility } from "@/lib/certificates";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
@@ -368,7 +369,8 @@ export async function createDiscountCode(_state: FormState, formData: FormData):
   const code = parsed.data.code.replace(/\s+/g, "").toUpperCase();
   if (!/^[A-Z0-9_-]+$/.test(code)) return { error: "Use letters, numbers, hyphens or underscores only." };
   try {
-    await (await getDb()).insert(discountCodes).values({ code, percentOff: parsed.data.percentOff, maxUses: parsed.data.maxUses ? Number(parsed.data.maxUses) : null, expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null });
+    const { timezone } = await getSettings();
+    await (await getDb()).insert(discountCodes).values({ code, percentOff: parsed.data.percentOff, maxUses: parsed.data.maxUses ? Number(parsed.data.maxUses) : null, expiresAt: parsed.data.expiresAt ? fromZonedInput(parsed.data.expiresAt, timezone) : null });
   } catch {
     return { error: "That discount code already exists." };
   }
@@ -381,6 +383,48 @@ export async function setDiscountCodeActive(id: number, active: boolean): Promis
   const actor = await requirePermission("discounts.manage");
   const [row] = await (await getDb()).update(discountCodes).set({ active }).where(eq(discountCodes.id, id)).returning({ code: discountCodes.code });
   if (row) await logAudit(actor, { action: active ? "discount.enabled" : "discount.disabled", summary: `${active ? "switched on" : "switched off"} the discount code ${row.code}` });
+  revalidatePath("/admin/discounts");
+}
+
+/** Changes a code's discount, usage limit or expiry. The code itself stays the same. */
+export async function updateDiscountCode(id: number, _state: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requirePermission("discounts.manage");
+  const parsed = discountSchema.omit({ code: true }).safeParse(formValues(formData));
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const db = await getDb();
+  const [before] = await db.select().from(discountCodes).where(eq(discountCodes.id, id));
+  if (!before || before.deletedAt) return { error: "This code no longer exists." };
+  const maxUses = parsed.data.maxUses ? Number(parsed.data.maxUses) : null;
+  if (maxUses !== null && maxUses < before.usedCount) return { error: `It has already been used ${before.usedCount} time${before.usedCount === 1 ? "" : "s"}, so the limit can't be lower than that.` };
+  const { timezone } = await getSettings();
+  const expiresAt = parsed.data.expiresAt ? fromZonedInput(parsed.data.expiresAt, timezone) : null;
+  await db.update(discountCodes).set({ percentOff: parsed.data.percentOff, maxUses, expiresAt }).where(eq(discountCodes.id, id));
+  const changes = [
+    before.percentOff !== parsed.data.percentOff && `discount ${before.percentOff}% → ${parsed.data.percentOff}%`,
+    before.maxUses !== maxUses && `max uses ${before.maxUses ?? "unlimited"} → ${maxUses ?? "unlimited"}`,
+    (before.expiresAt?.getTime() ?? null) !== (expiresAt?.getTime() ?? null) && `expiry ${expiresAt ? "changed" : "removed"}`,
+  ].filter(Boolean);
+  if (changes.length) await logAudit(actor, { action: "discount.updated", summary: `edited the discount code ${before.code} (${changes.join(", ")})` });
+  revalidatePath("/admin/discounts");
+  return { ok: `${before.code} saved.` };
+}
+
+/**
+ * Deletes a discount code. Codes nobody has used go completely; used ones are switched off, hidden and renamed
+ * (so the name can be reused) but kept, because balances on deposits paid with them depend on the discount.
+ */
+export async function deleteDiscountCode(id: number): Promise<void> {
+  const actor = await requirePermission("discounts.manage");
+  const db = await getDb();
+  const [code] = await db.select().from(discountCodes).where(eq(discountCodes.id, id));
+  if (!code || code.deletedAt) return;
+  const [used] = await db.select({ id: payments.id }).from(payments).where(eq(payments.discountCodeId, id)).limit(1);
+  if (used || code.usedCount > 0) {
+    await db.update(discountCodes).set({ active: false, deletedAt: new Date(), code: `${code.code}~deleted-${id}` }).where(eq(discountCodes.id, id));
+  } else {
+    await db.delete(discountCodes).where(eq(discountCodes.id, id));
+  }
+  await logAudit(actor, { action: "discount.deleted", summary: `deleted the discount code ${code.code}` });
   revalidatePath("/admin/discounts");
 }
 
