@@ -202,17 +202,17 @@ export function StudentImport({ cohorts, defaultCohort }: { cohorts: { id: numbe
         <section className={card}>
           <h2 className="font-display text-lg font-bold text-ink">Options</h2>
           <div className="flex flex-col gap-2">
-            <label htmlFor={`${id}-cohort`} className="text-sm font-medium text-ink">Enrol them on a cohort</label>
+            <label htmlFor={`${id}-cohort`} className="text-sm font-medium text-ink">Enrol them on a cohort <span className="font-normal text-muted">(optional)</span></label>
             <select
               id={`${id}-cohort`}
               value={cohortId ?? ""}
               onChange={(e) => { const next = e.target.value ? Number(e.target.value) : null; setCohortId(next); if (file) check(file.text, next); }}
               className="h-11 w-full cursor-pointer rounded-[5px] border border-edge-strong bg-surface px-3 text-sm text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10"
             >
-              <option value="">Don&apos;t enrol, just create accounts</option>
+              <option value="">No cohort, just create their accounts</option>
               {cohorts.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
-            <p className="text-[13px] text-muted">Enrolled without payment. Record any payments under Payments.</p>
+            <p className="text-[13px] text-muted">{cohortId ? "Enrolled without payment. Record any payments under Payments." : "They can enrol on a course themselves later."}</p>
           </div>
           <label className="flex cursor-pointer items-start gap-3 rounded-[5px] border border-edge p-3.5 has-[:checked]:border-accent-muted has-[:checked]:bg-accent-soft/50">
             <input type="checkbox" checked={emailStudents} onChange={(e) => setEmailStudents(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-accent" />

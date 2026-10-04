@@ -136,7 +136,7 @@ export async function importStudents(csv: string, cohortId: number | null, sendE
       const url = absoluteUrl(`/reset-password?token=${await issueToken(user.id, "invite")}`);
       outgoing.push(found
         ? { to: user.email, template: "account_setup", vars: { name: firstName(user.name), courseTitle: found.course.title, setupUrl: url } }
-        : { to: user.email, template: "invite", vars: { name: firstName(user.name), role: "student", inviteUrl: url } });
+        : { to: user.email, template: "student_account", vars: { name: firstName(user.name), setupUrl: url, coursesUrl: absoluteUrl("/courses") } });
     }
     await sendEmails(outgoing);
   }

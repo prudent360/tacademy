@@ -107,6 +107,23 @@ Your timetable, joining links, venue details and assignments are all in your das
 
 [[Go to my dashboard|{{dashboardUrl}}]]`,
   },
+  student_account: {
+    name: "Student account created",
+    description: "Sent when an admin imports students (without a cohort). Lets them choose a password.",
+    variables: { setupUrl: "https://example.com/reset-password?token=sample", coursesUrl: "https://example.com/courses" },
+    subject: "Your {{siteName}} student account is ready",
+    body: `Hi {{name}},
+
+Welcome to **{{siteName}}**! We've created a student account for you.
+
+Choose a password to sign in:
+
+[[Set my password|{{setupUrl}}]]
+
+Once you're in, you can update your profile, see your classes and [browse our courses]({{coursesUrl}}).
+
+This link expires in 7 days. If it runs out, use "Forgot password" on the sign-in page.`,
+  },
   account_setup: {
     name: "Student account set-up",
     description: "Sent when someone who enrolled without an account is given their place. Lets them choose a password.",
