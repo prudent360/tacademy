@@ -49,12 +49,27 @@ export function referralLink(code: string, to?: string): string {
  * Call right after creating an account; existing accounts are never re-assigned.
  */
 export async function attachReferrer(userId: number): Promise<void> {
-  const code = (await cookies()).get(REF_COOKIE)?.value;
-  if (!code || !(await referralConfig()).enabled) return;
+  const jar = await cookies();
+  const code = jar.get(REF_COOKIE)?.value;
+  if (!code) return;
+  // The link has done its job (or can't apply), so stop showing "Referred by".
+  jar.delete(REF_COOKIE);
+  if (!(await referralConfig()).enabled) return;
   const db = await getDb();
   const [referrer] = await db.select({ id: users.id }).from(users).where(and(eq(users.referralCode, code.toUpperCase()), eq(users.active, true)));
   if (!referrer || referrer.id === userId) return;
   await db.update(users).set({ referredById: referrer.id }).where(and(eq(users.id, userId), isNull(users.referredById)));
+}
+
+/** For the "Referred by" card: who referred this visitor, from the referral cookie. Null when there's no valid referral. */
+export async function visitorReferrer(): Promise<{ name: string; avatarUrl: string | null; gender: User["gender"]; code: string } | null> {
+  const code = (await cookies()).get(REF_COOKIE)?.value?.toUpperCase();
+  if (!code || !/^[A-Z0-9]{4,20}$/.test(code) || !(await referralConfig()).enabled) return null;
+  const [referrer] = await (await getDb()).select({ name: users.name, avatarUrl: users.avatarUrl, gender: users.gender }).from(users).where(and(eq(users.referralCode, code), eq(users.active, true)));
+  if (!referrer) return null;
+  // First name and initial, e.g. "Ada L.": enough to recognise, without the full name.
+  const [first, ...rest] = referrer.name.trim().split(/\s+/);
+  return { name: `${first}${rest.length ? ` ${rest[rest.length - 1][0].toUpperCase()}.` : ""}`, avatarUrl: referrer.avatarUrl, gender: referrer.gender, code };
 }
 
 /** Records the referrer's commission on a successful payment. Safe to call more than once per payment. */
