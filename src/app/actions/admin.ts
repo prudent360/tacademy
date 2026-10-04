@@ -18,6 +18,7 @@ import { fromZonedInput } from "@/lib/time";
 import { REQUIRED_TEMPLATES, sendEmail } from "@/lib/email";
 import { certificateEligibility } from "@/lib/certificates";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
+import { countryByCode } from "@/lib/countries";
 import { CURRENCY_CODES, formatMoney, parseMajor } from "@/lib/money";
 import { activateEnrollment, describePurchase, fulfilPayment, paymentBalanceFor, verifyPayment } from "@/lib/payments";
 import { notify } from "@/lib/notify";
@@ -303,7 +304,15 @@ export async function inviteUser(_state: FormState, formData: FormData): Promise
   redirect(`/admin/users/${id}?invited=1`);
 }
 
-const userSchema = z.object({ name: required("Name", 120), role: z.enum(ROLES), phone: text(40), bio: text(600), gender: z.enum(["female", "male", ""]).catch("").transform((g) => g || null) });
+const userSchema = z.object({
+  name: required("Name", 120),
+  email: emailSchema,
+  role: z.enum(ROLES),
+  phone: text(40),
+  bio: text(600),
+  gender: z.enum(["female", "male", ""]).catch("").transform((g) => g || null),
+  country: z.string().trim().toUpperCase().transform((c) => countryByCode(c)?.code ?? null),
+});
 
 export async function updateUser(id: number, _state: FormState, formData: FormData): Promise<FormState> {
   const admin = await requirePermission("users.manage");
@@ -321,6 +330,11 @@ export async function updateUser(id: number, _state: FormState, formData: FormDa
   }
   if (parsed.data.role === "staff" && before.role !== "staff") return { error: "Give someone a team role from Team & roles, where you choose what they can do." };
   if (before.role === "admin" && (parsed.data.role !== "admin" || !active) && (await activeAdminCount()) <= 1) return { error: "They're the only active administrator. Make someone else an administrator first." };
+  const emailChanged = parsed.data.email !== before.email;
+  if (emailChanged) {
+    const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.email, parsed.data.email));
+    if (taken) return { error: "Someone else already has an account with that email." };
+  }
   await db.update(users).set({
     ...parsed.data,
     active,
@@ -328,7 +342,10 @@ export async function updateUser(id: number, _state: FormState, formData: FormDa
     // Staff roles only apply to team members.
     ...(parsed.data.role !== "staff" ? { staffRoleKey: null } : {}),
     ...(before.active && !active ? { sessionVersion: sql`${users.sessionVersion} + 1` } : {}),
+    // A new address hasn't been confirmed yet.
+    ...(emailChanged ? { emailVerifiedAt: null } : {}),
   }).where(eq(users.id, id));
+  if (emailChanged) await logAudit(admin, { action: "user.email_changed", summary: `changed ${before.name}'s email from ${before.email} to ${parsed.data.email}`, target: { type: "user", id } });
   if (parsed.data.role !== before.role) await logAudit(admin, { action: "user.role_changed", summary: `changed ${before.name}'s role from ${before.role} to ${parsed.data.role}`, target: { type: "user", id } });
   if (before.active !== active) await logAudit(admin, { action: active ? "user.reactivated" : "user.deactivated", summary: `${active ? "reactivated" : "deactivated"} ${before.name}'s account`, target: { type: "user", id } });
   revalidatePath(`/admin/users/${id}`);

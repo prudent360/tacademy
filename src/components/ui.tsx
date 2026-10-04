@@ -195,8 +195,8 @@ export function TableToolbar({ action, q, placeholder, hidden = {}, filters, rig
   right?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-[5px] border border-edge bg-surface p-4 shadow-[0_1px_2px_rgba(24,19,64,.025)] lg:flex-row lg:items-center">
-      <form action={action} className="relative flex-1">
+    <div className="flex flex-col gap-3 rounded-[5px] border border-edge bg-surface p-4 shadow-[0_1px_2px_rgba(24,19,64,.025)] lg:flex-row lg:flex-wrap lg:items-center">
+      <form action={action} className="relative flex-1 lg:min-w-[300px]">
         {Object.entries(hidden).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
         <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted" />
         <input name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder} className="h-11 w-full rounded-lg border border-edge-strong bg-surface pl-10 pr-3 text-sm text-ink placeholder:text-[#878598] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
