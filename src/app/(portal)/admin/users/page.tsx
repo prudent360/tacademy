@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, count, inArray, isNotNull } from "drizzle-orm";
+import { and, count, desc, inArray, isNotNull } from "drizzle-orm";
 import { inviteUser } from "@/app/actions/admin";
 import { PeopleFilters, PeopleTable, type PersonRow } from "@/components/admin/people-table";
 import { ActionForm, Input, ModalButton, Select, SubmitButton } from "@/components/forms";
@@ -8,9 +8,9 @@ import { CapIcon, DownloadIcon, LayersIcon, PlusIcon, ShieldIcon, UsersIcon } fr
 import { StatTile } from "@/components/portal/dash";
 import { buttonClass, EmptyState, Notice, PageHeader, Pagination, TableToolbar } from "@/components/ui";
 import { getDb } from "@/db";
-import { enrollments, users, type Role } from "@/db/schema";
+import { emailLog, enrollments, users, type Role } from "@/db/schema";
 import { countryByCode, flag } from "@/lib/countries";
-import { PEOPLE_SORTS, PEOPLE_STATUSES, peopleOrder, peopleWhere, readPeopleFilter, type PeopleSort } from "@/lib/people";
+import { INVITE_TEMPLATES, PEOPLE_SORTS, PEOPLE_STATUSES, peopleOrder, peopleWhere, readPeopleFilter, type PeopleSort } from "@/lib/people";
 import { relativeTime } from "@/lib/time";
 import { studentId } from "@/lib/utils";
 import { can, requirePermission } from "@/lib/auth";
@@ -42,6 +42,13 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const courseCounts = ids.length
     ? await db.select({ userId: enrollments.userId, n: count() }).from(enrollments).where(and(inArray(enrollments.userId, ids), inArray(enrollments.status, ["active", "completed"]))).groupBy(enrollments.userId)
     : [];
+  // Whether the latest set-password email to each invited person went out.
+  const invitedEmails = rows.filter((u) => u.active && !u.passwordHash).map((u) => u.email);
+  const inviteLog = invitedEmails.length
+    ? await db.select({ to: emailLog.to, status: emailLog.status }).from(emailLog).where(and(inArray(emailLog.to, invitedEmails), inArray(emailLog.template, INVITE_TEMPLATES))).orderBy(desc(emailLog.id))
+    : [];
+  const inviteStatus = new Map<string, string>();
+  for (const l of inviteLog) if (!inviteStatus.has(l.to)) inviteStatus.set(l.to, l.status);
   const roleCount = (r: Role) => byRole.find((b) => b.role === r)?.n ?? 0;
   const everyone = byRole.reduce((a, b) => a + b.n, 0);
   const countries = countryRows.map((c) => countryByCode(c.country)).filter((c) => c !== undefined).sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ code: c.code, label: `${flag(c.code)} ${c.name}` }));
@@ -54,7 +61,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     role: u.role,
     studentId: u.role === "student" ? studentId(u) : null,
     courses: courseCounts.find((c) => c.userId === u.id)?.n ?? 0,
-    status: !u.active ? "deactivated" : !u.passwordHash ? "invited" : u.emailVerifiedAt ? "verified" : "unverified",
+    status: !u.active ? "deactivated" : !u.passwordHash ? (inviteStatus.get(u.email) === "failed" ? "invite_failed" : inviteStatus.get(u.email) === "queued" ? "invite_queued" : "invited") : u.emailVerifiedAt ? "verified" : "unverified",
     country: u.country ? flag(u.country) : null,
     joined: relativeTime(u.createdAt),
     lastLogin: u.lastLoginAt ? relativeTime(u.lastLoginAt) : null,

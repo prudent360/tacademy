@@ -11,7 +11,7 @@ import { AI_MODELS, AI_PROVIDERS, DEFAULT_AI, DEFAULT_MODEL, pingAi } from "@/li
 import { DEFAULT_BANK, DEFAULT_REMINDERS } from "@/lib/config";
 import { detectTransactpayCurrencies } from "@/lib/payments";
 import { getSettings } from "@/lib/data";
-import { sendEmail } from "@/lib/email";
+import { flushEmailQueue, sendEmail } from "@/lib/email";
 import { CURRENCY_CODES } from "@/lib/money";
 import { sendDueReminders } from "@/lib/reminders";
 import { encryptSecret } from "@/lib/secrets";
@@ -250,9 +250,20 @@ export async function saveEmailSettings(_state: FormState, formData: FormData): 
   const smtpUser = String(formData.get("smtpUser") ?? "").trim().slice(0, 200);
   const smtpPassword = driver === "smtp" ? secretField(formData, "smtpPassword", current.smtpPassword) : current.smtpPassword ?? "";
   if (driver === "smtp" && (!smtpHost || !smtpUser || !smtpPassword)) return { error: "Add the SMTP host, username and password to send with SMTP." };
-  await update({ email: { ...parsed.data, driver, apiKey: driver === "resend" ? secretField(formData, "apiKey", current.apiKey) : current.apiKey ?? "", smtpHost, smtpPort, smtpSecurity, smtpUser, smtpPassword } });
+  const limitText = String(formData.get("dailyLimit") ?? "").trim();
+  const dailyLimit = limitText ? Number(limitText) : 0;
+  if (!Number.isInteger(dailyLimit) || dailyLimit < 0 || dailyLimit > 1_000_000) return { error: "Enter the daily limit as a whole number, or leave it empty for no limit." };
+  await update({ email: { ...parsed.data, driver, apiKey: driver === "resend" ? secretField(formData, "apiKey", current.apiKey) : current.apiKey ?? "", smtpHost, smtpPort, smtpSecurity, smtpUser, smtpPassword, dailyLimit } });
   await logAudit(actor, { action: "settings.saved", summary: "updated the email settings" });
   return { ok: "Email settings saved." };
+}
+
+/** "Send queued emails now", as far as today's limit allows. */
+export async function sendQueuedEmailsNow(): Promise<void> {
+  const actor = await requirePermission("settings.manage");
+  const result = await flushEmailQueue();
+  if (result.sent || result.failed) await logAudit(actor, { action: "email.queue_sent", summary: `sent ${result.sent} queued email${result.sent === 1 ? "" : "s"}${result.failed ? ` (${result.failed} failed)` : ""}` });
+  revalidatePath("/admin/settings");
 }
 
 export async function sendTestEmailNow(): Promise<void> {

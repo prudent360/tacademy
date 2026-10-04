@@ -1,11 +1,13 @@
 import "server-only";
 import { and, asc, desc, eq, ilike, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm";
-import { ROLES, users, type Role } from "@/db/schema";
+import { emailLog, ROLES, users, type Role } from "@/db/schema";
 import { parseStudentId } from "./utils";
 
 export const PEOPLE_STATUSES = [
   { value: "active", label: "Active" },
   { value: "invited", label: "Invitation sent" },
+  { value: "email_failed", label: "Invitation email failed" },
+  { value: "email_queued", label: "Invitation email queued" },
   { value: "unverified", label: "Email unverified" },
   { value: "deactivated", label: "Deactivated" },
 ] as const;
@@ -31,12 +33,20 @@ export function readPeopleFilter(params: { role?: string; status?: string; q?: s
   };
 }
 
+/** The emails that carry a set-password link for an account made by an admin. */
+export const INVITE_TEMPLATES = ["invite", "student_account", "account_setup"];
+
+/** Status of the latest set-password email to this person (sent, failed, queued…), for filtering. */
+const lastInviteEmail = sql`(select l.status from ${emailLog} l where l.to = ${users.email} and l.template in ('invite', 'student_account', 'account_setup') order by l.id desc limit 1)`;
+
 export function peopleWhere({ role, status, q, country }: PeopleFilter): SQL | undefined {
   const filters: SQL[] = [];
   if (role) filters.push(eq(users.role, role));
   if (status === "active") filters.push(eq(users.active, true));
   if (status === "deactivated") filters.push(eq(users.active, false));
   if (status === "invited") filters.push(and(eq(users.active, true), isNull(users.passwordHash))!);
+  if (status === "email_failed") filters.push(and(eq(users.active, true), isNull(users.passwordHash), sql`${lastInviteEmail} = 'failed'`)!);
+  if (status === "email_queued") filters.push(and(eq(users.active, true), isNull(users.passwordHash), sql`${lastInviteEmail} = 'queued'`)!);
   if (status === "unverified") filters.push(and(eq(users.active, true), isNotNull(users.passwordHash), isNull(users.emailVerifiedAt))!);
   if (country) filters.push(eq(users.country, country));
   if (q) {

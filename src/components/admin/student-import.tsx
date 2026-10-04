@@ -110,6 +110,7 @@ export function StudentImport({ cohorts, defaultCohort }: { cohorts: { id: numbe
               ? cohortLabel ? "New students were emailed a link to set their password, and everyone enrolled got a confirmation." : "New students were emailed a link to set their password."
               : "No emails were sent. New students can use “Forgot password” on the sign-in page, or you can resend their invitation from their profile."}
           </p>
+          {result.queued ? <p className="rounded-[5px] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">{result.queued} set-password email{result.queued === 1 ? " is" : "s are"} queued because today&apos;s sending limit is reached. {result.queued === 1 ? "It goes" : "They go"} out automatically when the limit resets. See Settings › Email.</p> : null}
         </div>
         {result.skipped && result.skipped.length > 0 && (
           <div className="flex w-full flex-col gap-3 rounded-[5px] border border-amber-200 bg-amber-50 p-4">

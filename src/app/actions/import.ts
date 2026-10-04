@@ -19,7 +19,7 @@ import { markWaitlistEnrolled } from "@/lib/waitlist";
 export type PreviewStatus = "new" | "existing" | "enrolled" | "skip";
 export type PreviewRow = Omit<ImportRow, "error"> & { status: PreviewStatus; note?: string };
 export type PreviewResult = { error?: string; rows?: PreviewRow[] };
-export type ImportResult = { error?: string; created?: number; updated?: number; enrolled?: number; emailed?: boolean; skipped?: { line: number; email: string; reason: string }[] };
+export type ImportResult = { error?: string; created?: number; updated?: number; enrolled?: number; emailed?: boolean; queued?: number; skipped?: { line: number; email: string; reason: string }[] };
 
 async function usersByEmail(emails: string[]): Promise<Map<string, User>> {
   const db = await getDb();
@@ -129,7 +129,8 @@ export async function importStudents(csv: string, cohortId: number | null, sendE
     });
   }
 
-  // Set-password emails for the new accounts.
+  // Set-password emails for the new accounts. Over the daily sending limit, they wait in the queue.
+  let queued = 0;
   if (sendEmailsToStudents && created.length) {
     const outgoing: OutgoingEmail[] = [];
     for (const user of created) {
@@ -138,12 +139,12 @@ export async function importStudents(csv: string, cohortId: number | null, sendE
         ? { to: user.email, template: "account_setup", vars: { name: firstName(user.name), courseTitle: found.course.title, setupUrl: url } }
         : { to: user.email, template: "student_account", vars: { name: firstName(user.name), setupUrl: url, coursesUrl: absoluteUrl("/courses") } });
     }
-    await sendEmails(outgoing);
+    queued = (await sendEmails(outgoing)).queued;
   }
 
   const parts = [`${created.length} new`, existingRows.length && `${existingRows.length} existing`, found && `${enrolledIds.length} enrolled on ${found.course.title} – ${found.cohort.name}`].filter(Boolean).join(", ");
   await logAudit(actor, { action: "users.imported", summary: `imported students from a CSV (${parts})`, target: found ? { type: "cohort", id: found.cohort.id } : undefined, details: { skipped: skipped.length, emailed: sendEmailsToStudents } });
   revalidatePath("/admin/users");
   if (found) revalidatePath(`/teach/cohorts/${found.cohort.id}`);
-  return { created: created.length, updated, enrolled: enrolledIds.length, emailed: sendEmailsToStudents, skipped };
+  return { created: created.length, updated, enrolled: enrolledIds.length, emailed: sendEmailsToStudents, queued, skipped };
 }

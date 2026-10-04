@@ -218,6 +218,13 @@
       "when": 1791071197415,
       "tag": "0030_curriculum_lead_details",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791113199635,
+      "tag": "0031_email_queue",
+      "breakpoints": true
     }
   ]
 }

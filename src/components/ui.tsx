@@ -66,7 +66,7 @@ export function ModeBadge({ mode }: { mode: DeliveryMode | SessionMode }) {
 
 const STATUS_TONE: Record<string, Tone> = {
   active: "green", paid: "green", graded: "green", present: "green", sent: "green", completed: "accent",
-  pending: "amber", submitted: "amber", late: "amber", logged: "neutral",
+  pending: "amber", submitted: "amber", late: "amber", queued: "amber", logged: "neutral",
   failed: "red", cancelled: "red", absent: "red", resubmit: "cyan", refunded: "neutral", excused: "neutral",
 };
 

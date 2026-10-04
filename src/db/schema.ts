@@ -128,6 +128,8 @@ export type EmailSettings = {
   smtpSecurity: "ssl" | "tls" | "none";
   smtpUser: string;
   smtpPassword: string;
+  /** Most emails to send per day (from midnight in the academy's timezone). 0 or missing: no limit. Extra emails wait in a queue. */
+  dailyLimit: number;
 };
 export type AiProvider = "openai" | "anthropic";
 /**
@@ -648,11 +650,14 @@ export const emailLog = pgTable("email_log", {
   template: text("template").notNull(),
   subject: text("subject").notNull(),
   html: text("html").notNull().default(""),
-  status: text("status").$type<"sent" | "failed" | "logged" | "skipped">().notNull(),
+  /** Plain-text version, kept so queued emails can be sent later. */
+  text: text("text").notNull().default(""),
+  /** queued: waiting for the daily sending limit to reset. */
+  status: text("status").$type<"sent" | "failed" | "logged" | "skipped" | "queued">().notNull(),
   error: text("error"),
   providerId: text("provider_id"),
   createdAt: createdAt(),
-}, (t) => [index("email_log_created_idx").on(t.createdAt)]);
+}, (t) => [index("email_log_created_idx").on(t.createdAt), index("email_log_status_idx").on(t.status, t.id), index("email_log_to_idx").on(t.to, t.template)]);
 
 export type User = typeof users.$inferSelect;
 export type Settings = typeof settings.$inferSelect;

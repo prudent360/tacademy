@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { desc } from "drizzle-orm";
-import { runRemindersNow, saveAiSettings, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { count, desc, eq } from "drizzle-orm";
+import { runRemindersNow, saveAiSettings, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
@@ -13,7 +13,7 @@ import { getDb } from "@/db";
 import { emailLog, emailTemplates, type Settings } from "@/db/schema";
 import { bankTransferConfig, emailConfig, gatewayConfig, reminderConfig, type ResolvedGateway } from "@/lib/config";
 import { AI_MODELS, aiConfig } from "@/lib/ai";
-import { REQUIRED_TEMPLATES } from "@/lib/email";
+import { REQUIRED_TEMPLATES, sendingAllowance } from "@/lib/email";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "@/lib/email-templates";
 import { CURRENCIES } from "@/lib/money";
 import { testPaymentsAllowed } from "@/lib/payments";
@@ -270,7 +270,13 @@ export async function PaymentsTab({ s }: { s: Settings }) {
 // ---------- Email ----------
 
 export async function EmailTab({ s }: { s: Settings }) {
-  const [cfg, log] = await Promise.all([emailConfig(), (await getDb()).select().from(emailLog).orderBy(desc(emailLog.createdAt)).limit(15)]);
+  const db = await getDb();
+  const [cfg, log, allowance, [{ queued }]] = await Promise.all([
+    emailConfig(),
+    db.select().from(emailLog).orderBy(desc(emailLog.createdAt)).limit(15),
+    sendingAllowance(),
+    db.select({ queued: count() }).from(emailLog).where(eq(emailLog.status, "queued")),
+  ]);
   return (
     <div className="flex flex-col gap-6">
       <ActionForm action={saveEmailSettings} className="flex flex-col gap-6">
@@ -305,6 +311,21 @@ export async function EmailTab({ s }: { s: Settings }) {
           </div>
           <p className="text-sm text-muted">Emails currently go out as <span className="font-semibold text-ink">{cfg.from}</span>.</p>
         </Section>
+        <Section title="Daily sending limit" description="Mail providers cap how many emails a mailbox can send a day (Hostinger and Gmail do). Set your cap a little below theirs: emails over it wait in a queue and go out automatically the next day, instead of failing. Sign-up codes and password resets always go straight away.">
+          <div className="grid items-end gap-5 md:grid-cols-[220px_1fr]">
+            <Input label="Emails per day" name="dailyLimit" type="number" min={0} step={1} defaultValue={s.email.dailyLimit || ""} placeholder="No limit" />
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pb-2.5 text-sm text-body">
+              <span>Sent today: <strong className="text-ink">{allowance.sentToday.toLocaleString()}</strong>{allowance.limit ? <> of {allowance.limit.toLocaleString()}</> : null}</span>
+              <span>Waiting in queue: <strong className={queued ? "text-amber-800" : "text-ink"}>{queued.toLocaleString()}</strong></span>
+            </div>
+          </div>
+          {queued > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-[5px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <span className="grow">{queued.toLocaleString()} email{queued === 1 ? " is" : "s are"} waiting. {allowance.remaining === 0 ? "Today's limit is used up, so they'll go out after midnight." : "They go out with the daily job, or now if you like."}</span>
+              {allowance.remaining > 0 && <ActionButton action={sendQueuedEmailsNow} pendingText="Sending…" doneText="Done">Send queued emails now</ActionButton>}
+            </div>
+          )}
+        </Section>
         <div className="flex flex-wrap items-center gap-3">
           <SubmitButton>Save email settings</SubmitButton>
           <ActionButton action={sendTestEmailNow} pendingText="Sending…" doneText="Sent. Check your inbox or the log">Send a test email to me</ActionButton>
@@ -322,7 +343,7 @@ export async function EmailTab({ s }: { s: Settings }) {
                 <td className="text-body">{e.to}</td>
                 <td><Link href={`/admin/emails/log/${e.id}`} className="font-semibold text-ink hover:text-accent-ink">{e.subject}</Link></td>
                 <td className="text-muted">{EMAIL_TEMPLATES[e.template as TemplateKey]?.name ?? e.template}</td>
-                <td><StatusBadge status={e.status} label={e.status === "logged" ? "Logged only" : e.status === "skipped" ? "Switched off" : undefined} />{e.error && e.status === "failed" && <p className="mt-1 max-w-[260px] text-xs text-red-700">{e.error}</p>}</td>
+                <td><StatusBadge status={e.status} label={e.status === "logged" ? "Logged only" : e.status === "skipped" ? "Switched off" : e.status === "queued" ? "Queued" : undefined} />{e.error && e.status === "failed" && <p className="mt-1 max-w-[260px] text-xs text-red-700">{e.error}</p>}</td>
               </tr>
             ))}
             {!log.length && <tr><td colSpan={5} className="py-10 text-center text-muted">No emails yet.</td></tr>}

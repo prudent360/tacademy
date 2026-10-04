@@ -17,7 +17,7 @@ export type PersonRow = {
   role: "admin" | "instructor" | "student" | "staff";
   studentId: string | null;
   courses: number;
-  status: "deactivated" | "invited" | "verified" | "unverified";
+  status: "deactivated" | "invited" | "invite_failed" | "invite_queued" | "verified" | "unverified";
   country: string | null;
   joined: string;
   lastLogin: string | null;
@@ -27,6 +27,8 @@ const ROLE_TONE = { admin: "navy", instructor: "cyan", student: "accent", staff:
 const STATUS = {
   deactivated: <Badge tone="red">Deactivated</Badge>,
   invited: <Badge tone="amber">Invitation sent</Badge>,
+  invite_failed: <Badge tone="red">Invitation email failed</Badge>,
+  invite_queued: <Badge tone="amber">Invitation queued</Badge>,
   verified: <Badge tone="green">Verified</Badge>,
   unverified: <Badge>Email unverified</Badge>,
 };

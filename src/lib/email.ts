@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, asc, count, eq, gte } from "drizzle-orm";
 import { marked } from "marked";
 import nodemailer from "nodemailer";
 import { getDb } from "@/db";
@@ -8,6 +8,7 @@ import { emailConfig, type ResolvedEmail } from "./config";
 import { getSettings } from "./data";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "./email-templates";
 import { absoluteUrl, siteUrl } from "./site";
+import { fromZonedInput, toZonedInput } from "./time";
 
 export type Vars = Record<string, string | number | null | undefined>;
 export type OutgoingEmail = { to: string; template: TemplateKey; vars: Vars };
@@ -126,33 +127,51 @@ ${settings.tagline ? `<p style="margin:0 0 24px;font-size:14px;line-height:1.65;
 }
 
 type Message = { to: string; subject: string; html: string; text: string };
-type Delivery = { ok: boolean; ids: (string | null)[]; error?: string };
+/** One result per message, in order. `deferred`: the provider's sending limit was hit, so try again later. */
+type Result = { status: "sent" | "failed" | "deferred"; id: string | null; error?: string };
 
-/** Sends one at a time over a single SMTP connection; the chunk fails as a whole if any message does. */
-async function deliverSmtp(cfg: ResolvedEmail, messages: Message[]): Promise<Delivery> {
+/** Provider replies that mean "you've sent too much", as opposed to a bad address or broken settings. */
+const LIMIT_ERROR = /limit|quota|exceed|too many|\brate\b|throttl|try again later|\b(421|450|451|452|454)\b|5\.4\.6|4\.7\.0/i;
+
+/** Sends one at a time over a single SMTP connection, recording each message's own result. */
+async function deliverSmtp(cfg: ResolvedEmail, messages: Message[]): Promise<Result[]> {
   const { host, port, security, user, password } = cfg.smtp;
   const transport = nodemailer.createTransport({ host, port, secure: security === "ssl", requireTLS: security === "tls", auth: { user, pass: password }, connectionTimeout: 15_000 });
-  const ids: (string | null)[] = [];
+  const results: Result[] = [];
   try {
     for (const m of messages) {
-      const info = await transport.sendMail({ from: cfg.from, to: m.to, subject: m.subject, html: m.html, text: m.text, replyTo: cfg.replyTo || undefined });
-      ids.push(info.messageId ?? null);
+      try {
+        const info = await transport.sendMail({ from: cfg.from, to: m.to, subject: m.subject, html: m.html, text: m.text, replyTo: cfg.replyTo || undefined });
+        results.push({ status: "sent", id: info.messageId ?? null });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (LIMIT_ERROR.test(message)) {
+          // The mailbox has hit its limit: everything left waits for later.
+          while (results.length < messages.length) results.push({ status: "deferred", id: null, error: message });
+          break;
+        }
+        results.push({ status: "failed", id: null, error: message });
+        // Can't connect or sign in: the rest would fail the same way.
+        if (/auth|connect|ECONN|ETIMEDOUT|EAUTH|ESOCKET|certificate/i.test(message)) {
+          while (results.length < messages.length) results.push({ status: "failed", id: null, error: message });
+          break;
+        }
+      }
     }
-    return { ok: true, ids };
-  } catch (error) {
-    return { ok: false, ids, error: error instanceof Error ? error.message : String(error) };
   } finally {
     transport.close();
   }
+  return results;
 }
 
-async function deliver(messages: Message[]): Promise<Delivery> {
+async function deliver(messages: Message[]): Promise<Result[]> {
   const cfg = await emailConfig();
   if (cfg.driver === "smtp") return deliverSmtp(cfg, messages);
   const from = cfg.from;
   const replyTo = cfg.replyTo || undefined;
   const payload = messages.map((m) => ({ from, to: [m.to], subject: m.subject, html: m.html, text: m.text, reply_to: replyTo }));
   const single = payload.length === 1;
+  const all = (status: Result["status"], error: string): Result[] => messages.map(() => ({ status, id: null, error }));
   try {
     const response = await fetch(single ? "https://api.resend.com/emails" : "https://api.resend.com/emails/batch", {
       method: "POST",
@@ -160,20 +179,40 @@ async function deliver(messages: Message[]): Promise<Delivery> {
       body: JSON.stringify(single ? payload[0] : payload),
     });
     const data = (await response.json().catch(() => ({}))) as { id?: string; data?: { id: string }[]; message?: string };
-    if (!response.ok) return { ok: false, ids: [], error: data.message ?? `Resend responded ${response.status}` };
-    return { ok: true, ids: single ? [data.id ?? null] : (data.data ?? []).map((d) => d.id) };
+    if (!response.ok) {
+      const error = data.message ?? `Resend responded ${response.status}`;
+      return all(response.status === 429 || LIMIT_ERROR.test(error) ? "deferred" : "failed", error);
+    }
+    const ids = single ? [data.id ?? null] : (data.data ?? []).map((d) => d.id);
+    return messages.map((_, i) => ({ status: "sent", id: ids[i] ?? null }));
   } catch (error) {
-    return { ok: false, ids: [], error: error instanceof Error ? error.message : String(error) };
+    return all("failed", error instanceof Error ? error.message : String(error));
   }
 }
+
+/** Sign-in codes and password links are needed now, so they skip the queue. */
+const URGENT: TemplateKey[] = ["email_code", "password_reset", "verify_email"];
+
+/** Emails sent since midnight (academy time), and how many more are allowed today. Infinity means no limit. */
+export async function sendingAllowance(): Promise<{ limit: number; sentToday: number; remaining: number }> {
+  const settings = await getSettings();
+  const limit = Math.max(0, Math.floor(Number(settings.email?.dailyLimit) || 0));
+  const midnight = fromZonedInput(`${toZonedInput(new Date(), settings.timezone).slice(0, 10)}T00:00`, settings.timezone);
+  const [{ n }] = await (await getDb()).select({ n: count() }).from(emailLog).where(and(eq(emailLog.status, "sent"), gte(emailLog.createdAt, midnight)));
+  return { limit, sentToday: n, remaining: limit ? Math.max(0, limit - n) : Infinity };
+}
+
+export type SendSummary = { sent: number; queued: number; failed: number; logged: number; skipped: number };
 
 /**
  * Sends templated emails through the driver chosen in Settings > Email (Resend batches 100 per request; SMTP
  * sends one by one). Never throws: email is best effort and every attempt is written to the email log.
+ * With a daily limit set, emails over it are queued and sent when the limit resets (see flushEmailQueue).
  * With the "log" driver, or no credentials, messages are only logged, which is handy in development.
  */
-export async function sendEmails(emails: OutgoingEmail[]): Promise<void> {
-  if (!emails.length) return;
+export async function sendEmails(emails: OutgoingEmail[]): Promise<SendSummary> {
+  const summary: SendSummary = { sent: 0, queued: 0, failed: 0, logged: 0, skipped: 0 };
+  if (!emails.length) return summary;
   const db = await getDb();
   const templates = new Map<TemplateKey, Awaited<ReturnType<typeof getTemplate>>>();
   type Rendered = OutgoingEmail & { subject: string; html: string; text: string };
@@ -188,24 +227,73 @@ export async function sendEmails(emails: OutgoingEmail[]): Promise<void> {
   // Switched-off templates are recorded, not sent, so admins can see what was suppressed.
   if (skipped.length) {
     await db.insert(emailLog).values(skipped.map((m) => ({ to: m.to, template: m.template, subject: m.subject, html: m.html, status: "skipped" as const, error: "Template switched off in Settings" })));
+    summary.skipped = skipped.length;
   }
-  const configured = await emailConfigured();
+  if (!rendered.length) return summary;
+  const row = (m: Rendered, status: "sent" | "failed" | "logged" | "queued", error: string | null = null, providerId: string | null = null) =>
+    ({ to: m.to, template: m.template, subject: m.subject, html: m.html, text: status === "queued" ? m.text : "", status, error, providerId });
 
-  for (let i = 0; i < rendered.length; i += 100) {
-    const chunk = rendered.slice(i, i + 100);
-    let status: "sent" | "failed" | "logged" = "logged";
-    let result: Awaited<ReturnType<typeof deliver>> | null = null;
-    if (configured) {
-      result = await deliver(chunk);
-      status = result.ok ? "sent" : "failed";
-      if (!result.ok) console.error("Email delivery failed:", result.error);
-    } else if (process.env.NODE_ENV !== "production") {
-      for (const m of chunk) console.info(`[email:${m.template}] to ${m.to}: ${m.subject}`);
-    }
-    await db.insert(emailLog).values(
-      chunk.map((m, j) => ({ to: m.to, template: m.template, subject: m.subject, html: m.html, status, error: result?.error ?? null, providerId: result?.ids[j] ?? null })),
-    );
+  if (!(await emailConfigured())) {
+    if (process.env.NODE_ENV !== "production") for (const m of rendered) console.info(`[email:${m.template}] to ${m.to}: ${m.subject}`);
+    await db.insert(emailLog).values(rendered.map((m) => row(m, "logged")));
+    summary.logged = rendered.length;
+    return summary;
   }
+
+  // Within today's allowance, in order; urgent emails always go now.
+  let { remaining } = await sendingAllowance();
+  const now: Rendered[] = [];
+  const later: Rendered[] = [];
+  for (const m of rendered) {
+    if (URGENT.includes(m.template)) now.push(m);
+    else if (remaining > 0) { now.push(m); remaining--; }
+    else later.push(m);
+  }
+  const rows = later.map((m) => row(m, "queued", "Waiting for today's sending limit to reset"));
+  for (let i = 0; i < now.length; i += 100) {
+    const chunk = now.slice(i, i + 100);
+    const results = await deliver(chunk);
+    chunk.forEach((m, j) => {
+      const r = results[j];
+      // An urgent email is useless tomorrow, so it fails instead of waiting.
+      const status = r.status === "deferred" ? (URGENT.includes(m.template) ? "failed" : "queued") : r.status;
+      if (status === "failed") console.error(`Email to ${m.to} failed:`, r.error);
+      rows.push(row(m, status, r.error ?? null, r.id));
+    });
+  }
+  for (const r of rows) summary[r.status === "queued" ? "queued" : r.status === "sent" ? "sent" : "failed"]++;
+  for (let i = 0; i < rows.length; i += 200) await db.insert(emailLog).values(rows.slice(i, i + 200));
+  // Something went out, so there may be room for emails queued earlier.
+  if (summary.sent && !summary.queued) await flushEmailQueue().catch((e) => console.error("Email queue:", e));
+  return summary;
+}
+
+/** Sends queued emails, oldest first, as far as today's allowance goes. Run by the daily cron, after sends, and from Settings. */
+export async function flushEmailQueue(max = 500): Promise<{ sent: number; failed: number; waiting: number }> {
+  const db = await getDb();
+  const result = { sent: 0, failed: 0, waiting: 0 };
+  const countWaiting = async () => (await db.select({ n: count() }).from(emailLog).where(eq(emailLog.status, "queued")))[0].n;
+  if (!(await emailConfigured())) return { ...result, waiting: await countWaiting() };
+  const { remaining } = await sendingAllowance();
+  const take = Math.min(max, remaining);
+  if (take > 0) {
+    const queued = await db.select().from(emailLog).where(eq(emailLog.status, "queued")).orderBy(asc(emailLog.id)).limit(take);
+    for (let i = 0; i < queued.length; i += 100) {
+      const chunk = queued.slice(i, i + 100);
+      const results = await deliver(chunk.map((q) => ({ to: q.to, subject: q.subject, html: q.html, text: q.text })));
+      let deferred = false;
+      for (const [j, q] of chunk.entries()) {
+        const r = results[j];
+        if (r.status === "deferred") { deferred = true; continue; }
+        await db.update(emailLog).set({ status: r.status, error: r.error ?? null, providerId: r.id, createdAt: new Date() }).where(eq(emailLog.id, q.id));
+        result[r.status === "sent" ? "sent" : "failed"]++;
+      }
+      // The provider says stop for now.
+      if (deferred) break;
+    }
+  }
+  result.waiting = await countWaiting();
+  return result;
 }
 
 export async function sendEmail(to: string, template: TemplateKey, vars: Vars): Promise<void> {

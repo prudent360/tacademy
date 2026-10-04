@@ -75,9 +75,18 @@ export async function bulkPeople(action: BulkAction, target: BulkTarget): Promis
         ? { to: person.email, template: "student_account", vars: { name: firstName(person.name), setupUrl: url, coursesUrl: absoluteUrl("/courses") } }
         : { to: person.email, template: "invite", vars: { name: firstName(person.name), role: person.role, inviteUrl: url } });
     }
-    await sendEmails(outgoing);
+    const sent = await sendEmails(outgoing);
     if (outgoing.length) await logAudit(actor, { action: "users.invited", summary: `resent ${outgoing.length} invitation${outgoing.length === 1 ? "" : "s"}` });
-    return { ok: `Sent ${outgoing.length} invitation${outgoing.length === 1 ? "" : "s"}.`, skipped };
+    revalidatePath("/admin/users");
+    const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+    const parts = [
+      sent.sent && `Sent ${plural(sent.sent, "invitation")}.`,
+      sent.logged && `${plural(sent.logged, "invitation")} written to the email log (email delivery isn't set up).`,
+      sent.queued && `${plural(sent.queued, "invitation")} queued: today's sending limit is reached, so they'll go out automatically tomorrow.`,
+      sent.failed && `${plural(sent.failed, "invitation")} failed. Check Settings › Email.`,
+      !outgoing.length && "No invitations to send.",
+    ].filter(Boolean);
+    return { ok: parts.join(" "), error: sent.failed && !sent.sent && !sent.queued ? parts.join(" ") : undefined, skipped };
   }
 
   if (action === "reactivate") {
