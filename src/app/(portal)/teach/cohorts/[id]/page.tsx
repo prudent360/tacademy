@@ -438,7 +438,7 @@ async function StudentsTab({ cohortId, cohort, isAdmin, marks, heldCount, assign
               <Input label="Email" name="email" type="email" required />
               <Input label="Name (for new accounts)" name="name" />
             </div>
-            <div><SubmitButton pendingText="Adding…">Add student</SubmitButton></div>
+            <div className="flex flex-wrap items-center gap-4"><SubmitButton pendingText="Adding…">Add student</SubmitButton><Link href={`/admin/users/import?cohort=${cohortId}`} className="text-sm font-semibold text-accent-ink hover:underline">Adding many? Import from a CSV</Link></div>
           </ActionForm>
         </details>
       )}

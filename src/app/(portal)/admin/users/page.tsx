@@ -3,14 +3,14 @@ import Link from "next/link";
 import { and, count, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
 import { inviteUser } from "@/app/actions/admin";
 import { ActionForm, Input, ModalButton, Select, SubmitButton } from "@/components/forms";
-import { CapIcon, LayersIcon, PlusIcon, ShieldIcon, UsersIcon } from "@/components/icons";
+import { CapIcon, DownloadIcon, LayersIcon, PlusIcon, ShieldIcon, UsersIcon } from "@/components/icons";
 import { StatTile } from "@/components/portal/dash";
-import { Badge, DataTable, EmptyState, PageHeader, Pagination, PersonCell, TableToolbar } from "@/components/ui";
+import { Badge, buttonClass, DataTable, EmptyState, PageHeader, Pagination, PersonCell, TableToolbar } from "@/components/ui";
 import { getDb } from "@/db";
 import { enrollments, ROLES, users, type Role } from "@/db/schema";
 import { relativeTime } from "@/lib/time";
 import { parseStudentId, studentId } from "@/lib/utils";
-import { requirePermission } from "@/lib/auth";
+import { can, requirePermission } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "People" };
 
@@ -20,7 +20,8 @@ const ROLE_TONE = { admin: "navy", instructor: "cyan", student: "accent", staff:
 type Search = { role?: string; q?: string; page?: string };
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<Search> }) {
-  await requirePermission("users.view");
+  const viewer = await requirePermission("users.view");
+  const canImport = await can(viewer, "users.manage");
   const params = await searchParams;
   const role = ROLES.find((r) => r === params.role) as Role | undefined;
   const q = params.q?.trim() ?? "";
@@ -55,7 +56,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       <PageHeader
         title="People"
         description="Students, instructors and admins. Students usually sign up themselves; invite staff here."
-        actions={
+        actions={<>
+          {canImport && <Link href="/admin/users/import" className={buttonClass.secondary}><DownloadIcon className="size-4 rotate-180" /> Import students</Link>}
           <ModalButton label="Invite someone" title="Invite someone" icon={<PlusIcon className="size-4" />}>
             <ActionForm action={inviteUser}>
               <Input label="Full name" name="name" required />
@@ -65,7 +67,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               <SubmitButton pendingText="Inviting…">Send invitation</SubmitButton>
             </ActionForm>
           </ModalButton>
-        }
+        </>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
