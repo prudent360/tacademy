@@ -13,6 +13,7 @@ import {
 import { can, requirePermission } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { offerOpenPlaces } from "@/lib/waitlist";
+import { adjustCommissionForRefund } from "@/lib/referrals";
 import { getCohortWithCourse, getSettings } from "@/lib/data";
 import { fromZonedInput } from "@/lib/time";
 import { REQUIRED_TEMPLATES, sendEmail } from "@/lib/email";
@@ -49,6 +50,7 @@ const courseSchema = z.object({
   category: text(60),
   level: text(40),
   durationWeeks: z.string().trim().refine((v) => v === "" || /^\d{1,3}$/.test(v), "Duration must be a number of weeks."),
+  referralPercent: z.string().trim().refine((v) => v === "" || (/^\d{1,3}$/.test(v) && Number(v) <= 100), "Referral commission must be a whole number from 0 to 100."),
   sortOrder: sortValue,
   certificateMinAttendance: z.coerce.number().int().min(0).max(100),
   certificateMinAssignments: z.coerce.number().int().min(0).max(100),
@@ -85,6 +87,7 @@ async function saveCourse(id: number | null, formData: FormData): Promise<FormSt
     ...parsed.data,
     slug,
     durationWeeks: parsed.data.durationWeeks ? Number(parsed.data.durationWeeks) : null,
+    referralPercent: parsed.data.referralPercent === "" ? null : Number(parsed.data.referralPercent),
     outcomes: parseList(formData.get("outcomes"), /\n/).slice(0, 20),
     curriculum: parseList(formData.get("curriculum"), /\n/).slice(0, 40).map((line) => { const [title, ...rest] = line.split("|"); return { title: title.trim(), summary: rest.join("|").trim() }; }).filter((item) => item.title),
     portfolioProjects: parseList(formData.get("portfolioProjects"), /\n/).slice(0, 12),
@@ -530,7 +533,8 @@ export async function recordRefund(reference: string, _state: FormState, formDat
   if (reason.length < 3) return { error: "Add a short reason, for your records." };
   const total = payment.refundedAmount + amount;
   const full = total >= payment.amount;
-  await db.update(payments).set({ refundedAmount: total, refundedAt: new Date(), refundReason: reason, refundedById: actor.id, ...(full ? { status: "refunded" as const } : {}) }).where(eq(payments.id, payment.id));
+  const [refunded] = await db.update(payments).set({ refundedAmount: total, refundedAt: new Date(), refundReason: reason, refundedById: actor.id, ...(full ? { status: "refunded" as const } : {}) }).where(eq(payments.id, payment.id)).returning();
+  if (refunded) await adjustCommissionForRefund(refunded);
 
   // Optionally take them off the cohort (and withdraw any certificate) at the same time.
   let removed = false;

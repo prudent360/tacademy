@@ -12,6 +12,7 @@ import { DEFAULT_BANK, DEFAULT_REMINDERS } from "@/lib/config";
 import { detectTransactpayCurrencies } from "@/lib/payments";
 import { getSettings } from "@/lib/data";
 import { flushEmailQueue, sendEmail } from "@/lib/email";
+import { referralConfig } from "@/lib/referrals";
 import { CURRENCY_CODES } from "@/lib/money";
 import { sendDueReminders } from "@/lib/reminders";
 import { encryptSecret } from "@/lib/secrets";
@@ -393,6 +394,30 @@ export async function saveReminders(_state: FormState, formData: FormData): Prom
   });
   await logAudit(actor, { action: "settings.saved", summary: "updated the reminder settings" });
   return { ok: "Reminder settings saved." };
+}
+
+export async function saveReferralSettings(_state: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requirePermission("settings.manage");
+  const num = (key: string) => Number(String(formData.get(key) ?? "").trim());
+  const percent = num("percent");
+  const cookieDays = num("cookieDays");
+  const holdDays = num("holdDays");
+  if (!Number.isInteger(percent) || percent < 0 || percent > 100) return { error: "The commission must be a whole number from 0 to 100." };
+  if (!Number.isInteger(cookieDays) || cookieDays < 1 || cookieDays > 365) return { error: "Link memory must be between 1 and 365 days." };
+  if (!Number.isInteger(holdDays) || holdDays < 0 || holdDays > 180) return { error: "The waiting period must be between 0 and 180 days." };
+  const before = await referralConfig();
+  const next = {
+    enabled: formData.get("enabled") === "on",
+    percent,
+    cookieDays,
+    holdDays,
+    scope: formData.get("scope") === "all" ? "all" as const : "first" as const,
+    terms: String(formData.get("terms") ?? "").trim().slice(0, 2000),
+  };
+  await update({ referrals: next });
+  await logAudit(actor, { action: "settings.saved", summary: `updated the referral settings${before.percent !== percent ? ` (commission ${before.percent}% → ${percent}%)` : ""}${before.enabled !== next.enabled ? (next.enabled ? ", switched referrals on" : ", switched referrals off") : ""}` });
+  revalidatePath("/", "layout");
+  return { ok: "Referral settings saved." };
 }
 
 export async function runRemindersNow(): Promise<FormState> {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { count, desc, eq } from "drizzle-orm";
-import { runRemindersNow, saveAiSettings, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { runRemindersNow, saveAiSettings, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
@@ -18,6 +18,7 @@ import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "@/lib/email
 import { CURRENCIES } from "@/lib/money";
 import { testPaymentsAllowed } from "@/lib/payments";
 import { maskSecret } from "@/lib/secrets";
+import { referralConfig } from "@/lib/referrals";
 import { seoConfig } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
 import { relativeTime } from "@/lib/time";
@@ -560,6 +561,37 @@ export async function RemindersTab() {
           <p className="text-sm text-muted">Send anything that&apos;s due right now. Reminders are never sent twice.</p>
           <SubmitButton pendingText="Checking…">Run reminders now</SubmitButton>
         </ActionForm>
+      </Section>
+    </div>
+  );
+}
+
+// ---------- Referrals ----------
+
+export async function ReferralsTab() {
+  const r = await referralConfig();
+  return (
+    <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <ActionForm action={saveReferralSettings} className="flex flex-col gap-6">
+        <Section title="Refer & earn" description="Anyone with an account gets a personal link. When someone new joins through it and pays for a course, the person who shared it earns a commission." badge={r.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : <Badge>Off</Badge>}>
+          <Switch label="Turn on referrals" name="enabled" defaultChecked={r.enabled} hint="Shows Refer & earn to everyone in their account menu." />
+          <div className="grid gap-5 md:grid-cols-3">
+            <Input label="Commission (%)" name="percent" type="number" min={0} max={100} defaultValue={r.percent} hint="Of what the referred student pays. Each course can override it." />
+            <Input label="Link remembered for (days)" name="cookieDays" type="number" min={1} max={365} defaultValue={r.cookieDays} hint="How long after clicking a link the sign-up still counts." />
+            <Input label="Payable after (days)" name="holdDays" type="number" min={0} max={180} defaultValue={r.holdDays} hint="Waiting period, so refunds can happen before you pay out." />
+          </div>
+          <Select label="Commission is paid on" name="scope" defaultValue={r.scope} options={[{ value: "first", label: "The first course a referred student buys (including its deposit and balance)" }, { value: "all", label: "Every course a referred student ever buys" }]} />
+          <Textarea label="Extra terms (optional)" name="terms" defaultValue={r.terms} rows={4} hint="Shown on everyone's Refer & earn page, e.g. how and when you pay out." />
+        </Section>
+        <div><SubmitButton>Save referral settings</SubmitButton></div>
+      </ActionForm>
+      <Section title="How it works">
+        <ul className="flex flex-col gap-2.5 text-sm leading-relaxed text-body">
+          <li><strong className="text-ink">Only new people count.</strong> The referral is attached when someone creates an account (signing up or enrolling) after using a link. Existing accounts and self-referrals never count.</li>
+          <li><strong className="text-ink">Commission follows the money.</strong> It&apos;s worked out on what the student actually pays, after discounts, in the same currency.</li>
+          <li><strong className="text-ink">Refunds are handled.</strong> A refund reduces the commission, or cancels it when the refund is full.</li>
+          <li><strong className="text-ink">You pay out.</strong> Payable commissions and each person&apos;s bank details are under <Link href="/admin/referrals" className="font-semibold text-accent-ink">Payments › Referrals</Link>, where you mark them paid.</li>
+        </ul>
       </Section>
     </div>
   );

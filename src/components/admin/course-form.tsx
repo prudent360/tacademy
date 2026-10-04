@@ -58,6 +58,7 @@ export function CourseForm({ action, course, ai = false, kind = "course", linkab
         <Input label="Duration (weeks)" name="durationWeeks" type="number" min={1} max={200} defaultValue={course?.durationWeeks ?? ""} />
         <Input label="Sort order" name="sortOrder" type="number" defaultValue={course?.sortOrder ?? 0} hint="Lower shows first." />
       </div>
+      <Input label="Referral commission (%)" name="referralPercent" type="number" min={0} max={100} defaultValue={course?.referralPercent ?? ""} placeholder="Default" hint="What someone earns when a person they referred pays for this. Leave empty to use the default in Settings › Referrals; 0 turns it off for this one." className="max-w-[360px]" />
       <FileField label="Cover image" name="image" current={course?.imageUrl} removeName="removeImage" hint={`Used on ${noun} cards and in the page hero. 16:9 works best. Without one, generated artwork is used.`} />
       <FileField label="Hero background photo" name="heroImage" current={course?.heroImageUrl} removeName="removeHeroImage" hint="Optional. Fills the whole top of the page behind the title, with a purple gradient over it. Use a wide landscape photo, at least 1600px across, with the busy part away from the left." />
       {!internship && <FileField label="Curriculum document" name="curriculumFile" current={course?.curriculumUrl} accept=".pdf,.doc,.docx,application/pdf" removeName="removeCurriculum" hint="PDF recommended, up to 4 MB. Visitors get it after leaving their name, email and phone under “View curriculum”." />}

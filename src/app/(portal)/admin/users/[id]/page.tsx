@@ -26,6 +26,7 @@ export default async function UserPage({ params, searchParams }: { params: Promi
   const [user] = await db.select().from(users).where(eq(users.id, id));
   if (!user) notFound();
   const canManage = (await can(viewer, "users.manage")) && viewer.id !== id;
+  const [referrer] = user.referredById ? await db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, user.referredById)) : [];
   const [enrolled, teaching, paid] = await Promise.all([
     db.select({ enrollment: enrollments, cohort: cohorts, course: courses }).from(enrollments).innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId)).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(eq(enrollments.userId, id)).orderBy(desc(enrollments.createdAt)),
     db.select({ cohort: cohorts, course: courses }).from(cohortInstructors).innerJoin(cohorts, eq(cohorts.id, cohortInstructors.cohortId)).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(eq(cohortInstructors.userId, id)),
@@ -36,6 +37,7 @@ export default async function UserPage({ params, searchParams }: { params: Promi
     <>
       <PageHeader back={{ href: "/admin/users", label: "People" }} title={user.name} description={`${user.role === "student" ? `${studentId(user)} · ` : ""}${user.email}${countryByCode(user.country) ? ` · ${flag(user.country!)} ${countryByCode(user.country)!.name}` : ""} · joined ${relativeTime(user.createdAt)}`} actions={<ActionButton action={resendInvite.bind(null, id)} pendingText="Sending…" doneText="Email sent">{user.passwordHash ? "Send password reset" : "Resend invitation"}</ActionButton>} />
       {invited && <Notice>Invitation sent to {user.email}.</Notice>}
+      {referrer && <p className="-mt-2 text-sm text-muted">Referred by <Link href={`/admin/users/${referrer.id}`} className="font-semibold text-accent-ink hover:underline">{referrer.name}</Link>.</p>}
       <div className="grid items-start gap-6 xl:grid-cols-[1fr_1.3fr]">
         <Card title="Account">
           <ActionForm action={updateUser.bind(null, id)}>

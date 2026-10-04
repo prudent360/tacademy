@@ -107,6 +107,36 @@ Your timetable, joining links, venue details and assignments are all in your das
 
 [[Go to my dashboard|{{dashboardUrl}}]]`,
   },
+  referral_earned: {
+    name: "Referral commission earned",
+    description: "Sent when someone a user referred pays for a course.",
+    variables: { amount: "₦25,000", friend: "Chidi", courseTitle: "Data Analytics with Power BI", holdDays: "14", referralsUrl: "https://example.com/account/referrals" },
+    subject: "You earned {{amount}} for referring {{friend}}",
+    body: `Hi {{name}},
+
+Good news: **{{friend}}** just joined **{{courseTitle}}** through your referral link, so you've earned **{{amount}}** in commission.
+
+It becomes payable after {{holdDays}} days, once the refund window has passed. We'll pay it to the details you've saved on your Refer & earn page.
+
+[[See my referrals|{{referralsUrl}}]]
+
+Thank you for spreading the word!`,
+  },
+  referral_paid: {
+    name: "Referral commission paid",
+    description: "Sent when an admin marks a referrer's commission as paid out.",
+    variables: { amount: "₦50,000", note: "Bank transfer, ref 0042", referralsUrl: "https://example.com/account/referrals" },
+    subject: "We've paid you {{amount}} in referral commission",
+    body: `Hi {{name}},
+
+We've just paid you **{{amount}}** for the people you referred to {{siteName}}.
+
+{{note}}
+
+[[See my referrals|{{referralsUrl}}]]
+
+Keep sharing your link. You earn every time someone you refer joins.`,
+  },
   student_account: {
     name: "Student account created",
     description: "Sent when an admin imports students (without a cohort). Lets them choose a password.",

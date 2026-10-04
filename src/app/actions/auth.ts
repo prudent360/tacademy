@@ -14,6 +14,7 @@ import { countryByCode } from "@/lib/countries";
 import { homeFor, PENDING_COOKIE, sessionSecretProblem, signPendingSignIn, signPendingVerification, VERIFY_COOKIE, verifyPendingSignIn, verifyPendingVerification } from "@/lib/session";
 import { decryptSecret } from "@/lib/secrets";
 import { verifyTotp } from "@/lib/totp";
+import { attachReferrer } from "@/lib/referrals";
 import { absoluteUrl } from "@/lib/site";
 import { consumeCode, consumeToken, issueCode, issueToken } from "@/lib/tokens";
 import { firstName } from "@/lib/utils";
@@ -132,6 +133,7 @@ export async function register(_state: FormState, formData: FormData): Promise<F
     .insert(users)
     .values({ name, email, gender, country, phone: formatPhone(dial.data, phone.data), role: "student", passwordHash: await bcrypt.hash(password, 12) })
     .returning();
+  await attachReferrer(user.id);
   await startEmailCodeStep(user, { remember: true, next: safeNext(formData.get("next")), welcome: true });
 }
 

@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AvatarArt, type Gender } from "@/components/avatar-art";
 import { BrandMark } from "@/components/brand-mark";
-import { AwardIcon, TrendIcon, BellIcon, MoonIcon, MonitorIcon, SunIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
+import { AwardIcon, TrendIcon, BellIcon, MoonIcon, MonitorIcon, SunIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GiftIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
 import type { Role } from "@/db/schema";
 import type { Permission } from "@/lib/permissions";
 
@@ -19,10 +19,10 @@ const ROLE_LABEL: Record<Role, string> = { admin: "Administrator", instructor: "
 
 const SETTINGS_TABS: [string, string][] = [
   ["general", "General"], ["branding", "Branding"], ["payments", "Payments"], ["email", "Email"], ["templates", "Email templates"],
-  ["reminders", "Reminders"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
+  ["reminders", "Reminders"], ["referrals", "Referrals"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
 ];
 
-function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number }, perms: Permission[]): NavGroup[] {
+function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number }, perms: Permission[], referrals = false): NavGroup[] {
   const learning: NavGroup = {
     label: "Learning",
     items: [
@@ -77,6 +77,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
         href: "/admin/payments", label: "Payments", icon: CardIcon, children: [
           { href: "/admin/payments", label: "All payments", icon: CardIcon, perm: "payments.view" },
           { href: "/admin/discounts", label: "Discount codes", icon: CardIcon, perm: "discounts.manage" },
+          { href: "/admin/referrals", label: "Referrals", icon: GiftIcon, perm: "referrals.manage" },
         ],
       },
       { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon, perm: "leads.view" },
@@ -97,8 +98,9 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
     label: "Account",
     items: [
       ...(role === "student" ? [{ href: "/dashboard/payments", label: "Payments", icon: CardIcon }] : []),
+      ...(referrals ? [{ href: "/account/referrals", label: "Refer & earn", icon: GiftIcon }] : []),
       { href: "/notifications", label: "Notifications", icon: BellIcon, badge: counts.unread },
-      { href: "/account", label: "Profile & security", icon: UserIcon },
+      { href: "/account", label: "Profile & security", icon: UserIcon, exact: true },
     ],
   };
   if (role === "instructor") return [teaching, account];
@@ -341,7 +343,7 @@ function PromoArt() {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl = null, theme: initialTheme = "light", unread, toGrade, newApplications = 0, newInstructorApplications = 0, permissions = [], notifications, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl = null, theme: initialTheme = "light", unread, toGrade, newApplications = 0, newInstructorApplications = 0, permissions = [], referrals = false, notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null; gender?: Gender | null };
@@ -358,6 +360,8 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
   newInstructorApplications?: number;
   /** Admin-area permissions, for admins and staff. */
   permissions?: Permission[];
+  /** Refer & earn is switched on. */
+  referrals?: boolean;
   notifications: ShellNotification[];
   /** Shown instead of the date for students. */
   studentId?: string;
@@ -369,7 +373,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
   const pathname = usePathname();
   const tab = useSearchParams().get("tab");
   const [drawer, setDrawer] = useState(false);
-  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications }, permissions);
+  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications }, permissions, referrals);
   // Which groups and dropdowns are open is remembered in this browser; until changed, groups start open and
   // dropdowns open when they hold the current page.
   const storedNav = useSyncExternalStore(subscribeStorage, readNavState, () => null);

@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const ROLES = ["admin", "instructor", "student", "staff"] as const;
 export type Role = (typeof ROLES)[number];
@@ -69,6 +69,14 @@ export const users = pgTable("users", {
   /** ISO 3166 alpha-2, chosen at enrolment; sets the currency and payment options offered. */
   country: text("country"),
   emailReminders: boolean("email_reminders").notNull().default(true),
+  /** Their personal referral code, made the first time they open Refer & earn. */
+  referralCode: text("referral_code").unique(),
+  /** Who referred them, set once when the account is created through a referral link. */
+  referredById: integer("referred_by_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+  /** Visits to their referral link. */
+  referralClicks: integer("referral_clicks").notNull().default(0),
+  /** Where to send their referral commission. */
+  payoutDetails: jsonb("payout_details").$type<PayoutDetails>(),
   /** Bumped to sign the user out everywhere (password reset, deactivation). */
   sessionVersion: integer("session_version").notNull().default(1),
   active: boolean("active").notNull().default(true),
@@ -168,6 +176,13 @@ export type SeoSettings = {
 };
 /** bunnyTokenKey is stored encrypted; when set, Bunny Stream lesson videos get expiring signed links. */
 export type VideoSettings = { bunnyTokenKey: string };
+/**
+ * Refer & earn. percent: the default commission on what a referred student pays. cookieDays: how long a link
+ * visit counts. holdDays: how long a commission waits before it can be paid out (so refunds can happen first).
+ * scope: "first" pays on the referred student's first programme only, "all" on every programme they buy.
+ */
+export type ReferralSettings = { enabled: boolean; percent: number; cookieDays: number; holdDays: number; scope: "first" | "all"; terms: string };
+export type PayoutDetails = { method: "bank" | "other"; bankName: string; accountName: string; accountNumber: string; other: string };
 export type ReminderSettings = { dayBefore: boolean; hourBefore: boolean; hourLeadMinutes: number; assignmentDue: boolean; assignmentLeadHours: number };
 export type Faq = { question: string; answer: string };
 export type Testimonial = { quote: string; name: string; role: string };
@@ -199,6 +214,7 @@ export const settings = pgTable("settings", {
   payment: jsonb("payment").$type<Partial<PaymentSettings>>().notNull().default({}),
   email: jsonb("email").$type<Partial<EmailSettings>>().notNull().default({}),
   reminders: jsonb("reminders").$type<Partial<ReminderSettings>>().notNull().default({}),
+  referrals: jsonb("referrals").$type<Partial<ReferralSettings>>().notNull().default({}),
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
   seo: jsonb("seo").$type<Partial<SeoSettings>>().notNull().default({}),
   video: jsonb("video").$type<Partial<VideoSettings>>().notNull().default({}),
@@ -217,6 +233,8 @@ export const courses = pgTable("courses", {
   category: text("category").notNull().default(""),
   level: text("level").notNull().default("Beginner"),
   durationWeeks: integer("duration_weeks"),
+  /** Referral commission for this course, overriding the default in Settings › Referrals. Null: use the default. */
+  referralPercent: integer("referral_percent"),
   outcomes: jsonb("outcomes").$type<string[]>().notNull().default([]),
   curriculum: jsonb("curriculum").$type<CourseModule[]>().notNull().default([]),
   portfolioProjects: jsonb("portfolio_projects").$type<string[]>().notNull().default([]),
@@ -733,3 +751,33 @@ export const courseReviews = pgTable("course_reviews", {
 }, (t) => [index("course_reviews_course_idx").on(t.courseId, t.status)]);
 
 export type CourseReview = typeof courseReviews.$inferSelect;
+
+export const COMMISSION_STATUSES = ["pending", "paid", "cancelled"] as const;
+export type CommissionStatus = (typeof COMMISSION_STATUSES)[number];
+
+/**
+ * Commission earned when someone a user referred pays. "pending" becomes payable once availableAt passes
+ * (the refund window); an admin marks it "paid" after sending the money. Refunds reduce or cancel it.
+ */
+export const referralCommissions = pgTable("referral_commissions", {
+  id: serial("id").primaryKey(),
+  referrerId: integer("referrer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  referredUserId: integer("referred_user_id").references(() => users.id, { onDelete: "set null" }),
+  paymentId: integer("payment_id").references(() => payments.id, { onDelete: "set null" }).unique(),
+  courseId: integer("course_id").references(() => courses.id, { onDelete: "set null" }),
+  /** Kept so the row still reads well if the course is deleted. */
+  courseTitle: text("course_title").notNull().default(""),
+  currency: text("currency").notNull(),
+  /** What the referred student paid (minor units), and the percentage applied to it. */
+  paymentAmount: integer("payment_amount").notNull(),
+  percent: integer("percent").notNull(),
+  amount: integer("amount").notNull(),
+  status: text("status").$type<CommissionStatus>().notNull().default("pending"),
+  availableAt: timestamp("available_at", { withTimezone: true }).notNull(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  paidById: integer("paid_by_id").references(() => users.id, { onDelete: "set null" }),
+  note: text("note").notNull().default(""),
+  createdAt: createdAt(),
+}, (t) => [index("referral_commissions_referrer_idx").on(t.referrerId, t.status), index("referral_commissions_status_idx").on(t.status, t.availableAt)]);
+
+export type ReferralCommission = typeof referralCommissions.$inferSelect;

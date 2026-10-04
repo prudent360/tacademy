@@ -8,6 +8,7 @@ import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
 import { countryByCode } from "./countries";
+import { recordCommission } from "./referrals";
 import { markWaitlistEnrolled } from "./waitlist";
 import { CURRENCIES, CURRENCY_CODES, formatMoney, gatewayFor } from "./money";
 import { notify } from "./notify";
@@ -440,6 +441,7 @@ export async function fulfilPayment(reference: string): Promise<void> {
   }]);
 
   if (payment.cohortId) await activateEnrollment(payment.userId, payment.cohortId, "payment");
+  await recordCommission(payment).catch((e) => console.error("Referral commission:", e));
 
   await notify((await getAdmins()).map((a) => a.id), {
     kind: "payment",

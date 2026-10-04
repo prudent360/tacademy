@@ -42,6 +42,7 @@ export const IdCardIcon: Icon = (p) => <Svg {...p}><rect x="2.5" y="4.5" width="
 export const AwardIcon: Icon = (p) => <Svg {...p}><circle cx="12" cy="9" r="6" /><path d="M8.5 14.2L7 22l5-3 5 3-1.5-7.8" /></Svg>;
 export const ChartIcon: Icon = (p) => <Svg {...p}><path d="M3 20h18" /><path d="M6 16l4-5 3 3 5-7" /></Svg>;
 export const MegaphoneIcon: Icon = (p) => <Svg {...p}><path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z" /><path d="M17 8a5 5 0 0 1 0 8" /></Svg>;
+export const GiftIcon: Icon = (p) => <Svg {...p}><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M12 8v13" /><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" /><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5" /></Svg>;
 export const LayersIcon: Icon = (p) => <Svg {...p}><path d="M12 3l9 5-9 5-9-5z" /><path d="M3 13l9 5 9-5" /></Svg>;
 export const KeyIcon: Icon = (p) => <Svg {...p}><circle cx="8" cy="15" r="4" /><path d="M11 12l9-9" /><path d="M16 7l3 3" /></Svg>;
 export const CapIcon: Icon = (p) => <Svg {...p}><path d="M2 9l10-5 10 5-10 5z" /><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5" /></Svg>;

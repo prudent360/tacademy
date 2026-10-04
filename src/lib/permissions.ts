@@ -19,6 +19,7 @@ export const PERMISSIONS = [
   "payments.manage",
   "discounts.manage",
   "leads.view",
+  "referrals.manage",
   "team.manage",
   "settings.manage",
   "emails.manage",
@@ -48,6 +49,7 @@ export const PERMISSION_GROUPS: { title: string; items: { key: Permission; label
     { key: "payments.manage", label: "Manage payments", hint: "Confirm transfers, record payments, refunds and balance reminders" },
     { key: "discounts.manage", label: "Manage discount codes", hint: "Create and switch off codes" },
     { key: "leads.view", label: "View curriculum requests", hint: "People who downloaded a curriculum" },
+    { key: "referrals.manage", label: "Manage referrals", hint: "See referral commissions and mark them paid" },
   ] },
   { title: "Administration", items: [
     { key: "team.manage", label: "Manage team and roles", hint: "Invite staff, change roles and what each role can do" },

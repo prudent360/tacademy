@@ -1,5 +1,6 @@
 "use server";
 
+import { attachReferrer } from "@/lib/referrals";
 import { and, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -59,10 +60,12 @@ async function applicantFor(details: Details, next: string): Promise<{ user: Use
     }
     // Someone who started enrolling before but never paid: refresh their details.
     const [user] = await db.update(users).set({ ...profile, name }).where(eq(users.id, existing.id)).returning();
+    await attachReferrer(user.id);
     return { user };
   }
 
   const [user] = await db.insert(users).values({ ...profile, name, email: details.email, role: "student" }).returning();
+  await attachReferrer(user.id);
   return { user };
 }
 
