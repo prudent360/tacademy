@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { ArrowRight, type Icon } from "@/components/icons";
 
-/** Students and admins share the brand purple of the Refer & earn card and the site's page heroes. */
+/** Every dashboard uses the brand purple of the Refer & earn card and the site's page heroes. */
+const BRAND_GRADIENT = "from-[#5b4be0] via-[#4f3fd7] to-[#3d2fb8]";
 const BANNER_TONES = {
-  student: "from-[#5b4be0] via-[#4f3fd7] to-[#3d2fb8]",
-  instructor: "from-[#10233a] via-[#183b55] to-[#0a6d8c]",
-  admin: "from-[#5b4be0] via-[#4f3fd7] to-[#3d2fb8]",
+  student: BRAND_GRADIENT,
+  instructor: BRAND_GRADIENT,
+  admin: BRAND_GRADIENT,
 } as const;
 
 /** Role-aware welcome banner at the top of each dashboard. */

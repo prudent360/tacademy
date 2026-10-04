@@ -63,7 +63,7 @@ export default async function TeachHome({ searchParams }: { searchParams: Promis
         aside={next ? (
           <div className="flex flex-col gap-3 rounded-[5px] border border-white/15 bg-white/[0.07] p-4 backdrop-blur">
             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-light">
-              {next.session.mode === "virtual" ? <VideoIcon className="size-4" /> : <PinIcon className="size-4" />} {MODE_LABEL[next.session.mode]} · starts in
+              {next.session.mode === "virtual" ? <VideoIcon className="size-4" /> : <PinIcon className="size-4" />} {MODE_LABEL[next.session.mode]} · {new Date(next.session.startsAt) <= now ? "live now" : "starts in"}
             </span>
             <Countdown to={new Date(next.session.startsAt).toISOString()} />
             <Link href={`/teach/sessions/${next.session.id}`} className="inline-flex h-10 items-center justify-center rounded-lg bg-surface text-sm font-semibold text-accent-ink hover:bg-accent-soft">Open live class</Link>
