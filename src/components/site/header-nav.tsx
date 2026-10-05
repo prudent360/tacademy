@@ -40,9 +40,28 @@ function CourseIcon({ course, className }: { course: MenuCourse; className: stri
 type Panel = "courses" | "about" | null;
 
 const itemClass = (active: boolean, open = false) =>
-  `relative flex h-10 items-center gap-1 whitespace-nowrap rounded-[5px] px-3 text-[15px] font-medium transition hover:bg-page hover:text-accent ${active || open ? "text-accent" : "text-ink"} ${active ? "after:absolute after:inset-x-3 after:-bottom-[13px] after:h-[2px] after:rounded-full after:bg-accent md:after:-bottom-[17px]" : ""}`;
+  `flex h-9 items-center gap-1 whitespace-nowrap rounded-full px-3.5 text-[15px] font-medium transition hover:bg-white/10 hover:text-white ${active || open ? "bg-white/[.12] text-white" : "text-white/90"}`;
 
-/** The header's menu: Courses and About open panels on hover or click; phones get a full-screen menu. */
+/** Menu panels: a white card in columns, each with a small heading and links with a one-line description. */
+const panelClass = "nav-menu-in rounded-[12px] bg-white p-3 text-left shadow-[0_32px_70px_-24px_rgba(24,19,64,.55),0_10px_22px_-14px_rgba(24,19,64,.25)] ring-1 ring-ink/[.06]";
+const headingClass = "px-3 pb-2 pt-2 font-mono text-[11px] font-semibold uppercase tracking-[1.4px] text-muted";
+
+function MenuLink({ href, title, text, onClick }: { href: string; title: string; text: string; onClick?: () => void }) {
+  return (
+    <Link href={href} onClick={onClick} className="group flex flex-col gap-0.5 rounded-[8px] px-3 py-2.5 transition hover:bg-panel">
+      <span className="text-[15px] font-semibold text-ink group-hover:text-accent">{title}</span>
+      <span className="text-[13px] leading-snug text-muted">{text}</span>
+    </Link>
+  );
+}
+
+const START: { href: string; title: string; text: string }[] = [
+  { href: "/enroll", title: "Enrol in a cohort", text: "Pick a start date and pay online" },
+  { href: "/internships", title: "Internships", text: "Real projects, free for our graduates" },
+  { href: "/teach-with-us", title: "Teach with us", text: "Share what you do every day" },
+];
+
+/** The header's menu: Courses and About open white panels on hover or click; phones get a full-screen menu. */
 export function HeaderNav({ courses, totalCourses, account, brand }: { courses: MenuCourse[]; totalCourses: number; account: { href: string; label: string } | null; brand: React.ReactNode }) {
   const pathname = usePathname();
   const [panel, setPanel] = useState<Panel>(null);
@@ -65,6 +84,9 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
     return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onClick); };
   }, []);
   useEffect(() => {
+    document.querySelector<HTMLElement>(".site-header")?.style.setProperty("--nav-open", panel ? "1" : "0");
+  }, [panel]);
+  useEffect(() => {
     document.body.style.overflow = mobile ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobile]);
@@ -74,48 +96,30 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
   const is = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
   const signIn = account
-    ? <Link href={account.href} className="flex h-11 items-center justify-center rounded-[5px] bg-accent px-5 text-[15px] font-semibold text-white transition hover:bg-accent-dark">{account.label}</Link>
+    ? <Link href={account.href} className="flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-[15px] font-semibold text-[#4f3fd7] transition hover:bg-white/90">{account.label} <ArrowRight className="size-4" /></Link>
     : <>
-        <Link href="/login" className="flex h-11 items-center px-2 text-[15px] font-semibold text-ink transition hover:text-accent">Sign in</Link>
-        <Link href="/enroll" className="flex h-11 items-center justify-center gap-1.5 rounded-[5px] bg-accent px-5 text-[15px] font-semibold text-white shadow-[0_10px_24px_-14px_rgba(79,63,215,.9)] transition hover:bg-accent-dark">Enrol now</Link>
+        <Link href="/login" className="flex h-10 items-center rounded-full px-5 text-[15px] font-semibold text-white ring-1 ring-white/35 transition hover:bg-white/10 hover:ring-white/60">Sign in</Link>
+        <Link href="/enroll" className="flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-[15px] font-semibold text-[#4f3fd7] shadow-[0_10px_24px_-14px_rgba(0,0,0,.6)] transition hover:bg-white/90">Enrol now <ArrowRight className="size-4" /></Link>
       </>;
 
   return (
     <div ref={root} className="contents">
-      {/* Softens the page behind an open panel so it stands out; clicking it closes the panel. */}
-      <div
-        aria-hidden="true"
-        onClick={() => setPanel(null)}
-        className={`fixed inset-0 -z-10 hidden bg-white/60 backdrop-blur-[2px] transition-opacity duration-200 lg:block ${panel ? "opacity-100" : "pointer-events-none opacity-0"}`}
-      />
-      <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex">
+      <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
         <div className="relative" onMouseEnter={() => hoverOpen("courses")} onMouseLeave={hoverClose}>
           <button type="button" aria-expanded={panel === "courses"} aria-controls="menu-courses" onClick={() => setPanel(panel === "courses" ? null : "courses")} className={itemClass(is("/courses"), panel === "courses")}>
             Courses <ChevronDown className={`size-4 transition-transform ${panel === "courses" ? "rotate-180" : ""}`} />
           </button>
           {panel === "courses" && (
-            <div id="menu-courses" className="absolute left-1/2 top-full z-40 w-[680px] -translate-x-1/2 pt-4">
-              <div className="grid grid-cols-[1.45fr_1fr] overflow-hidden rounded-[5px] border border-edge-strong bg-white shadow-[0_40px_90px_-28px_rgba(24,19,64,.55),0_12px_24px_-12px_rgba(24,19,64,.18)]">
-                <div className="flex flex-col gap-1 p-3">
-                  <p className="px-3 pb-1 pt-2 font-mono text-[11px] font-semibold uppercase tracking-[1.4px] text-muted">Courses</p>
-                  {courses.map((c) => (
-                    <Link key={c.slug} href={`/courses/${c.slug}`} className="group flex items-start gap-3 rounded-[5px] px-3 py-2.5 transition hover:bg-panel">
-                      <CourseIcon course={c} className="mt-0.5 size-9" />
-                      <span className="flex min-w-0 flex-col">
-                        <span className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{c.title}</span>
-                        <span className="text-xs text-muted">{c.category ? `${c.category} · ` : ""}{c.next}</span>
-                      </span>
-                    </Link>
-                  ))}
+            <div id="menu-courses" className="absolute left-0 top-full z-40 w-[660px] pt-3">
+              <div className={`${panelClass} grid grid-cols-[1.5fr_1fr] gap-2`}>
+                <div className="flex flex-col">
+                  <p className={headingClass}>Courses</p>
+                  {courses.map((c) => <MenuLink key={c.slug} href={`/courses/${c.slug}`} title={c.title} text={`${c.category ? `${c.category} · ` : ""}${c.next}`} />)}
                   <Link href="/courses" className="mx-3 mt-1 flex items-center gap-1.5 border-t border-line pb-1 pt-3 text-sm font-semibold text-accent hover:text-accent-dark">View all {totalCourses} courses <ArrowRight className="size-4" /></Link>
                 </div>
-                <div className="flex flex-col justify-between gap-4 bg-[linear-gradient(160deg,#4f3fd7_0%,#3d2fb8_100%)] p-6 text-white">
-                  <div className="flex flex-col gap-2">
-                    <span className="flex size-10 items-center justify-center rounded-[5px] bg-white/15"><BriefcaseIcon className="size-5" /></span>
-                    <p className="font-display text-lg font-bold leading-snug">Finished a course? Get real experience.</p>
-                    <p className="text-sm leading-relaxed text-white/80">Our internships are free for graduates of our courses.</p>
-                  </div>
-                  <Link href="/internships" className="inline-flex h-10 w-fit items-center gap-1.5 rounded-[5px] bg-white px-4 text-sm font-semibold text-ink hover:bg-[#f1efff]">See internships <ArrowRight className="size-4" /></Link>
+                <div className="flex flex-col border-l border-line pl-2">
+                  <p className={headingClass}>Start here</p>
+                  {START.map((l) => <MenuLink key={l.href} {...l} />)}
                 </div>
               </div>
             </div>
@@ -128,14 +132,16 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
             About <ChevronDown className={`size-4 transition-transform ${panel === "about" ? "rotate-180" : ""}`} />
           </button>
           {panel === "about" && (
-            <div id="menu-about" className="absolute left-1/2 top-full z-40 w-[340px] -translate-x-1/2 pt-4">
-              <div className="flex flex-col gap-1 rounded-[5px] border border-edge-strong bg-white p-2 shadow-[0_40px_90px_-28px_rgba(24,19,64,.55),0_12px_24px_-12px_rgba(24,19,64,.18)]">
-                {ABOUT.map(({ href, label, text, icon: ItemIcon }) => (
-                  <Link key={href} href={href} onClick={() => setPanel(null)} className="group flex items-start gap-3 rounded-[5px] px-3 py-2.5 transition hover:bg-panel">
-                    <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[5px] bg-accent-soft text-accent"><ItemIcon className="size-[18px]" /></span>
-                    <span className="flex flex-col"><span className="text-[15px] font-semibold text-ink group-hover:text-accent">{label}</span><span className="text-xs text-muted">{text}</span></span>
-                  </Link>
-                ))}
+            <div id="menu-about" className="absolute left-0 top-full z-40 w-[520px] pt-3">
+              <div className={`${panelClass} grid grid-cols-2 gap-2`}>
+                <div className="flex flex-col">
+                  <p className={headingClass}>Learn with us</p>
+                  {ABOUT.slice(0, 3).map(({ href, label, text }) => <MenuLink key={href} href={href} title={label} text={text} onClick={() => setPanel(null)} />)}
+                </div>
+                <div className="flex flex-col border-l border-line pl-2">
+                  <p className={headingClass}>Company</p>
+                  {ABOUT.slice(3).map(({ href, label, text }) => <MenuLink key={href} href={href} title={label} text={text} onClick={() => setPanel(null)} />)}
+                </div>
               </div>
             </div>
           )}
@@ -144,13 +150,13 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
 
       <div className="hidden shrink-0 items-center gap-3 lg:flex">{signIn}</div>
 
-      <button type="button" onClick={() => setMobile(true)} aria-expanded={mobile} aria-label="Open menu" className="flex size-11 items-center justify-center rounded-[5px] border border-edge text-ink lg:hidden"><MenuIcon /></button>
+      <button type="button" onClick={() => setMobile(true)} aria-expanded={mobile} aria-label="Open menu" className="flex size-10 items-center justify-center rounded-full text-white ring-1 ring-white/35 transition hover:bg-white/10 lg:hidden"><MenuIcon /></button>
 
       {mobile && (
         <div role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-50 flex flex-col bg-white lg:hidden">
           <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-line px-5">
             {brand}
-            <button type="button" onClick={() => setMobile(false)} aria-label="Close menu" className="flex size-11 items-center justify-center rounded-[5px] border border-edge text-ink"><XIcon /></button>
+            <button type="button" onClick={() => setMobile(false)} aria-label="Close menu" className="flex size-10 items-center justify-center rounded-full border border-edge text-ink"><XIcon /></button>
           </div>
           <nav aria-label="Mobile" className="flex grow flex-col gap-7 overflow-y-auto px-5 py-6">
             <section className="flex flex-col gap-1">
@@ -177,10 +183,10 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
           </nav>
           <div className="flex shrink-0 flex-col gap-2 border-t border-line p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             {account
-              ? <Link href={account.href} className="flex h-12 items-center justify-center rounded-[5px] bg-accent text-base font-semibold text-white">{account.label}</Link>
+              ? <Link href={account.href} className="flex h-12 items-center justify-center rounded-full bg-accent text-base font-semibold text-white">{account.label}</Link>
               : <>
-                  <Link href="/enroll" className="flex h-12 items-center justify-center rounded-[5px] bg-accent text-base font-semibold text-white">Enrol now</Link>
-                  <Link href="/login" className="flex h-12 items-center justify-center rounded-[5px] border border-edge-strong text-base font-semibold text-ink">Sign in</Link>
+                  <Link href="/enroll" className="flex h-12 items-center justify-center rounded-full bg-accent text-base font-semibold text-white">Enrol now</Link>
+                  <Link href="/login" className="flex h-12 items-center justify-center rounded-full border border-edge-strong text-base font-semibold text-ink">Sign in</Link>
                   <p className="pt-1 text-center text-sm text-muted">New here? <Link href="/register" className="font-semibold text-accent">Create a free account</Link></p>
                 </>}
           </div>

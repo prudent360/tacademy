@@ -432,3 +432,16 @@ body:has([data-no-footer]) .course-advisor { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .hero-rise, .hero-motif, .hero-dot { animation: none; }
 }
+
+/* Site header: transparent over a coloured hero (pages marked data-under-header), a filled pill everywhere else. */
+body:has([data-under-header]) .site-header { --nav-base: 0; }
+
+/* Header menu panels drop in with a quick fade and scale. */
+@keyframes nav-menu-in {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+.nav-menu-in { animation: nav-menu-in .18s cubic-bezier(.2, .8, .2, 1) both; transform-origin: top left; }
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu-in { animation: none; }
+}

@@ -4,6 +4,7 @@ import { HowItWorks } from "@/components/site/how-it-works";
 import Image from "next/image";
 import { ArrowRight, BuildingIcon, CheckIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
 import { MarkMotif } from "@/components/site/page-hero";
+import { ScrambleText } from "@/components/site/scramble-text";
 import { CourseCard } from "@/components/site/course-card";
 import { ModeBadge } from "@/components/ui";
 import { isFree, withCohorts } from "@/lib/catalog";
@@ -88,23 +89,19 @@ export default async function HomePage() {
 
       {/* Hero: an inset indigo panel with faint line work behind centred text. The site header floats over its top edge. */}
       <section className="bg-white px-2 pt-2 sm:px-3 sm:pt-3">
-        <div data-under-header className="relative isolate overflow-hidden rounded-[14px] bg-[#4f3fd7] text-white md:rounded-[18px]">
+        <div data-under-header className="relative isolate overflow-hidden rounded-[16px] bg-[#4f3fd7] text-white md:rounded-[24px]">
           <div aria-hidden="true" className="absolute inset-0 -z-10">
-            <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_85%_-10%,rgba(255,255,255,.16),transparent_62%),radial-gradient(760px_460px_at_0%_110%,rgba(49,196,240,.3),transparent_60%),linear-gradient(135deg,#5b4be0_0%,#4f3fd7_48%,#3d2fb8_100%)]" />
-            {/* A wide line grid that fades out towards the edges. */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:96px_96px] [background-position:center_top] [mask-image:radial-gradient(ellipse_75%_70%_at_50%_35%,#000_20%,transparent_80%)]" />
-            {/* Large thin rings drifting off the top right and bottom left corners. */}
-            <svg viewBox="0 0 800 800" fill="none" className="absolute -right-[260px] -top-[300px] size-[820px] max-md:size-[560px] max-md:-right-[220px] max-md:-top-[240px]">
-              {[390, 320, 250, 180].map((r, i) => <circle key={r} cx="400" cy="400" r={r} stroke={`rgba(255,255,255,${0.14 - i * 0.025})`} strokeWidth="1" />)}
-              <circle cx="400" cy="400" r="320" stroke="rgba(143,223,247,.45)" strokeWidth="1.2" strokeDasharray="2 10" />
+            {/* A few long, faint lines across the panel, like a drafting sheet. */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-position:-1px_150px] [background-size:320px_240px] [mask-image:linear-gradient(180deg,#000_55%,transparent)]" />
+            {/* Large thin rings off the top right, and a fan of lines sweeping in from the bottom left. */}
+            <svg viewBox="0 0 800 800" fill="none" className="absolute -right-[260px] -top-[300px] size-[820px] max-md:-right-[220px] max-md:-top-[240px] max-md:size-[560px]">
+              {[390, 320, 250, 180].map((r, i) => <circle key={r} cx="400" cy="400" r={r} stroke={`rgba(255,255,255,${0.13 - i * 0.025})`} strokeWidth="1" />)}
+              <circle cx="400" cy="400" r="320" stroke="rgba(143,223,247,.4)" strokeWidth="1.2" strokeDasharray="2 10" />
             </svg>
-            <svg viewBox="0 0 800 800" fill="none" className="absolute -bottom-[420px] -left-[300px] size-[820px] max-md:hidden">
-              {[390, 300, 210].map((r, i) => <circle key={r} cx="400" cy="400" r={r} stroke={`rgba(255,255,255,${0.11 - i * 0.025})`} strokeWidth="1" />)}
+            <svg viewBox="0 0 600 400" fill="none" preserveAspectRatio="none" className="absolute bottom-0 left-0 h-[70%] w-[55%] max-md:hidden">
+              {[0, 1, 2, 3, 4].map((i) => <path key={i} d={`M0 ${400 - i * 18} Q ${220 + i * 40} ${300 - i * 50} ${600} ${-40 + i * 70}`} stroke={`rgba(255,255,255,${0.1 - i * 0.015})`} strokeWidth="1" />)}
             </svg>
-            <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.16)_1px,transparent_1.2px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_30%_40%_at_12%_30%,#000_10%,transparent_70%)]" />
-            <MarkMotif className="hero-motif absolute -left-24 top-28 size-[360px] opacity-60 max-lg:hidden" />
-            <MarkMotif className="hero-motif absolute -right-16 bottom-0 size-[300px] opacity-50 [animation-delay:-7s] max-md:hidden" />
-            <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgba(49,196,240,.7)_30%,rgba(124,112,240,.7)_70%,transparent)]" />
+            <MarkMotif className="hero-motif absolute -right-16 bottom-0 size-[300px] opacity-40 [animation-delay:-7s] max-md:hidden" />
           </div>
 
           <div className="mx-auto flex max-w-[1200px] flex-col items-center px-5 pb-16 pt-12 text-center sm:px-8 md:pb-24 md:pt-20">
@@ -115,7 +112,7 @@ export default async function HomePage() {
                   <span className="absolute size-2 animate-ping rounded-full bg-accent/40 motion-reduce:hidden" />
                   <span className="relative size-2 rounded-full bg-accent" />
                 </span>
-                Next intake starts <span className="font-semibold text-white">{nextStart ?? "soon"}</span>
+                Next intake starts <span className="font-semibold tabular-nums text-white"><ScrambleText text={nextStart ?? "soon"} delay={150} /></span>
                 <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
               </Link>
             ) : settings.heroEyebrow && (
@@ -140,7 +137,7 @@ export default async function HomePage() {
               <dl style={{ animationDelay: "340ms" }} className="hero-rise mt-12 grid w-full max-w-[560px] grid-cols-2 overflow-hidden rounded-[10px] bg-white/[.06] ring-1 ring-white/20 backdrop-blur-sm lg:flex lg:w-auto lg:max-w-none lg:rounded-full md:mt-14">
                 {settings.stats.map((stat, i) => (
                   <div key={stat.label} className={`flex flex-col-reverse items-center gap-0.5 px-5 py-3 lg:flex-row-reverse lg:gap-3 lg:py-2.5 ${i > 0 ? "lg:border-l lg:border-white/20" : ""} ${i % 2 ? "border-l border-white/20" : ""} ${i > 1 ? "border-t border-white/20 lg:border-t-0" : ""}`}>
-                    <dd className="font-display text-xl font-bold tracking-tight text-white lg:text-base">{stat.value}</dd>
+                    <dd className="font-display text-xl font-bold tabular-nums tracking-tight text-white lg:text-base"><ScrambleText text={stat.value} delay={450 + i * 120} /></dd>
                     <dt className="whitespace-nowrap text-xs text-white/70 lg:text-sm">{stat.label}</dt>
                   </div>
                 ))}
