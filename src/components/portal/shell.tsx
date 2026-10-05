@@ -19,7 +19,7 @@ const ROLE_LABEL: Record<Role, string> = { admin: "Administrator", instructor: "
 
 const SETTINGS_TABS: [string, string][] = [
   ["general", "General"], ["branding", "Branding"], ["payments", "Payments"], ["email", "Email"], ["templates", "Email templates"],
-  ["reminders", "Reminders"], ["referrals", "Referrals"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
+  ["reminders", "Reminders"], ["referrals", "Referrals"], ["announcement", "Dashboard pop-up"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
 ];
 
 function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number }, perms: Permission[], referrals = false): NavGroup[] {

@@ -66,6 +66,12 @@ export async function markAllRead(): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+/** Closes the dashboard pop-up for good (on every device), until its message changes. */
+export async function dismissAnnouncement(version: string): Promise<void> {
+  const user = await requireUser();
+  await (await getDb()).update(users).set({ announcementSeen: version.slice(0, 40) }).where(eq(users.id, user.id));
+}
+
 export async function markRead(id: number): Promise<void> {
   const user = await requireUser();
   await (await getDb()).update(notifications).set({ readAt: new Date() }).where(and(eq(notifications.id, id), eq(notifications.userId, user.id)));

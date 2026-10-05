@@ -420,6 +420,30 @@ export async function saveReferralSettings(_state: FormState, formData: FormData
   return { ok: "Referral settings saved." };
 }
 
+export async function saveAnnouncement(_state: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requirePermission("settings.manage");
+  const field = (key: string, max: number) => String(formData.get(key) ?? "").trim().slice(0, max);
+  const next = {
+    enabled: formData.get("enabled") === "on",
+    title: field("title", 120),
+    body: field("body", 2000),
+    buttonLabel: field("buttonLabel", 60),
+    buttonUrl: field("buttonUrl", 500),
+    audience: formData.get("audience") === "everyone" ? "everyone" as const : "students" as const,
+  };
+  if (next.enabled && (!next.title || !next.body)) return { error: "Add a title and a message before switching the pop-up on." };
+  if (next.buttonUrl && !/^(https?:\/\/|\/)/i.test(next.buttonUrl)) return { error: "The button link must start with https:// (or / for a page on this site)." };
+  if (next.buttonUrl && !next.buttonLabel) return { error: "Add a label for the button, or remove its link." };
+  const before = (await getSettings()).announcement ?? {};
+  const changed = (["title", "body", "buttonLabel", "buttonUrl", "audience"] as const).some((k) => before[k] !== next[k]);
+  // A new version shows the pop-up again to people who closed the old one.
+  const version = changed || (next.enabled && !before.enabled) || !before.version ? new Date().toISOString() : before.version;
+  await update({ announcement: { ...next, version } });
+  await logAudit(actor, { action: "settings.saved", summary: `${next.enabled ? "updated" : "switched off"} the dashboard pop-up${next.enabled ? `: “${next.title}”` : ""}` });
+  revalidatePath("/", "layout");
+  return { ok: next.enabled ? (version !== before.version ? "Saved. Everyone will see the pop-up the next time they open their dashboard." : "Saved.") : "Saved. The pop-up is switched off." };
+}
+
 export async function runRemindersNow(): Promise<FormState> {
   await requirePermission("settings.manage");
   const r = await sendDueReminders();

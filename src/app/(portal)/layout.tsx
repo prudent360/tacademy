@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { markAllRead } from "@/app/actions/account";
+import { AnnouncementModal } from "@/components/portal/announcement-modal";
 import { logout, resendVerification } from "@/app/actions/auth";
 import { ActionButton } from "@/components/forms";
 import { PortalShell, type Theme } from "@/components/portal/shell";
@@ -28,6 +29,12 @@ export default async function PortalLayout({ children }: { children: React.React
   const newApplications = perms.has("applications.review") ? (await (await getDb()).select({ n: count() }).from(internshipApplications).where(eq(internshipApplications.status, "new")))[0]?.n ?? 0 : 0;
   const newInstructorApplications = perms.has("instructors.review") ? (await (await getDb()).select({ n: count() }).from(instructorApplications).where(eq(instructorApplications.status, "new")))[0]?.n ?? 0 : 0;
 
+  // The admin's dashboard pop-up, until this person closes this version of it.
+  const a = settings.announcement ?? {};
+  const announcement = a.enabled && a.version && a.title && user.announcementSeen !== a.version && (a.audience === "everyone" || user.role === "student")
+    ? { title: a.title, body: a.body ?? "", buttonLabel: a.buttonLabel ?? "", buttonUrl: a.buttonUrl ?? "", version: a.version }
+    : null;
+
   return (
     <PortalShell
       role={user.role}
@@ -54,6 +61,7 @@ export default async function PortalLayout({ children }: { children: React.React
           <ActionButton action={resendVerification} pendingText="Sending…" doneText="Sent. Check your inbox">Resend confirmation email</ActionButton>
         </div>
       )}
+      {announcement && <AnnouncementModal {...announcement} />}
       {children}
     </PortalShell>
   );

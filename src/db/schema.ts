@@ -77,6 +77,8 @@ export const users = pgTable("users", {
   referralClicks: integer("referral_clicks").notNull().default(0),
   /** Where to send their referral commission. */
   payoutDetails: jsonb("payout_details").$type<PayoutDetails>(),
+  /** The dashboard pop-up version they closed, so it isn't shown again. */
+  announcementSeen: text("announcement_seen"),
   /** Bumped to sign the user out everywhere (password reset, deactivation). */
   sessionVersion: integer("session_version").notNull().default(1),
   active: boolean("active").notNull().default(true),
@@ -182,6 +184,8 @@ export type VideoSettings = { bunnyTokenKey: string };
  * scope: "first" pays on the referred student's first programme only, "all" on every programme they buy.
  */
 export type ReferralSettings = { enabled: boolean; percent: number; cookieDays: number; holdDays: number; scope: "first" | "all"; terms: string };
+/** A pop-up shown once on the dashboard. `version` changes on every save, so an edited message shows again. */
+export type AnnouncementSettings = { enabled: boolean; title: string; body: string; buttonLabel: string; buttonUrl: string; audience: "students" | "everyone"; version: string };
 export type PayoutDetails = { method: "bank" | "other"; bankName: string; accountName: string; accountNumber: string; other: string };
 export type ReminderSettings = { dayBefore: boolean; hourBefore: boolean; hourLeadMinutes: number; assignmentDue: boolean; assignmentLeadHours: number };
 export type Faq = { question: string; answer: string };
@@ -215,6 +219,7 @@ export const settings = pgTable("settings", {
   email: jsonb("email").$type<Partial<EmailSettings>>().notNull().default({}),
   reminders: jsonb("reminders").$type<Partial<ReminderSettings>>().notNull().default({}),
   referrals: jsonb("referrals").$type<Partial<ReferralSettings>>().notNull().default({}),
+  announcement: jsonb("announcement").$type<Partial<AnnouncementSettings>>().notNull().default({}),
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
   seo: jsonb("seo").$type<Partial<SeoSettings>>().notNull().default({}),
   video: jsonb("video").$type<Partial<VideoSettings>>().notNull().default({}),

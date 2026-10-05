@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { count, desc, eq } from "drizzle-orm";
-import { runRemindersNow, saveAiSettings, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { runRemindersNow, saveAiSettings, saveAnnouncement, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
@@ -591,6 +591,46 @@ export async function ReferralsTab() {
           <li><strong className="text-ink">Commission follows the money.</strong> It&apos;s worked out on what the student actually pays, after discounts, in the same currency.</li>
           <li><strong className="text-ink">Refunds are handled.</strong> A refund reduces the commission, or cancels it when the refund is full.</li>
           <li><strong className="text-ink">You pay out.</strong> Payable commissions and each person&apos;s bank details are under <Link href="/admin/referrals" className="font-semibold text-accent-ink">Payments › Referrals</Link>, where you mark them paid.</li>
+        </ul>
+      </Section>
+    </div>
+  );
+}
+
+// ---------- Dashboard pop-up ----------
+
+const ANNOUNCEMENT_EXAMPLE = {
+  title: "Our earlier courses have moved",
+  body: "If you were taking one of our earlier courses, it now lives at learn.tekskillup.com. Sign in there to continue where you left off.\n\nOur live cohorts and new courses are right here on this dashboard.",
+  buttonLabel: "Go to learn.tekskillup.com",
+  buttonUrl: "https://learn.tekskillup.com",
+};
+
+export function AnnouncementTab({ s }: { s: Settings }) {
+  const a = s.announcement ?? {};
+  // Until something is saved, the form starts with an example to edit.
+  const v = a.title ? { title: a.title, body: a.body ?? "", buttonLabel: a.buttonLabel ?? "", buttonUrl: a.buttonUrl ?? "" } : ANNOUNCEMENT_EXAMPLE;
+  return (
+    <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <ActionForm action={saveAnnouncement} className="flex flex-col gap-6">
+        <Section title="Dashboard pop-up" description="A message that pops up once when people open their dashboard. When they close it, it doesn't come back, until you change the message." badge={a.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> Showing</Badge> : <Badge>Off</Badge>}>
+          <Switch label="Show the pop-up" name="enabled" defaultChecked={a.enabled} />
+          <Select label="Who sees it" name="audience" defaultValue={a.audience ?? "students"} options={[{ value: "students", label: "Students" }, { value: "everyone", label: "Everyone who signs in (students, instructors and the team)" }]} />
+          <Input label="Title" name="title" defaultValue={v.title} maxLength={120} required />
+          <Textarea label="Message" name="body" defaultValue={v.body} rows={5} maxLength={2000} hint="Plain text. Web addresses become links, and blank lines start a new paragraph." />
+          <div className="grid gap-5 md:grid-cols-2">
+            <Input label="Button label (optional)" name="buttonLabel" defaultValue={v.buttonLabel} maxLength={60} />
+            <Input label="Button link" name="buttonUrl" defaultValue={v.buttonUrl} placeholder="https://" hint="Other websites open in a new tab." />
+          </div>
+        </Section>
+        <div><SubmitButton>Save pop-up</SubmitButton></div>
+      </ActionForm>
+      <Section title="Good to know">
+        <ul className="flex flex-col gap-2.5 text-sm leading-relaxed text-body">
+          <li><strong className="text-ink">Shown once per person.</strong> Closing it is remembered on their account, so it won&apos;t reappear on their phone either.</li>
+          <li><strong className="text-ink">Editing shows it again.</strong> Change the title, message or button and everyone sees the new version once.</li>
+          <li><strong className="text-ink">Switching off is instant.</strong> Untick “Show the pop-up” and save.</li>
+          <li>For news that should reach people who don&apos;t sign in, send an email as well.</li>
         </ul>
       </Section>
     </div>
