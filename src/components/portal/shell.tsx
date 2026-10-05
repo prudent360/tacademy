@@ -22,7 +22,7 @@ const SETTINGS_TABS: [string, string][] = [
   ["reminders", "Reminders"], ["referrals", "Referrals"], ["announcement", "Dashboard pop-up"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
 ];
 
-function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number }, perms: Permission[], referrals = false): NavGroup[] {
+function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number; newJobApplications?: number }, perms: Permission[], referrals = false): NavGroup[] {
   const learning: NavGroup = {
     label: "Learning",
     items: [
@@ -81,6 +81,12 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
         ],
       },
       { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon, perm: "leads.view" },
+      {
+        href: "/admin/careers", label: "Careers", icon: BriefcaseIcon, children: [
+          { href: "/admin/careers", label: "Job openings", icon: BriefcaseIcon, exact: true, also: ["/admin/careers/new"], perm: "careers.manage" },
+          { href: "/admin/careers/applications", label: "Applications", icon: ClipboardIcon, badge: counts.newJobApplications, perm: "careers.manage" },
+        ],
+      },
     ],
   };
   const system: NavGroup = {
@@ -343,7 +349,7 @@ function PromoArt() {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl = null, theme: initialTheme = "light", unread, toGrade, newApplications = 0, newInstructorApplications = 0, permissions = [], referrals = false, notifications, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl = null, theme: initialTheme = "light", unread, toGrade, newApplications = 0, newInstructorApplications = 0, newJobApplications = 0, permissions = [], referrals = false, notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null; gender?: Gender | null };
@@ -358,6 +364,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
   /** Admins: internship applications waiting for review. */
   newApplications?: number;
   newInstructorApplications?: number;
+  newJobApplications?: number;
   /** Admin-area permissions, for admins and staff. */
   permissions?: Permission[];
   /** Refer & earn is switched on. */
@@ -373,7 +380,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
   const pathname = usePathname();
   const tab = useSearchParams().get("tab");
   const [drawer, setDrawer] = useState(false);
-  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications }, permissions, referrals);
+  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications, newJobApplications }, permissions, referrals);
   // Which groups and dropdowns are open is remembered in this browser; until changed, groups start open and
   // dropdowns open when they hold the current page.
   const storedNav = useSyncExternalStore(subscribeStorage, readNavState, () => null);

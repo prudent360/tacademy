@@ -239,6 +239,13 @@
       "when": 1791206872227,
       "tag": "0033_dashboard_announcement",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791212268040,
+      "tag": "0034_careers",
+      "breakpoints": true
     }
   ]
 }

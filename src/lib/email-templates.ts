@@ -367,6 +367,34 @@ You're very welcome to apply again for a future intake, and our courses are a gr
 
 The {{siteName}} team`,
   },
+  job_application_received: {
+    name: "Job application received",
+    description: "Sent to someone straight after they apply for a role on the Careers page.",
+    variables: { jobTitle: "Programme Coordinator" },
+    subject: "We've received your application: {{jobTitle}}",
+    body: `Hi {{name}},
+
+Thank you for applying for the **{{jobTitle}}** role at {{siteName}}. We've received your application and CV.
+
+Our team reviews every application. If your experience is a good match, we'll contact you to arrange a conversation. If you don't hear from us within three weeks, we've decided not to move forward this time.
+
+The {{siteName}} team`,
+  },
+  job_application_unsuccessful: {
+    name: "Job application unsuccessful",
+    description: "Optionally sent when an application is moved to “Not progressing”.",
+    variables: { jobTitle: "Programme Coordinator" },
+    subject: "Your application for {{jobTitle}}",
+    body: `Hi {{name}},
+
+Thank you for your interest in the **{{jobTitle}}** role at {{siteName}}, and for the time you put into your application.
+
+After careful review, we've decided not to move forward with your application this time. We'd encourage you to keep an eye on our careers page for future openings.
+
+We wish you all the best in your search.
+
+The {{siteName}} team`,
+  },
   instructor_application_received: {
     name: "Instructor application received",
     description: "Sent to someone straight after they apply to become an instructor.",

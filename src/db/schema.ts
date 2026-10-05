@@ -786,3 +786,73 @@ export const referralCommissions = pgTable("referral_commissions", {
 }, (t) => [index("referral_commissions_referrer_idx").on(t.referrerId, t.status), index("referral_commissions_status_idx").on(t.status, t.availableAt)]);
 
 export type ReferralCommission = typeof referralCommissions.$inferSelect;
+
+export const JOB_TYPES = ["full_time", "part_time", "contract", "internship", "volunteer"] as const;
+export type JobType = (typeof JOB_TYPES)[number];
+export const JOB_MODES = ["remote", "hybrid", "onsite"] as const;
+export type JobMode = (typeof JOB_MODES)[number];
+export const JOB_STATUSES = ["draft", "open", "closed"] as const;
+export type JobStatus = (typeof JOB_STATUSES)[number];
+
+/** A role on the public Careers page. Lists are one item per line. */
+export const jobOpenings = pgTable("job_openings", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  department: text("department").notNull().default(""),
+  location: text("location").notNull().default(""),
+  workMode: text("work_mode").$type<JobMode>().notNull().default("remote"),
+  employmentType: text("employment_type").$type<JobType>().notNull().default("full_time"),
+  /** Free text, e.g. "₦400,000 – ₦600,000 a month". Empty: not shown. */
+  salary: text("salary").notNull().default(""),
+  summary: text("summary").notNull().default(""),
+  description: text("description").notNull().default(""),
+  responsibilities: jsonb("responsibilities").$type<string[]>().notNull().default([]),
+  requirements: jsonb("requirements").$type<string[]>().notNull().default([]),
+  niceToHave: jsonb("nice_to_have").$type<string[]>().notNull().default([]),
+  benefits: jsonb("benefits").$type<string[]>().notNull().default([]),
+  /** form: apply on the site. email/link: send people to applyTarget instead. */
+  applyMethod: text("apply_method").$type<"form" | "email" | "link">().notNull().default("form"),
+  applyTarget: text("apply_target").notNull().default(""),
+  status: text("status").$type<JobStatus>().notNull().default("draft"),
+  /** YYYY-MM-DD; applications close at the end of this day. */
+  closesOn: text("closes_on"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("job_openings_status_idx").on(t.status, t.sortOrder)]);
+
+export type JobOpening = typeof jobOpenings.$inferSelect;
+
+export const JOB_APPLICATION_STATUSES = ["new", "reviewing", "interview", "offer", "hired", "rejected"] as const;
+export type JobApplicationStatus = (typeof JOB_APPLICATION_STATUSES)[number];
+
+/** Someone applying for a role through the Careers page. */
+export const jobApplications = pgTable("job_applications", {
+  id: serial("id").primaryKey(),
+  jobId: integer("job_id").references(() => jobOpenings.id, { onDelete: "set null" }),
+  /** Kept so the application still reads well if the role is deleted. */
+  jobTitle: text("job_title").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  /** ISO 3166 alpha-2. */
+  country: text("country").notNull().default(""),
+  city: text("city").notNull().default(""),
+  linkedinUrl: text("linkedin_url"),
+  portfolioUrl: text("portfolio_url"),
+  cvUrl: text("cv_url"),
+  coverLetter: text("cover_letter").notNull().default(""),
+  salaryExpectation: text("salary_expectation").notNull().default(""),
+  noticePeriod: text("notice_period").notNull().default(""),
+  heardFrom: text("heard_from").notNull().default(""),
+  consentAt: timestamp("consent_at", { withTimezone: true }).notNull(),
+  status: text("status").$type<JobApplicationStatus>().notNull().default("new"),
+  adminNotes: text("admin_notes").notNull().default(""),
+  decidedById: integer("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("job_applications_job_idx").on(t.jobId, t.status), index("job_applications_created_idx").on(t.createdAt), index("job_applications_email_idx").on(t.email)]);
+
+export type JobApplication = typeof jobApplications.$inferSelect;

@@ -13,7 +13,7 @@ import { studentId } from "@/lib/utils";
 import { xpForUser } from "@/lib/xp";
 import { count, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { instructorApplications, internshipApplications } from "@/db/schema";
+import { instructorApplications, jobApplications, internshipApplications } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +27,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const savedTheme = (await cookies()).get("tk-theme")?.value;
   const theme: Theme = savedTheme === "dark" || savedTheme === "system" ? savedTheme : "light";
   const newApplications = perms.has("applications.review") ? (await (await getDb()).select({ n: count() }).from(internshipApplications).where(eq(internshipApplications.status, "new")))[0]?.n ?? 0 : 0;
+  const newJobApplications = perms.has("careers.manage") ? (await (await getDb()).select({ n: count() }).from(jobApplications).where(eq(jobApplications.status, "new")))[0]?.n ?? 0 : 0;
   const newInstructorApplications = perms.has("instructors.review") ? (await (await getDb()).select({ n: count() }).from(instructorApplications).where(eq(instructorApplications.status, "new")))[0]?.n ?? 0 : 0;
 
   // The admin's dashboard pop-up, until this person closes this version of it.
@@ -47,6 +48,7 @@ export default async function PortalLayout({ children }: { children: React.React
       toGrade={toGrade}
       newApplications={newApplications}
       newInstructorApplications={newInstructorApplications}
+      newJobApplications={newJobApplications}
       permissions={[...perms]}
       referrals={settings.referrals?.enabled === true}
       studentId={user.role === "student" ? studentId(user) : undefined}

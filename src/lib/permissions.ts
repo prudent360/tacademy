@@ -20,6 +20,7 @@ export const PERMISSIONS = [
   "discounts.manage",
   "leads.view",
   "referrals.manage",
+  "careers.manage",
   "team.manage",
   "settings.manage",
   "emails.manage",
@@ -43,6 +44,7 @@ export const PERMISSION_GROUPS: { title: string; items: { key: Permission; label
     { key: "users.view", label: "View people", hint: "Students and instructors, their details and progress" },
     { key: "users.manage", label: "Manage people", hint: "Invite, edit, enrol, complete and deactivate accounts" },
     { key: "instructors.review", label: "Review instructor applications", hint: "Accept people as instructors" },
+    { key: "careers.manage", label: "Manage careers", hint: "Post job openings and review job applications" },
   ] },
   { title: "Sales", items: [
     { key: "payments.view", label: "View payments", hint: "Transactions and CSV exports" },

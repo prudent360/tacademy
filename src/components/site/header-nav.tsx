@@ -11,6 +11,7 @@ const ABOUT: { href: string; label: string; text: string; icon: Icon }[] = [
   { href: "/#formats", label: "How we teach", text: "Live online, in person or hybrid", icon: SwapIcon },
   { href: "/#how", label: "How it works", text: "From enrolling to your certificate", icon: LayersIcon },
   { href: "/#faq", label: "FAQ", text: "Fees, schedules, certificates", icon: SparkIcon },
+  { href: "/careers", label: "Careers", text: "Join our team", icon: BriefcaseIcon },
   { href: "/contact", label: "Contact us", text: "Talk to the team", icon: MessageIcon },
 ];
 
@@ -123,7 +124,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
         <Link href="/internships" className={itemClass(is("/internships"))}>Internships</Link>
         <Link href="/teach-with-us" className={itemClass(is("/teach-with-us"))}>Teach with us</Link>
         <div className="relative" onMouseEnter={() => hoverOpen("about")} onMouseLeave={hoverClose}>
-          <button type="button" aria-expanded={panel === "about"} aria-controls="menu-about" onClick={() => setPanel(panel === "about" ? null : "about")} className={itemClass(is("/contact"), panel === "about")}>
+          <button type="button" aria-expanded={panel === "about"} aria-controls="menu-about" onClick={() => setPanel(panel === "about" ? null : "about")} className={itemClass(is("/contact") || is("/careers"), panel === "about")}>
             About <ChevronDown className={`size-4 transition-transform ${panel === "about" ? "rotate-180" : ""}`} />
           </button>
           {panel === "about" && (
