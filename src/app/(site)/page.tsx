@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ProductShowcase } from "@/components/site/product-showcase";
 import { HowItWorks } from "@/components/site/how-it-works";
 import Image from "next/image";
-import { ArrowRight, AwardIcon, BuildingIcon, CheckIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon, VideoIcon } from "@/components/icons";
+import { ArrowRight, BuildingIcon, CheckIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
 import { MarkMotif } from "@/components/site/page-hero";
 import { CourseCard } from "@/components/site/course-card";
 import { ModeBadge } from "@/components/ui";
@@ -65,12 +65,6 @@ export default async function HomePage() {
   const ratings = await ratingsFor(featured.map((c) => c.id));
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
   const { currencies } = await visitorCurrencies(settings);
-  const heroPhoto = settings.heroImageUrl ?? "/images/home-hero-team.webp";
-  // Five photos for the hero's curve: the Settings hero photo in the middle, then the bundled photos and course covers.
-  const pool = [...new Set([heroPhoto, "/images/how-it-works-classroom.webp", "/images/academy-instructor-support.webp", "/images/enrol-classroom.webp", "/images/home-hero-team.webp", ...summaries.flatMap((c) => (c.imageUrl ? [c.imageUrl] : []))])];
-  const pick = (n: number) => pool[n % pool.length];
-  // With only four distinct photos, the far-right slot repeats a classroom photo rather than the centre one.
-  const gallery = [pick(3), pick(1), pick(0), pick(2), pool.length > 4 ? pool[4] : pick(1)];
   const next = await getNextIntake();
   const nextStart = next?.cohort.startDate ? new Date(`${next.cohort.startDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : null;
   const nextSeats = next?.seatsLeft ?? null;
@@ -92,80 +86,68 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
 
-      {/* Hero: centred text above a curved row of photos, on a soft lavender wash with the brand mark drifting at the edges. */}
-      <section data-under-header className="relative isolate overflow-hidden bg-white">
-        <div aria-hidden="true" className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_12%_0%,rgba(79,63,215,.16),transparent_62%),radial-gradient(820px_500px_at_92%_8%,rgba(49,196,240,.18),transparent_60%),linear-gradient(180deg,#f1efff_0%,#f8f7fd_52%,#ffffff_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(rgba(79,63,215,.18)_1px,transparent_1.2px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_55%_45%_at_50%_28%,#000_15%,transparent_75%)]" />
-          <MarkMotif tone="light" className="hero-motif absolute -left-28 top-24 size-[420px] max-lg:hidden" />
-          <MarkMotif tone="light" className="hero-motif absolute -right-24 -top-6 size-[360px] [animation-delay:-7s] max-md:hidden" />
-        </div>
-        {/* Small notes floating either side of the headline on wide screens. */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 mx-auto hidden h-[560px] max-w-[1320px] xl:block">
-          <span className="showcase-bob absolute left-6 top-[430px] flex items-center gap-2.5 rounded-[5px] bg-white px-3.5 py-2.5 text-[13px] font-bold text-ink shadow-[0_18px_40px_-18px_rgba(24,19,64,.45)] ring-1 ring-edge"><span className="flex size-8 items-center justify-center rounded-[5px] bg-accent-soft text-accent"><VideoIcon className="size-4" /></span>Live classes, online or in person</span>
-          <span className="showcase-bob absolute right-6 top-[395px] flex items-center gap-2.5 rounded-[5px] bg-white px-3.5 py-2.5 text-[13px] font-bold text-ink shadow-[0_18px_40px_-18px_rgba(24,19,64,.45)] ring-1 ring-edge [animation-delay:1.2s]"><span className="flex size-8 items-center justify-center rounded-[5px] bg-cyan-soft text-cyan-ink"><AwardIcon className="size-4" /></span>Verified certificates</span>
-          <span className="showcase-bob absolute right-24 top-[495px] flex items-center gap-2.5 rounded-[5px] bg-white px-3.5 py-2.5 text-[13px] font-bold text-ink shadow-[0_18px_40px_-18px_rgba(24,19,64,.45)] ring-1 ring-edge [animation-delay:2.4s]"><span className="flex size-8 items-center justify-center rounded-[5px] bg-emerald-50 text-emerald-700"><CheckIcon className="size-4" /></span>Feedback on real projects</span>
-        </div>
-        <div className="mx-auto flex max-w-[1200px] flex-col items-center px-5 pt-14 text-center sm:px-8 md:pt-20">
-          {/* The live next start date when a cohort is open, otherwise the eyebrow text from Settings. */}
-          {next ? (
-            <Link href={`/enroll?cohort=${next.cohort.id}`} className="hero-rise group flex items-center gap-2.5 rounded-full border border-edge bg-white/80 py-1.5 pl-2 pr-3.5 text-sm font-medium text-body transition hover:border-accent-muted hover:bg-white">
-              <span className="relative flex size-6 items-center justify-center rounded-full bg-white shadow-sm" aria-hidden="true">
-                <span className="absolute size-2 animate-ping rounded-full bg-accent/40 motion-reduce:hidden" />
-                <span className="relative size-2 rounded-full bg-accent" />
-              </span>
-              Next intake starts <span className="font-semibold text-ink">{nextStart ?? "soon"}</span>
-              <ArrowRight className="size-3.5 text-accent transition group-hover:translate-x-0.5" />
-            </Link>
-          ) : settings.heroEyebrow && (
-            <p className="hero-rise flex items-center gap-2 rounded-full border border-edge bg-white/80 px-3.5 py-1.5 text-sm font-medium text-body">
-              <CheckIcon className="size-4 text-accent" /> {settings.heroEyebrow}
-            </p>
-          )}
-          <h1 style={{ animationDelay: "100ms" }} className="hero-rise mt-6 max-w-[920px] text-balance font-display text-[40px] font-extrabold leading-[1.05] tracking-[-1.5px] text-ink sm:text-[54px] lg:text-[68px] lg:tracking-[-2.5px]">
-            {/* Words wrapped in *asterisks* in Settings are highlighted. */}
-            {(settings.heroTitle || settings.siteName).split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <span key={i} className="bg-[linear-gradient(100deg,#4f3fd7_0%,#6e61e3_45%,#1fa9d6_100%)] bg-clip-text text-transparent">{part}</span> : part))}
-          </h1>
-          {settings.heroSubtitle && <p style={{ animationDelay: "180ms" }} className="hero-rise mt-5 max-w-[620px] text-pretty text-lg leading-relaxed text-muted md:text-[19px]">{settings.heroSubtitle}</p>}
-          <div style={{ animationDelay: "260ms" }} className="hero-rise mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/courses" className="flex h-13 items-center gap-2 rounded-full bg-ink px-7 text-base font-semibold text-white shadow-[0_14px_30px_-14px_rgba(24,19,64,.8)] transition hover:-translate-y-0.5 hover:bg-accent">
-              Browse courses <ArrowRight className="size-[18px]" />
-            </Link>
-            <a href="#formats" className="flex h-13 items-center rounded-full border-[1.5px] border-ink/80 bg-white/70 px-7 text-base font-semibold text-ink transition hover:border-accent hover:text-accent">How we teach</a>
+      {/* Hero: an inset indigo panel with faint line work behind centred text. The site header floats over its top edge. */}
+      <section className="bg-white px-2 pt-2 sm:px-3 sm:pt-3">
+        <div data-under-header className="relative isolate overflow-hidden rounded-[14px] bg-[#4f3fd7] text-white md:rounded-[18px]">
+          <div aria-hidden="true" className="absolute inset-0 -z-10">
+            <div className="absolute inset-0 bg-[radial-gradient(900px_520px_at_85%_-10%,rgba(255,255,255,.16),transparent_62%),radial-gradient(760px_460px_at_0%_110%,rgba(49,196,240,.3),transparent_60%),linear-gradient(135deg,#5b4be0_0%,#4f3fd7_48%,#3d2fb8_100%)]" />
+            {/* A wide line grid that fades out towards the edges. */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:96px_96px] [background-position:center_top] [mask-image:radial-gradient(ellipse_75%_70%_at_50%_35%,#000_20%,transparent_80%)]" />
+            {/* Large thin rings drifting off the top right and bottom left corners. */}
+            <svg viewBox="0 0 800 800" fill="none" className="absolute -right-[260px] -top-[300px] size-[820px] max-md:size-[560px] max-md:-right-[220px] max-md:-top-[240px]">
+              {[390, 320, 250, 180].map((r, i) => <circle key={r} cx="400" cy="400" r={r} stroke={`rgba(255,255,255,${0.14 - i * 0.025})`} strokeWidth="1" />)}
+              <circle cx="400" cy="400" r="320" stroke="rgba(143,223,247,.45)" strokeWidth="1.2" strokeDasharray="2 10" />
+            </svg>
+            <svg viewBox="0 0 800 800" fill="none" className="absolute -bottom-[420px] -left-[300px] size-[820px] max-md:hidden">
+              {[390, 300, 210].map((r, i) => <circle key={r} cx="400" cy="400" r={r} stroke={`rgba(255,255,255,${0.11 - i * 0.025})`} strokeWidth="1" />)}
+            </svg>
+            <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,.16)_1px,transparent_1.2px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_30%_40%_at_12%_30%,#000_10%,transparent_70%)]" />
+            <MarkMotif className="hero-motif absolute -left-24 top-28 size-[360px] opacity-60 max-lg:hidden" />
+            <MarkMotif className="hero-motif absolute -right-16 bottom-0 size-[300px] opacity-50 [animation-delay:-7s] max-md:hidden" />
+            <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgba(49,196,240,.7)_30%,rgba(124,112,240,.7)_70%,transparent)]" />
+          </div>
+
+          <div className="mx-auto flex max-w-[1200px] flex-col items-center px-5 pb-16 pt-12 text-center sm:px-8 md:pb-24 md:pt-20">
+            {/* The live next start date when a cohort is open, otherwise the eyebrow text from Settings. */}
+            {next ? (
+              <Link href={`/enroll?cohort=${next.cohort.id}`} className="hero-rise group flex items-center gap-2.5 rounded-full bg-white/[.1] py-1.5 pl-2 pr-3.5 text-sm font-medium text-white/85 ring-1 ring-white/25 transition hover:bg-white/[.16]">
+                <span className="relative flex size-6 items-center justify-center rounded-full bg-white" aria-hidden="true">
+                  <span className="absolute size-2 animate-ping rounded-full bg-accent/40 motion-reduce:hidden" />
+                  <span className="relative size-2 rounded-full bg-accent" />
+                </span>
+                Next intake starts <span className="font-semibold text-white">{nextStart ?? "soon"}</span>
+                <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
+              </Link>
+            ) : settings.heroEyebrow && (
+              <p className="hero-rise flex items-center gap-2 rounded-full bg-white/[.1] px-3.5 py-1.5 text-sm font-medium text-white/90 ring-1 ring-white/25">
+                <CheckIcon className="size-4 text-cyan-light" /> {settings.heroEyebrow}
+              </p>
+            )}
+            <h1 style={{ animationDelay: "100ms" }} className="hero-rise mt-6 max-w-[920px] text-balance font-display text-[40px] font-extrabold leading-[1.05] tracking-[-1.5px] sm:text-[54px] lg:text-[68px] lg:tracking-[-2.5px]">
+              {/* Words wrapped in *asterisks* in Settings are highlighted. */}
+              {(settings.heroTitle || settings.siteName).split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <span key={i} className="bg-[linear-gradient(100deg,#ffffff_0%,#bfe9fb_45%,#8fdff7_100%)] bg-clip-text text-transparent">{part}</span> : part))}
+            </h1>
+            {settings.heroSubtitle && <p style={{ animationDelay: "180ms" }} className="hero-rise mt-5 max-w-[620px] text-pretty text-lg leading-relaxed text-white/80 md:text-[19px]">{settings.heroSubtitle}</p>}
+            <div style={{ animationDelay: "260ms" }} className="hero-rise mt-8 flex flex-wrap justify-center gap-3">
+              <Link href="/courses" className="flex h-13 items-center gap-2 rounded-full bg-white px-7 text-base font-semibold text-[#4f3fd7] shadow-[0_14px_30px_-14px_rgba(0,0,0,.55)] transition hover:-translate-y-0.5 hover:bg-cyan-soft">
+                Browse courses <ArrowRight className="size-[18px]" />
+              </Link>
+              <a href="#formats" className="flex h-13 items-center rounded-full px-7 text-base font-semibold text-white ring-[1.5px] ring-white/55 transition hover:bg-white/10 hover:ring-white">How we teach</a>
+            </div>
+
+            {/* Stats from Settings, as one segmented bar. */}
+            {settings.stats.length > 0 && (
+              <dl style={{ animationDelay: "340ms" }} className="hero-rise mt-12 grid w-full max-w-[560px] grid-cols-2 overflow-hidden rounded-[10px] bg-white/[.06] ring-1 ring-white/20 backdrop-blur-sm lg:flex lg:w-auto lg:max-w-none lg:rounded-full md:mt-14">
+                {settings.stats.map((stat, i) => (
+                  <div key={stat.label} className={`flex flex-col-reverse items-center gap-0.5 px-5 py-3 lg:flex-row-reverse lg:gap-3 lg:py-2.5 ${i > 0 ? "lg:border-l lg:border-white/20" : ""} ${i % 2 ? "border-l border-white/20" : ""} ${i > 1 ? "border-t border-white/20 lg:border-t-0" : ""}`}>
+                    <dd className="font-display text-xl font-bold tracking-tight text-white lg:text-base">{stat.value}</dd>
+                    <dt className="whitespace-nowrap text-xs text-white/70 lg:text-sm">{stat.label}</dt>
+                  </div>
+                ))}
+              </dl>
+            )}
           </div>
         </div>
-
-        {/* The gallery is cut by two large elliptical edges, creating one continuous curve across every photo. */}
-        <div aria-hidden="true" className="hero-gallery-curve relative mb-16 mt-10 [perspective:1200px] sm:mb-20 sm:mt-12 md:mb-24 md:mt-14" style={{ maskImage: "linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%)", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%)" }}>
-          <div className="flex items-start justify-center gap-3 px-3 [transform-style:preserve-3d] sm:gap-4 md:gap-5">
-            {gallery.map((src, i) => {
-              const offset = i - 2;
-              return (
-                <div
-                  key={`${src}-${i}`}
-                  className={`hero-arc-tile relative aspect-[4/3] w-[68vw] max-w-[340px] shrink-0 overflow-hidden rounded-[5px] border border-white/80 bg-panel shadow-sm sm:w-[38vw] md:w-[24vw] ${Math.abs(offset) === 2 ? "hidden md:block" : ""}`}
-                  style={{ "--arc": offset, "--depth": Math.abs(offset) } as React.CSSProperties}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" loading={offset === 0 ? "eager" : "lazy"} fetchPriority={offset === 0 ? "high" : undefined} className="size-full object-cover transition-transform duration-700" />
-                  <div className="absolute inset-0 ring-1 ring-inset ring-ink/[.06]" />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {settings.stats.length > 0 && (
-          <dl className="mx-auto grid max-w-[900px] grid-cols-2 gap-x-8 gap-y-6 px-5 pb-16 pt-4 text-center sm:grid-cols-4 sm:px-8 md:pb-20">
-            {settings.stats.map((stat) => (
-              <div key={stat.label} className="flex flex-col-reverse gap-1">
-                <dt className="text-sm text-muted">{stat.label}</dt>
-                <dd className="font-display text-3xl font-bold tracking-tight text-ink">{stat.value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        {!settings.stats.length && <div className="pb-16 md:pb-20" />}
       </section>
 
       {/* Fast course discovery */}
