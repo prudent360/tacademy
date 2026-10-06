@@ -69,8 +69,8 @@ export default async function AdminHome() {
   const setup = [
     { ok: stripeOk, label: "Stripe payments", hint: "Add your keys in Settings → Payments", href: "/admin/settings?tab=payments" },
     { ok: paystackOk, label: "Paystack payments", hint: "Add your keys in Settings → Payments", href: "/admin/settings?tab=payments" },
-    { ok: emailOk, label: "Email delivery", hint: "Set up Resend or SMTP in Settings → Email", href: "/admin/settings?tab=email" },
-    { ok: Boolean(process.env.CRON_SECRET), label: "Class reminders", hint: "Set CRON_SECRET in Vercel", href: "/admin/settings?tab=reminders" },
+    { ok: emailOk, label: "Email delivery", hint: "Set up Resend or SMTP in Settings → Email", href: "/admin/settings?tab=messages#email" },
+    { ok: Boolean(process.env.CRON_SECRET), label: "Class reminders", hint: "Set CRON_SECRET in Vercel", href: "/admin/settings?tab=messages#reminders" },
     { ok: blobConfigured() || !process.env.VERCEL, label: "File uploads", hint: "Connect a Vercel Blob store", href: undefined },
   ];
   const setupDone = setup.filter((s) => s.ok).length;

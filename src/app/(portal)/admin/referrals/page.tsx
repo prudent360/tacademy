@@ -80,10 +80,10 @@ export default async function AdminReferralsPage({ searchParams }: { searchParam
       <PageHeader
         title="Referrals"
         description={cfg.enabled ? `People earn ${cfg.percent}% (or the course's own rate) when someone they refer pays. Commission is payable ${cfg.holdDays ? `${cfg.holdDays} days after the payment` : "as soon as they pay"}.` : "Refer & earn is switched off."}
-        actions={<Link href="/admin/settings?tab=referrals" className="inline-flex h-11 items-center rounded-[5px] border border-edge-strong bg-surface px-5 text-[15px] font-semibold text-ink hover:bg-page">Referral settings</Link>}
+        actions={<Link href="/admin/settings?tab=payments#referrals" className="inline-flex h-11 items-center rounded-[5px] border border-edge-strong bg-surface px-5 text-[15px] font-semibold text-ink hover:bg-page">Referral settings</Link>}
       />
       {params.done && <Notice tone="green">{params.done.slice(0, 200)}</Notice>}
-      {!cfg.enabled && <Notice tone="amber">Referrals are off, so no new commission is earned. <Link href="/admin/settings?tab=referrals" className="font-semibold underline">Switch them on in Settings › Referrals</Link>.</Notice>}
+      {!cfg.enabled && <Notice tone="amber">Referrals are off, so no new commission is earned. <Link href="/admin/settings?tab=payments#referrals" className="font-semibold underline">Switch them on in Settings › Referrals</Link>.</Notice>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Ready to pay" value={money(totals.ready)} icon={GiftIcon} tone="purple" href={url({ state: "ready" })} />

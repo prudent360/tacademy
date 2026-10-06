@@ -20,7 +20,7 @@ export default async function EmailLogPage({ params }: { params: Promise<{ id: s
   const settings = await getSettings();
   return (
     <>
-      <PageHeader back={{ href: "/admin/settings?tab=email", label: "Email settings" }} title={row.subject} description={<span className="flex flex-wrap items-center gap-2">To {row.to} · {formatDateTime(row.createdAt, settings.timezone)} <StatusBadge status={row.status} label={row.status === "logged" ? "Logged only" : undefined} /></span>} />
+      <PageHeader back={{ href: "/admin/settings?tab=messages#email", label: "Email settings" }} title={row.subject} description={<span className="flex flex-wrap items-center gap-2">To {row.to} · {formatDateTime(row.createdAt, settings.timezone)} <StatusBadge status={row.status} label={row.status === "logged" ? "Logged only" : undefined} /></span>} />
       {row.error && <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{row.error}</p>}
       <Card padded={false}>
         {/* Links stay clickable for testing flows locally, e.g. verification and password links. */}

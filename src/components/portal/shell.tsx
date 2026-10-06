@@ -18,8 +18,7 @@ export type ShellNotification = { id: number; title: string; body: string; href:
 const ROLE_LABEL: Record<Role, string> = { admin: "Administrator", instructor: "Instructor", student: "Student", staff: "Team member" };
 
 const SETTINGS_TABS: [string, string][] = [
-  ["general", "General"], ["branding", "Branding"], ["payments", "Payments"], ["email", "Email"], ["templates", "Email templates"],
-  ["reminders", "Reminders"], ["whatsapp", "WhatsApp"], ["referrals", "Referrals"], ["announcement", "Dashboard pop-up"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
+  ["general", "General"], ["payments", "Payments"], ["messages", "Messages"], ["templates", "Email templates"], ["integrations", "Integrations"],
 ];
 
 function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number; newJobApplications?: number }, perms: Permission[], referrals = false): NavGroup[] {
