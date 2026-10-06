@@ -246,6 +246,27 @@
       "when": 1791212268040,
       "tag": "0034_careers",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791242515608,
+      "tag": "0035_free_classes",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791243591864,
+      "tag": "0036_whatsapp",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791244098867,
+      "tag": "0037_showcase",
+      "breakpoints": true
     }
   ]
 }

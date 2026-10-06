@@ -16,6 +16,8 @@ import { referralConfig } from "@/lib/referrals";
 import { CURRENCY_CODES } from "@/lib/money";
 import { sendDueReminders } from "@/lib/reminders";
 import { encryptSecret } from "@/lib/secrets";
+import { sendWhatsAppTest, whatsappNumber } from "@/lib/whatsapp";
+import { WHATSAPP_LANGUAGES } from "@/lib/whatsapp-templates";
 import { deleteIfReplaced } from "@/lib/storage";
 import { isValidTimeZone } from "@/lib/time";
 import { trimLogo } from "@/lib/trim-image";
@@ -372,6 +374,34 @@ export async function saveVideoSettings(_state: FormState, formData: FormData): 
   await update({ video: { bunnyTokenKey: secretField(formData, "bunnyTokenKey", current.bunnyTokenKey) } });
   await logAudit(actor, { action: "settings.saved", summary: "updated the video settings" });
   return { ok: "Video settings saved." };
+}
+
+// ---------- WhatsApp ----------
+
+export async function saveWhatsAppSettings(_state: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requirePermission("settings.manage");
+  const current = (await getSettings()).whatsapp ?? {};
+  const phoneNumberId = String(formData.get("phoneNumberId") ?? "").trim();
+  if (phoneNumberId && !/^\d{6,30}$/.test(phoneNumberId)) return { error: "The phone number ID is a long number. Copy it from WhatsApp Manager › API Setup (not the phone number itself)." };
+  const token = String(formData.get("accessToken") ?? "").trim();
+  if (token && !/^EA[A-Za-z0-9]{20,}$/.test(token)) return { error: "That doesn't look like a Meta access token. It starts with “EA”." };
+  const language = WHATSAPP_LANGUAGES.find((l) => l.value === formData.get("language"))?.value ?? "en";
+  const enabled = formData.get("enabled") === "on";
+  const accessToken = secretField(formData, "accessToken", current.accessToken);
+  if (enabled && (!phoneNumberId || !accessToken)) return { error: "Add the phone number ID and access token before switching WhatsApp on." };
+  await update({ whatsapp: { enabled, phoneNumberId, accessToken, language } });
+  await logAudit(actor, { action: "settings.saved", summary: `updated the WhatsApp settings${enabled !== (current.enabled === true) ? ` (turned ${enabled ? "on" : "off"})` : ""}` });
+  return { ok: enabled ? "Saved. Opted-in students now get WhatsApp messages." : "Saved. WhatsApp messages are off." };
+}
+
+/** Sends Meta's hello_world template to check the phone number ID and token work. */
+export async function sendWhatsAppTestNow(_state: FormState, formData: FormData): Promise<FormState> {
+  await requirePermission("settings.manage");
+  const to = whatsappNumber(String(formData.get("testNumber") ?? ""));
+  if (!to) return { error: "Enter the number with its country code, e.g. +234 803 123 4567." };
+  const result = await sendWhatsAppTest(to);
+  revalidatePath("/admin/settings");
+  return result.error ? { error: `WhatsApp said: ${result.error}` } : { ok: "Sent. Check that phone for Meta's “Hello World” message." };
 }
 
 // ---------- Reminders ----------

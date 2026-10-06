@@ -35,7 +35,7 @@ export async function updateProfile(_state: FormState, formData: FormData): Prom
     if (message) return { error: message };
     throw error;
   }
-  await (await getDb()).update(users).set({ ...parsed.data, gender, avatarUrl, emailReminders: formData.get("emailReminders") === "on" }).where(eq(users.id, user.id));
+  await (await getDb()).update(users).set({ ...parsed.data, gender, avatarUrl, emailReminders: formData.get("emailReminders") === "on", ...(formData.get("whatsappShown") === "1" ? { whatsappOptIn: formData.get("whatsappOptIn") === "on" } : {}) }).where(eq(users.id, user.id));
   await deleteIfReplaced(user.avatarUrl, avatarUrl);
   revalidatePath("/", "layout");
   return { ok: "Profile saved." };

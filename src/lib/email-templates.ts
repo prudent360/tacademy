@@ -367,6 +367,76 @@ You're very welcome to apply again for a future intake, and our courses are a gr
 
 The {{siteName}} team`,
   },
+  free_class_confirmed: {
+    name: "Free class: place confirmed",
+    description: "Sent straight after someone signs up for a free class.",
+    variables: { classTitle: "Intro to Data Analytics", when: "Tue 14 Oct, 18:00 – 19:30 WAT", modeLabel: "Live online", location: "Join link: https://meet.google.com/abc-defg-hij", calendarUrl: "https://example.com/free-classes/intro-to-data/calendar.ics", classUrl: "https://example.com/free-classes/intro-to-data" },
+    subject: "You're in: {{classTitle}}",
+    body: `Hi {{name}},
+
+Your free place is confirmed. We're looking forward to seeing you.
+
+- **Class:** {{classTitle}}
+- **When:** {{when}}
+- **Format:** {{modeLabel}}
+- {{location}}
+
+We'll remind you the day before and shortly before it starts. [Add it to your calendar]({{calendarUrl}}) so you don't miss it.
+
+[[See class details|{{classUrl}}]]`,
+  },
+  free_class_reminder: {
+    name: "Free class: reminder",
+    description: "Sent the day before and shortly before a free class starts.",
+    variables: { classTitle: "Intro to Data Analytics", when: "Tue 14 Oct, 18:00 – 19:30 WAT", leadTime: "tomorrow", modeLabel: "Live online", location: "Join link: https://meet.google.com/abc-defg-hij", classUrl: "https://example.com/free-classes/intro-to-data" },
+    subject: "Reminder: {{classTitle}} is {{leadTime}}",
+    body: `Hi {{name}},
+
+A quick reminder that your free class is **{{leadTime}}**.
+
+- **Class:** {{classTitle}}
+- **When:** {{when}}
+- **Format:** {{modeLabel}}
+- {{location}}
+
+[[See class details|{{classUrl}}]]`,
+  },
+  free_class_follow_up: {
+    name: "Free class: follow-up offer",
+    description: "Sent after a free class ends, with the recording (if any) and a personal discount code for the linked course.",
+    variables: { classTitle: "Intro to Data Analytics", courseTitle: "Data Analytics with Power BI", recording: "Missed a bit? [Watch the recording](https://example.com/recording).", offer: "As a thank-you, here's **10% off** the full course with your personal code **FREE-ADA-7K3Q**. It's valid until Tue 21 Oct.", enrolUrl: "https://example.com/enroll?course=data-analytics&code=FREE-ADA-7K3Q" },
+    subject: "Thanks for joining {{classTitle}}",
+    body: `Hi {{name}},
+
+Thank you for joining **{{classTitle}}**. We hope you enjoyed it.
+
+{{recording}}
+
+If you'd like to keep going, **{{courseTitle}}** takes you from here to job-ready, with live classes, real projects and feedback from your instructor.
+
+{{offer}}
+
+[[Enrol in {{courseTitle}}|{{enrolUrl}}]]
+
+Questions? Just reply to this email.
+
+The {{siteName}} team`,
+  },
+  showcase_invite: {
+    name: "Project showcase invitation",
+    description: "Sent when an instructor invites a student to publish a graded project on the public Projects page.",
+    variables: { assignmentTitle: "Sales performance dashboard", instructorName: "Tolu Adeyemi", note: "> Your use of drill-through was excellent.", showcaseUrl: "https://example.com/dashboard/showcase/1" },
+    subject: "Your project was picked for our showcase",
+    body: `Hi {{name}},
+
+Great news: **{{instructorName}}** thinks your work on **{{assignmentTitle}}** is strong enough to feature on our public Projects page.
+
+{{note}}
+
+Being featured gives you a link to share on your CV and LinkedIn, next to your verified certificate. It's your choice: you can edit the title, description and cover image first, or decline.
+
+[[Review and publish|{{showcaseUrl}}]]`,
+  },
   job_application_received: {
     name: "Job application received",
     description: "Sent to someone straight after they apply for a role on the Careers page.",

@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { getDb } from "@/db";
 import { discountCodes, enrollments, payments, users, type Cohort, type Course, type DiscountCode, type EnrollmentSource, type Payment, type PaymentPlan, type User } from "@/db/schema";
+import { sendWhatsApp, whatsappNumber } from "./whatsapp";
 import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
@@ -402,6 +403,7 @@ export async function activateEnrollment(userId: number, cohortId: number, sourc
         dashboardUrl: absoluteUrl(`/dashboard/cohorts/${cohortId}`),
       },
     },
+    whatsapp: { template: "enrollment_confirmed", params: (u) => [firstName(u.name), course.title, `${cohort.name}${cohort.startDate ? `, starting ${formatDateOnly(cohort.startDate)}` : ""}`, absoluteUrl(`/dashboard/cohorts/${cohortId}`)] },
   });
   return true;
 }
@@ -439,6 +441,8 @@ export async function fulfilPayment(reference: string): Promise<void> {
       paymentsUrl: absoluteUrl("/dashboard/payments"),
     },
   }]);
+  const whatsappTo = user.whatsappOptIn ? whatsappNumber(user.phone) : null;
+  if (whatsappTo) await sendWhatsApp([{ to: whatsappTo, template: "payment_receipt", params: [firstName(user.name), amount, payment.description, payment.reference] }]);
 
   if (payment.cohortId) await activateEnrollment(payment.userId, payment.cohortId, "payment");
   await recordCommission(payment).catch((e) => console.error("Referral commission:", e));

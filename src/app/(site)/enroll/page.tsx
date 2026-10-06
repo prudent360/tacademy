@@ -5,17 +5,18 @@ import { getCurrentUser } from "@/lib/auth";
 import { isFree, withCohorts } from "@/lib/catalog";
 import { bankTransferConfig } from "@/lib/config";
 import { getPublishedCourses, getSettings, getStudentCohorts, graduateFor, linkedCourseTitles } from "@/lib/data";
-import { onlineProviders, payableCurrencies } from "@/lib/payments";
+import { findDiscount, onlineProviders, payableCurrencies } from "@/lib/payments";
 import { cohortCurrencies } from "@/lib/pricing";
 import { formatDateOnly } from "@/lib/time";
 import { visitorCurrencies } from "@/lib/visitor";
+import { whatsappConfig } from "@/lib/whatsapp";
 
 export const metadata: Metadata = { title: "Enrol", description: "Choose a course and cohort, tell us about yourself and secure your place.", alternates: { canonical: "/enroll" } };
 
 /** Default country for the phone field, from the academy's main currency. */
 const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA", UGX: "UG", TZS: "TZ", RWF: "RW", XOF: "SN", XAF: "CM" };
 
-export default async function EnrolPage({ searchParams }: { searchParams: Promise<{ cohort?: string; course?: string }> }) {
+export default async function EnrolPage({ searchParams }: { searchParams: Promise<{ cohort?: string; course?: string; code?: string }> }) {
   const [params, settings, user, courses, payable, bank, providers] = await Promise.all([searchParams, getSettings(), getCurrentUser(), getPublishedCourses(), payableCurrencies(), bankTransferConfig(), onlineProviders()]);
   const visitor = await visitorCurrencies(settings);
   const enrolledIn = user ? new Set((await getStudentCohorts(user.id)).map((row) => row.cohort.id)) : new Set<number>();
@@ -50,6 +51,9 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
 
   const requested = Number(params.cohort);
   const selected = cohorts.find((c) => c.id === requested) ?? (params.course ? cohorts.find((c) => courses.find((course) => course.id === c.courseId)?.slug === params.course) : undefined);
+  // A code in the link (e.g. from a free class follow-up email) is applied straight away if it's still valid.
+  const linked = params.code ? await findDiscount(params.code) : null;
+  const initialDiscount = linked && !("error" in linked) ? { code: linked.code, percentOff: linked.percentOff } : null;
   const [phoneDial, ...phoneRest] = user?.phone.includes(" ") ? user.phone.split(" ") : [];
 
   return (
@@ -68,6 +72,8 @@ export default async function EnrolPage({ searchParams }: { searchParams: Promis
               cohorts={cohorts}
               preferred={visitor.currencies}
               initialCohortId={selected?.id ?? null}
+              initialDiscount={initialDiscount}
+              whatsapp={(await whatsappConfig()).ready}
               signedIn={user ? { firstName: user.name.split(" ")[0], lastName: user.name.split(" ").slice(1).join(" "), email: user.email, dial: phoneDial ?? "", phone: phoneRest.join(" "), dateOfBirth: user.dateOfBirth ?? "", gender: user.gender ?? "", qualification: user.qualification, country: user.country ?? "" } : null}
               defaultCountry={visitor.country ?? PHONE_COUNTRY[settings.currencies[0] ?? ""]}
             />

@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { count, desc, eq } from "drizzle-orm";
-import { runRemindersNow, saveAiSettings, saveAnnouncement, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { runRemindersNow, saveWhatsAppSettings, sendWhatsAppTestNow, saveAiSettings, saveAnnouncement, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
 import { EmailDriverFields } from "@/components/admin/email-driver";
 import { TransactpayCheckButton } from "@/components/admin/transactpay-check";
 import { ActionButton, ActionForm, FileField, Input, SecretInput, Select, SubmitButton, Switch, Textarea } from "@/components/forms";
-import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon, SearchIcon, SparkIcon } from "@/components/icons";
+import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon, MessageIcon, SearchIcon, SparkIcon } from "@/components/icons";
 import { Badge, DataTable, Notice, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
-import { emailLog, emailTemplates, type Settings } from "@/db/schema";
+import { emailLog, emailTemplates, users, whatsappLog, type Settings } from "@/db/schema";
 import { bankTransferConfig, emailConfig, gatewayConfig, reminderConfig, type ResolvedGateway } from "@/lib/config";
 import { AI_MODELS, aiConfig } from "@/lib/ai";
 import { REQUIRED_TEMPLATES, sendingAllowance } from "@/lib/email";
@@ -22,6 +22,8 @@ import { referralConfig } from "@/lib/referrals";
 import { seoConfig } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
 import { relativeTime } from "@/lib/time";
+import { whatsappConfig } from "@/lib/whatsapp";
+import { WHATSAPP_LANGUAGES, WHATSAPP_TEMPLATES } from "@/lib/whatsapp-templates";
 
 function Section({ title, description, icon, badge, children, footer }: { title: string; description?: React.ReactNode; icon?: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
@@ -523,6 +525,78 @@ export function VideoTab({ s }: { s: Settings }) {
           <li>Publish the lesson. Students watch it inside the lesson page and mark it complete.</li>
         </ol>
         <p className="text-xs text-muted">Also add your website under <strong>Allowed domains</strong> in Bunny&apos;s Security settings so the player only works on your site. YouTube, Vimeo and Loom links play inside lessons too.</p>
+      </Section>
+    </div>
+  );
+}
+
+// ---------- WhatsApp ----------
+
+export async function WhatsAppTab({ s }: { s: Settings }) {
+  const db = await getDb();
+  const [cfg, log, [{ optedIn }]] = await Promise.all([
+    whatsappConfig(),
+    db.select().from(whatsappLog).orderBy(desc(whatsappLog.createdAt)).limit(15),
+    db.select({ optedIn: count() }).from(users).where(eq(users.whatsappOptIn, true)),
+  ]);
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <ActionForm action={saveWhatsAppSettings} className="flex flex-col gap-6">
+          <Section title="WhatsApp messages" description="Class reminders, deadline reminders, enrolment confirmations and receipts, also sent on WhatsApp to students who opt in. Uses Meta's WhatsApp Cloud API."
+            icon={<span className="flex size-10 items-center justify-center rounded-xl bg-[#25d366] text-white"><MessageIcon className="size-5" /></span>}
+            badge={cfg.ready ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : cfg.enabled ? <Badge tone="amber"><AlertIcon className="size-3.5" /> Not set up</Badge> : <Badge>Off</Badge>}>
+            <Switch label="Send WhatsApp messages" name="enabled" defaultChecked={cfg.enabled} hint="When on, students see a WhatsApp option on the enrol form and their account page." />
+            <Input label="Phone number ID" name="phoneNumberId" defaultValue={cfg.phoneNumberId} placeholder="e.g. 106540352242922" className="[&_input]:font-mono [&_input]:text-sm" hint="WhatsApp Manager › API Setup. It's a long ID, not the phone number." />
+            <SecretInput label="Access token" name="accessToken" masked={maskSecret(s.whatsapp?.accessToken)} placeholder="EAA…" hint="Use a permanent System User token (Business Settings › System users), not the 24-hour test token." />
+            <Select label="Template language" name="language" defaultValue={cfg.language} options={WHATSAPP_LANGUAGES.map((l) => ({ value: l.value, label: `${l.label} (${l.value})` }))} hint="Must match the language you pick when creating the templates." className="max-w-[320px]" />
+          </Section>
+          <div><SubmitButton>Save WhatsApp settings</SubmitButton></div>
+        </ActionForm>
+        <div className="flex flex-col gap-6">
+          <Section title="Test the connection">
+            <ActionForm action={sendWhatsAppTestNow} className="flex flex-col gap-4">
+              <p className="text-sm text-muted">Sends Meta&apos;s ready-made “Hello World” message, which works before your own templates are approved. On a test number, add the recipient under API Setup first.</p>
+              <Input label="Send to" name="testNumber" type="tel" placeholder="+234 803 123 4567" />
+              <div><SubmitButton pendingText="Sending…">Send test message</SubmitButton></div>
+            </ActionForm>
+          </Section>
+          <Section title="Who gets messages">
+            <p className="text-sm text-body"><strong className="font-display text-2xl text-ink">{optedIn}</strong> student{optedIn === 1 ? " has" : "s have"} opted in.</p>
+            <p className="text-xs text-muted">Students opt in on the enrol form or their account page; free class sign-ups tick “Also remind me on WhatsApp”. Email is always sent as well.</p>
+          </Section>
+        </div>
+      </div>
+
+      <Section title="Templates to create in WhatsApp Manager" description={<>Meta only delivers messages that use approved templates. In <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink">WhatsApp Manager › Message templates</a>, create each one below with category <strong>Utility</strong>, the language chosen above, and exactly this name and text. Approval usually takes minutes.</>}>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Object.entries(WHATSAPP_TEMPLATES).map(([name, t]) => (
+            <div key={name} className="flex flex-col gap-3 rounded-[10px] border border-edge bg-panel p-4">
+              <div><p className="font-semibold text-ink">{t.label}</p><p className="text-xs text-muted">{t.when}</p></div>
+              <CopyField label="Template name" value={name} />
+              <CopyField label="Body" value={t.body} multiline />
+              <p className="text-xs text-muted"><span className="font-semibold text-body">Sample values for Meta:</span> {t.sample.map((v, i) => `{{${i + 1}}} ${v}`).join(" · ")}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Recent messages">
+        {log.length ? (
+          <DataTable>
+            <thead><tr><th>To</th><th>Message</th><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              {log.map((m) => (
+                <tr key={m.id}>
+                  <td className="font-mono text-xs text-body">+{m.to}</td>
+                  <td className="text-body">{m.template in WHATSAPP_TEMPLATES ? WHATSAPP_TEMPLATES[m.template as keyof typeof WHATSAPP_TEMPLATES].label : m.template === "hello_world" ? "Test (Hello World)" : m.template}</td>
+                  <td>{m.status === "sent" ? <Badge tone="green">Sent</Badge> : <><Badge tone="red">Failed</Badge>{m.error && <span className="mt-1 block max-w-[360px] text-xs text-muted">{m.error}</span>}</>}</td>
+                  <td className="whitespace-nowrap text-muted">{relativeTime(m.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </DataTable>
+        ) : <p className="text-sm text-muted">No WhatsApp messages yet.</p>}
       </Section>
     </div>
   );

@@ -5,6 +5,8 @@ import { notifications, users, type User } from "@/db/schema";
 import { sendEmails, type OutgoingEmail, type Vars } from "./email";
 import type { TemplateKey } from "./email-templates";
 import { firstName } from "./utils";
+import { sendWhatsApp, whatsappNumber } from "./whatsapp";
+import type { WhatsAppTemplate } from "./whatsapp-templates";
 
 type NotifyOptions = {
   kind: string;
@@ -18,9 +20,14 @@ type NotifyOptions = {
     /** Reminders respect the "email me reminders" preference; transactional emails always send. */
     isReminder?: boolean;
   };
+  /** Also sent on WhatsApp to people who opted in, when WhatsApp is set up. `params` fill the template's {{1}}, {{2}}… */
+  whatsapp?: {
+    template: WhatsAppTemplate;
+    params: (user: User) => string[];
+  };
 };
 
-/** Creates an in-app notification for each user and, optionally, emails them. */
+/** Creates an in-app notification for each user and, optionally, emails them and sends a WhatsApp message. */
 export async function notify(userIds: number[], options: NotifyOptions): Promise<void> {
   const ids = [...new Set(userIds)];
   if (!ids.length) return;
@@ -31,6 +38,14 @@ export async function notify(userIds: number[], options: NotifyOptions): Promise
   await db.insert(notifications).values(
     recipients.map((u) => ({ userId: u.id, kind: options.kind, title: options.title, body: options.body ?? "", href: options.href ?? null })),
   );
+
+  const whatsapp = options.whatsapp;
+  if (whatsapp) {
+    await sendWhatsApp(recipients.flatMap((u) => {
+      const to = u.whatsappOptIn ? whatsappNumber(u.phone) : null;
+      return to ? [{ to, template: whatsapp.template, params: whatsapp.params(u) }] : [];
+    }));
+  }
 
   const email = options.email;
   if (!email) return;

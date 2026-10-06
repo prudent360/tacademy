@@ -69,6 +69,8 @@ export const users = pgTable("users", {
   /** ISO 3166 alpha-2, chosen at enrolment; sets the currency and payment options offered. */
   country: text("country"),
   emailReminders: boolean("email_reminders").notNull().default(true),
+  /** Agreed to class reminders, receipts and enrolment messages on WhatsApp (to their phone number). */
+  whatsappOptIn: boolean("whatsapp_opt_in").notNull().default(false),
   /** Their personal referral code, made the first time they open Refer & earn. */
   referralCode: text("referral_code").unique(),
   /** Who referred them, set once when the account is created through a referral link. */
@@ -187,6 +189,8 @@ export type ReferralSettings = { enabled: boolean; percent: number; cookieDays: 
 /** A pop-up shown once on the dashboard. `version` changes on every save, so an edited message shows again. */
 export type AnnouncementSettings = { enabled: boolean; title: string; body: string; buttonLabel: string; buttonUrl: string; audience: "students" | "everyone"; version: string };
 export type PayoutDetails = { method: "bank" | "other"; bankName: string; accountName: string; accountNumber: string; other: string };
+/** WhatsApp Cloud API (Meta). The access token is stored encrypted. */
+export type WhatsAppSettings = { enabled: boolean; phoneNumberId: string; accessToken: string; language: string };
 export type ReminderSettings = { dayBefore: boolean; hourBefore: boolean; hourLeadMinutes: number; assignmentDue: boolean; assignmentLeadHours: number };
 export type Faq = { question: string; answer: string };
 export type Testimonial = { quote: string; name: string; role: string };
@@ -218,6 +222,7 @@ export const settings = pgTable("settings", {
   payment: jsonb("payment").$type<Partial<PaymentSettings>>().notNull().default({}),
   email: jsonb("email").$type<Partial<EmailSettings>>().notNull().default({}),
   reminders: jsonb("reminders").$type<Partial<ReminderSettings>>().notNull().default({}),
+  whatsapp: jsonb("whatsapp").$type<Partial<WhatsAppSettings>>().notNull().default({}),
   referrals: jsonb("referrals").$type<Partial<ReferralSettings>>().notNull().default({}),
   announcement: jsonb("announcement").$type<Partial<AnnouncementSettings>>().notNull().default({}),
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
@@ -856,3 +861,116 @@ export const jobApplications = pgTable("job_applications", {
 }, (t) => [index("job_applications_job_idx").on(t.jobId, t.status), index("job_applications_created_idx").on(t.createdAt), index("job_applications_email_idx").on(t.email)]);
 
 export type JobApplication = typeof jobApplications.$inferSelect;
+
+export const FREE_CLASS_STATUSES = ["draft", "open", "closed"] as const;
+export type FreeClassStatus = (typeof FREE_CLASS_STATUSES)[number];
+
+/**
+ * A free taster class or webinar. People sign up without an account; afterwards each signup is sent a
+ * personal discount code to enrol on the linked course.
+ */
+export const freeClasses = pgTable("free_classes", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  description: text("description").notNull().default(""),
+  /** What people will learn or leave with, one per line. */
+  takeaways: jsonb("takeaways").$type<string[]>().notNull().default([]),
+  /** The course the class leads into: the follow-up offer points here. */
+  courseId: integer("course_id").references(() => courses.id, { onDelete: "set null" }),
+  hostName: text("host_name").notNull().default(""),
+  hostTitle: text("host_title").notNull().default(""),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  mode: text("mode").$type<SessionMode>().notNull().default("virtual"),
+  /** Shared only with people who signed up (confirmation and reminder emails). */
+  meetingUrl: text("meeting_url"),
+  venue: text("venue").notNull().default(""),
+  /** Empty: no limit. */
+  capacity: integer("capacity"),
+  status: text("status").$type<FreeClassStatus>().notNull().default("draft"),
+  /** Follow-up offer: percent off the course, valid for this many days. 0 percent: no code is sent. */
+  offerPercent: integer("offer_percent").notNull().default(10),
+  offerDays: integer("offer_days").notNull().default(7),
+  recordingUrl: text("recording_url"),
+  reminderDaySentAt: timestamp("reminder_day_sent_at", { withTimezone: true }),
+  reminderHourSentAt: timestamp("reminder_hour_sent_at", { withTimezone: true }),
+  followUpSentAt: timestamp("follow_up_sent_at", { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("free_classes_status_idx").on(t.status, t.startsAt)]);
+
+export type FreeClass = typeof freeClasses.$inferSelect;
+
+/** Someone signed up for a free class. No account needed. */
+export const freeClassSignups = pgTable("free_class_signups", {
+  id: serial("id").primaryKey(),
+  classId: integer("class_id").notNull().references(() => freeClasses.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  /** One of LEAD_BACKGROUNDS, or empty. */
+  background: text("background").notNull().default(""),
+  heardFrom: text("heard_from").notNull().default(""),
+  /** Agreed to class reminders on WhatsApp. */
+  whatsappOptIn: boolean("whatsapp_opt_in").notNull().default(false),
+  consentAt: timestamp("consent_at", { withTimezone: true }).notNull(),
+  /** Ticked by the team after the class. Null: not recorded. */
+  attended: boolean("attended"),
+  /** The personal code sent in the follow-up. */
+  discountCodeId: integer("discount_code_id").references(() => discountCodes.id, { onDelete: "set null" }),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("free_class_signups_email_idx").on(t.classId, t.email), index("free_class_signups_created_idx").on(t.createdAt)]);
+
+export type FreeClassSignup = typeof freeClassSignups.$inferSelect;
+
+export const WHATSAPP_STATUSES = ["sent", "failed"] as const;
+export type WhatsAppStatus = (typeof WHATSAPP_STATUSES)[number];
+
+/** Every WhatsApp message the academy tried to send, for Settings › WhatsApp. */
+export const whatsappLog = pgTable("whatsapp_log", {
+  id: serial("id").primaryKey(),
+  /** Digits only, with country code. */
+  to: text("to").notNull(),
+  template: text("template").notNull(),
+  params: jsonb("params").$type<string[]>().notNull().default([]),
+  status: text("status").$type<WhatsAppStatus>().notNull(),
+  error: text("error"),
+  /** Meta's message id. */
+  providerId: text("provider_id"),
+  createdAt: createdAt(),
+}, (t) => [index("whatsapp_log_created_idx").on(t.createdAt)]);
+
+export type WhatsAppLog = typeof whatsappLog.$inferSelect;
+
+export const SHOWCASE_STATUSES = ["invited", "published", "declined", "hidden"] as const;
+export type ShowcaseStatus = (typeof SHOWCASE_STATUSES)[number];
+
+/**
+ * A student project on the public /projects gallery. An instructor invites a graded submission; the student edits
+ * the title, summary and cover and chooses to publish (or decline). The team can hide a published project.
+ */
+export const showcaseProjects = pgTable("showcase_projects", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  submissionId: integer("submission_id").notNull().unique().references(() => submissions.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  courseId: integer("course_id").references(() => courses.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  /** Tools and skills used, e.g. "Power BI", "SQL". */
+  tools: jsonb("tools").$type<string[]>().notNull().default([]),
+  linkUrl: text("link_url"),
+  imageUrl: text("image_url"),
+  status: text("status").$type<ShowcaseStatus>().notNull().default("invited"),
+  /** The instructor's note with the invitation, e.g. what stood out. */
+  inviteNote: text("invite_note").notNull().default(""),
+  invitedById: integer("invited_by_id").references(() => users.id, { onDelete: "set null" }),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("showcase_projects_status_idx").on(t.status, t.publishedAt), index("showcase_projects_user_idx").on(t.userId)]);
+
+export type ShowcaseProject = typeof showcaseProjects.$inferSelect;

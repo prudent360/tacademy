@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { AiTab, AnnouncementTab, BrandingTab, SeoTab, VideoTab, EmailTab, GeneralTab, PaymentsTab, ReferralsTab, RemindersTab, TemplatesTab } from "@/components/admin/settings-tabs";
-import { CardIcon, ClockIcon, CogIcon, FileIcon, MailIcon, MegaphoneIcon, PaletteIcon, SearchIcon, SparkIcon, UsersIcon, VideoIcon } from "@/components/icons";
+import { AiTab, AnnouncementTab, BrandingTab, SeoTab, VideoTab, EmailTab, GeneralTab, PaymentsTab, ReferralsTab, RemindersTab, TemplatesTab, WhatsAppTab } from "@/components/admin/settings-tabs";
+import { CardIcon, ClockIcon, CogIcon, FileIcon, MailIcon, MegaphoneIcon, MessageIcon, PaletteIcon, SearchIcon, SparkIcon, UsersIcon, VideoIcon } from "@/components/icons";
 import { PageHeader, Tabs } from "@/components/ui";
 import { redirect } from "next/navigation";
 import { can, requireUser } from "@/lib/auth";
@@ -15,6 +15,7 @@ const TABS = [
   { key: "email", label: "Email", icon: MailIcon },
   { key: "templates", label: "Email templates", icon: FileIcon },
   { key: "reminders", label: "Reminders", icon: ClockIcon },
+  { key: "whatsapp", label: "WhatsApp", icon: MessageIcon },
   { key: "referrals", label: "Referrals", icon: UsersIcon },
   { key: "announcement", label: "Dashboard pop-up", icon: MegaphoneIcon },
   { key: "seo", label: "SEO", icon: SearchIcon },
@@ -43,6 +44,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {tab === "email" && <EmailTab s={s} />}
       {tab === "templates" && <TemplatesTab />}
       {tab === "reminders" && <RemindersTab />}
+      {tab === "whatsapp" && <WhatsAppTab s={s} />}
       {tab === "referrals" && <ReferralsTab />}
       {tab === "announcement" && <AnnouncementTab s={s} />}
       {tab === "seo" && <SeoTab s={s} />}

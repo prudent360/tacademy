@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ProductShowcase } from "@/components/site/product-showcase";
 import { HowItWorks } from "@/components/site/how-it-works";
 import Image from "next/image";
-import { ArrowRight, BuildingIcon, CheckIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon } from "@/components/icons";
+import { ArrowRight, BuildingIcon, CheckIcon, MessageIcon, MonitorIcon, PhoneIcon, SparkIcon, SwapIcon, VideoIcon } from "@/components/icons";
 import { MarkMotif } from "@/components/site/page-hero";
 import { ScrambleText } from "@/components/site/scramble-text";
 import { CourseCard } from "@/components/site/course-card";
@@ -16,6 +16,12 @@ import { visitorCurrencies } from "@/lib/visitor";
 import { pageMetadata, seoConfig } from "@/lib/seo";
 import type { Metadata } from "next";
 import { ratingsFor } from "@/lib/reviews";
+import { and, asc, eq, gt } from "drizzle-orm";
+import { getDb } from "@/db";
+import { freeClasses } from "@/db/schema";
+import { formatSessionRange } from "@/lib/time";
+import { publishedProjects } from "@/lib/showcase-data";
+import { CourseArt } from "@/components/site/course-art";
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await seoConfig();
@@ -67,6 +73,9 @@ export default async function HomePage() {
   const taken = await seatsTaken(upcoming.map((u) => u.cohort.id));
   const { currencies } = await visitorCurrencies(settings);
   const next = await getNextIntake();
+  const projects = await publishedProjects({ limit: 3 });
+  // The next free class still taking sign-ups, for the "try it free" banner.
+  const [freeClass] = await (await getDb()).select().from(freeClasses).where(and(eq(freeClasses.status, "open"), gt(freeClasses.startsAt, new Date()))).orderBy(asc(freeClasses.startsAt)).limit(1);
   const nextStart = next?.cohort.startDate ? new Date(`${next.cohort.startDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : null;
   const nextSeats = next?.seatsLeft ?? null;
 
@@ -157,6 +166,23 @@ export default async function HomePage() {
           <Link href="/courses" className="flex shrink-0 items-center gap-1.5 text-sm font-bold text-accent hover:text-accent-dark">View all <ArrowRight className="size-4" /></Link>
         </div>
       </section>
+
+      {/* Free class: a low-commitment first step, shown only when one is open. */}
+      {freeClass && (
+        <section aria-label="Free class" className="bg-white px-5 pt-14 sm:px-8 md:pt-20">
+          <Link href={`/free-classes/${freeClass.slug}`} className="group mx-auto flex max-w-[1200px] flex-col gap-5 overflow-hidden rounded-[16px] bg-[#181340] p-6 text-white transition hover:-translate-y-0.5 sm:p-8 md:flex-row md:items-center md:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-cyan-light ring-1 ring-white/15"><VideoIcon className="size-5" /></span>
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="font-mono text-xs uppercase tracking-[1.5px] text-cyan-light">Free live class</p>
+                <p className="font-display text-xl font-bold md:text-2xl">{freeClass.title}</p>
+                <p className="text-[15px] text-white/70">{formatSessionRange(freeClass.startsAt, freeClass.endsAt, settings.timezone)} · {freeClass.mode === "virtual" ? "Live online" : freeClass.venue}</p>
+              </div>
+            </div>
+            <span className="inline-flex h-12 shrink-0 items-center gap-2 self-start rounded-full bg-white px-6 font-semibold text-[#4f3fd7] md:self-auto">Save my free place <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
+          </Link>
+        </section>
+      )}
 
       {/* Formats */}
       <section id="formats" className="scroll-mt-20 border-t border-line bg-white">
@@ -286,6 +312,33 @@ export default async function HomePage() {
               })}
             </ul>
             <p className="text-sm text-muted">Your seat is confirmed as soon as payment completes.</p>
+          </div>
+        </section>
+      )}
+
+      {/* Student projects: graded work students chose to publish. */}
+      {projects.length > 0 && (
+        <section className="border-t border-line bg-white">
+          <div className="mx-auto flex max-w-[1200px] flex-col gap-10 px-5 py-20 sm:px-8 md:py-24">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <SectionHeading align="left" eyebrow="Student projects" title="Built by our students" subtitle="Real coursework, graded by instructors and published by the students who built it." />
+              <Link href="/projects" className="flex items-center gap-1.5 font-bold text-accent hover:text-accent-dark">See all projects <ArrowRight className="size-4" /></Link>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              {projects.map(({ project: p, studentName, courseTitle }) => (
+                <Link key={p.id} href={`/projects/${p.slug}`} className="group flex flex-col overflow-hidden rounded-[12px] border border-edge bg-white transition hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_24px_50px_-30px_rgba(24,19,64,.45)]">
+                  <div className="aspect-[16/10] overflow-hidden bg-panel">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" className="size-full object-cover transition duration-500 group-hover:scale-[1.03]" /> : <CourseArt seed={p.id} className="size-full" />}
+                  </div>
+                  <div className="flex flex-col gap-1.5 p-5">
+                    {courseTitle && <p className="font-mono text-[11px] font-semibold uppercase tracking-[1.4px] text-accent">{courseTitle}</p>}
+                    <h3 className="font-display text-lg font-bold leading-snug text-ink group-hover:text-accent">{p.title}</h3>
+                    <p className="text-sm text-muted">by {studentName}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
       )}

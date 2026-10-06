@@ -7,7 +7,7 @@ import { getSettings } from "./data";
 import { notify } from "./notify";
 import { absoluteUrl } from "./site";
 import { formatDateTime, formatSessionRange } from "./time";
-import { MODE_LABEL } from "./utils";
+import { firstName, MODE_LABEL } from "./utils";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -75,6 +75,7 @@ export async function sendDueReminders(now = new Date()): Promise<{ dayReminders
         isReminder: true,
         vars: { sessionTitle: session.title, courseTitle: course.title, when, leadTime, modeLabel: MODE_LABEL[session.mode], location, sessionUrl: absoluteUrl(`/dashboard/cohorts/${session.cohortId}`) },
       },
+      whatsapp: { template: "class_reminder", params: (u) => [firstName(u.name), session.title, leadTime, when, absoluteUrl(`/dashboard/cohorts/${session.cohortId}`)] },
     });
     result[kind === "hour" ? "hourReminders" : "dayReminders"] += students.length;
   }
@@ -102,6 +103,7 @@ export async function sendDueReminders(now = new Date()): Promise<{ dayReminders
       body: `Due ${dueDate}`,
       href: `/dashboard/assignments/${assignment.id}`,
       email: { template: "assignment_due", isReminder: true, vars: { assignmentTitle: assignment.title, courseTitle: course.title, dueDate, assignmentUrl: absoluteUrl(`/dashboard/assignments/${assignment.id}`) } },
+      whatsapp: { template: "assignment_due", params: (u) => [firstName(u.name), assignment.title, course.title, dueDate, absoluteUrl(`/dashboard/assignments/${assignment.id}`)] },
     });
     result.assignmentReminders += pending.length;
   }

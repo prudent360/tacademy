@@ -5,6 +5,7 @@ import { ActionButton, ActionForm, Checkbox, FileField, Input, Select, SubmitBut
 import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import type { User } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { whatsappConfig } from "@/lib/whatsapp";
 import { getSettings } from "@/lib/data";
 import { decryptSecret } from "@/lib/secrets";
 import { formatDateTime } from "@/lib/time";
@@ -15,7 +16,7 @@ import { GENDER_OPTIONS, studentId } from "@/lib/utils";
 export const metadata: Metadata = { title: "Account" };
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ twofactor?: string }> }) {
-  const [user, settings, { twofactor }] = await Promise.all([requireUser(), getSettings(), searchParams]);
+  const [user, settings, { twofactor }, whatsapp] = await Promise.all([requireUser(), getSettings(), searchParams, whatsappConfig()]);
   const twoFactorRequired = settings.requireStaffTwoFactor && (user.role === "admin" || user.role === "staff");
   return (
     <>
@@ -32,6 +33,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             {user.role !== "student" && <Textarea label="Short bio" name="bio" defaultValue={user.bio} hint="Shown on course pages you teach." />}
             <FileField label="Profile photo" name="avatar" current={user.avatarUrl} removeName="removeAvatar" />
             <Checkbox label="Email me class and deadline reminders" name="emailReminders" defaultChecked={user.emailReminders} hint="Receipts, feedback and account emails are always sent." />
+            {/* Marks that the WhatsApp box was on the form, so an unticked box turns it off (and a hidden one leaves it alone). */}
+            {whatsapp.ready && <input type="hidden" name="whatsappShown" value="1" />}
+            {whatsapp.ready && <Checkbox label="Send me reminders and receipts on WhatsApp" name="whatsappOptIn" defaultChecked={user.whatsappOptIn} hint="Sent to the phone number above. Include your country code, e.g. +234 803 123 4567." />}
             <SubmitButton>Save profile</SubmitButton>
           </ActionForm>
         </Card>

@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { inviteToShowcase } from "@/app/actions/showcase";
 import { gradeSubmission } from "@/app/actions/teach";
+import { ActionForm, SubmitButton, Textarea } from "@/components/forms";
 import { GradeForm } from "@/components/teach/grade-form";
 import { FileIcon, LinkIcon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
 import { Badge, Card, PageHeader, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
-import { assignments, submissions, users } from "@/db/schema";
+import { assignments, showcaseProjects, submissions, users } from "@/db/schema";
 import { requireTeacher } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
+import { SHOWCASE_STATUS_LABEL, SHOWCASE_STATUS_TONE } from "@/lib/showcase";
 import { formatDateTime } from "@/lib/time";
 import { idParam } from "@/lib/validation";
 import { draftGrade } from "@/app/actions/ai";
@@ -29,7 +32,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ id:
     .where(eq(submissions.id, id));
   if (!row) notFound();
   await requireTeacher(row.assignment.cohortId);
-  const [settings, aiGrading] = await Promise.all([getSettings(), aiAvailable("grading")]);
+  const [settings, aiGrading, [showcase]] = await Promise.all([getSettings(), aiAvailable("grading"), db.select().from(showcaseProjects).where(eq(showcaseProjects.submissionId, id))]);
   const { submission, assignment, student } = row;
   const late = assignment.dueAt && new Date(submission.submittedAt) > new Date(assignment.dueAt);
 
@@ -49,9 +52,25 @@ export default async function SubmissionPage({ params }: { params: Promise<{ id:
             {assignment.instructions ? <Markdown>{assignment.instructions}</Markdown> : <p className="text-muted">No written instructions.</p>}
           </Card>
         </div>
-        <Card title="Feedback">
-          <GradeForm action={gradeSubmission.bind(null, id)} maxScore={assignment.maxScore} score={submission.score} feedback={submission.feedback} aiDraft={aiGrading ? draftGrade.bind(null, id) : undefined} />
-        </Card>
+        <div className="flex flex-col gap-6">
+          <Card title="Feedback">
+            <GradeForm action={gradeSubmission.bind(null, id)} maxScore={assignment.maxScore} score={submission.score} feedback={submission.feedback} aiDraft={aiGrading ? draftGrade.bind(null, id) : undefined} />
+          </Card>
+          {/* Strong graded work can go on the public Projects page, if the student agrees. */}
+          {submission.status === "graded" && (
+            <Card title="Project showcase">
+              {showcase ? (
+                <p className="flex flex-wrap items-center gap-2 text-sm text-body">Invited to the showcase. <Badge tone={SHOWCASE_STATUS_TONE[showcase.status]}>{SHOWCASE_STATUS_LABEL[showcase.status]}</Badge></p>
+              ) : (
+                <ActionForm action={inviteToShowcase.bind(null, id)} className="flex flex-col gap-4">
+                  <p className="text-sm text-muted">Is this work good enough to show future students and employers? Invite {student.name.split(" ")[0]} to publish it on the public Projects page. They can edit it first, or decline.</p>
+                  <Textarea label="Note to the student (optional)" name="note" rows={2} maxLength={500} placeholder="e.g. Your drill-through pages were excellent." />
+                  <div><SubmitButton pendingText="Inviting…">Invite to showcase</SubmitButton></div>
+                </ActionForm>
+              )}
+            </Card>
+          )}
+        </div>
       </div>
     </>
   );

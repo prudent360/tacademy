@@ -42,9 +42,13 @@ type Details = z.infer<typeof detailsSchema>;
  * Finds or creates the student for an enrolment. Only enrolled students get a usable account:
  * new students are created without a password and choose one from the email sent when their place is confirmed.
  */
-async function applicantFor(details: Details, next: string): Promise<{ user: User } | { error: string; signIn?: string }> {
+async function applicantFor(details: Details, next: string, whatsappOptIn: boolean): Promise<{ user: User } | { error: string; signIn?: string }> {
   const db = await getDb();
-  const profile = { phone: formatPhone(details.dialCode, details.phone), dateOfBirth: details.dateOfBirth, gender: details.gender || null, qualification: details.qualification, country: details.country };
+  const profile = {
+    phone: formatPhone(details.dialCode, details.phone), dateOfBirth: details.dateOfBirth, gender: details.gender || null, qualification: details.qualification, country: details.country,
+    // Ticking the box turns WhatsApp on; leaving it unticked doesn't turn off an earlier opt-in (that's on the account page).
+    ...(whatsappOptIn ? { whatsappOptIn: true } : {}),
+  };
   const signedIn = await getCurrentUser();
   if (signedIn) {
     const [user] = await db.update(users).set(profile).where(eq(users.id, signedIn.id)).returning();
@@ -89,7 +93,7 @@ export async function enrol(_state: EnrolState, formData: FormData): Promise<Enr
   if (wait) return { error: `Too many attempts. Please try again in ${wait} minute${wait === 1 ? "" : "s"}.` };
   await recordLoginFailure(details.email, "enrol");
 
-  const applicant = await applicantFor(details, `/enroll?cohort=${cohort.id}`);
+  const applicant = await applicantFor(details, `/enroll?cohort=${cohort.id}`, formData.get("whatsapp") === "on");
   if ("error" in applicant) return applicant;
   const { user } = applicant;
   if (await isEnrolled(user.id, cohort.id)) return { error: "You're already enrolled on this cohort.", signIn: `/dashboard/cohorts/${cohort.id}` };

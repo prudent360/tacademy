@@ -25,3 +25,22 @@ export function buildIcs(events: { session: ClassSession; courseTitle: string; u
   lines.push("END:VCALENDAR");
   return lines.join("\r\n");
 }
+
+/** A one-event calendar file, e.g. for a free class someone signed up to. */
+export function buildEventIcs(event: { uid: string; title: string; description: string; startsAt: Date; endsAt: Date; location: string; url: string }, calendarName: string): string {
+  return [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Academy//Classes//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${escape(calendarName)}`,
+    "BEGIN:VEVENT",
+    `UID:${event.uid}@academy`,
+    `DTSTAMP:${stamp(new Date())}`,
+    `DTSTART:${stamp(event.startsAt)}`,
+    `DTEND:${stamp(event.endsAt)}`,
+    `SUMMARY:${escape(event.title)}`,
+    `DESCRIPTION:${escape([event.description, event.url].filter(Boolean).join("\n\n"))}`,
+    `LOCATION:${escape(event.location)}`,
+    `URL:${event.url}`,
+    "STATUS:CONFIRMED",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+}

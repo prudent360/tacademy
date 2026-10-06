@@ -68,10 +68,14 @@ function Choice({ name, value, checked, onChange, children }: { name: string; va
 }
 
 /** Two-step enrolment: the student's details, then course, cohort and payment, with a live summary. */
-export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defaultCountry }: {
+export function EnrolForm({ cohorts, preferred, initialCohortId, initialDiscount = null, whatsapp = false, signedIn, defaultCountry }: {
   cohorts: EnrolCohort[];
   preferred: string[];
   initialCohortId: number | null;
+  /** A valid code from the link (e.g. a free class follow-up), applied from the start. */
+  initialDiscount?: { code: string; percentOff: number } | null;
+  /** WhatsApp messages are set up, so offer the opt-in. */
+  whatsapp?: boolean;
   signedIn: Prefill | null;
   /** From the visitor's location, when known. */
   defaultCountry?: string;
@@ -113,8 +117,8 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
     setShowCurrencies(false);
   }
   // A discount code is checked when "Apply" is pressed, so the saving shows before paying. It's checked again at payment.
-  const [codeInput, setCodeInput] = useState("");
-  const [discount, setDiscount] = useState<{ code: string; percentOff: number } | null>(null);
+  const [codeInput, setCodeInput] = useState(initialDiscount?.code ?? "");
+  const [discount, setDiscount] = useState<{ code: string; percentOff: number } | null>(initialDiscount);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [checkingCode, setCheckingCode] = useState(false);
   const codeRequest = useRef(0);
@@ -192,6 +196,12 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, signedIn, defau
           </Field>
           <Field label="Phone Number (WhatsApp preferred)" htmlFor={`${id}-phone`} required>
             <PhoneInput id={`${id}-phone`} country={phoneCountry} onCountryChange={setPhoneCountry} defaultValue={signedIn?.phone} />
+            {whatsapp && (
+              <label className="flex cursor-pointer items-start gap-2.5 pt-1 text-sm text-body">
+                <input type="checkbox" name="whatsapp" defaultChecked className="mt-0.5 size-4 shrink-0 accent-accent" />
+                <span>Send my class reminders and receipts on WhatsApp too</span>
+              </label>
+            )}
           </Field>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Date of Birth" htmlFor={`${id}-dob`} required>

@@ -11,6 +11,7 @@ const ABOUT: { href: string; label: string; text: string; icon: Icon }[] = [
   { href: "/#formats", label: "How we teach", text: "Live online, in person or hybrid", icon: SwapIcon },
   { href: "/#how", label: "How it works", text: "From enrolling to your certificate", icon: LayersIcon },
   { href: "/#faq", label: "FAQ", text: "Fees, schedules, certificates", icon: SparkIcon },
+  { href: "/projects", label: "Student projects", text: "Real work by our graduates", icon: ChartIcon },
   { href: "/careers", label: "Careers", text: "Join our team", icon: BriefcaseIcon },
   { href: "/contact", label: "Contact us", text: "Talk to the team", icon: MessageIcon },
 ];
@@ -56,6 +57,7 @@ function MenuLink({ href, title, text, onClick }: { href: string; title: string;
 }
 
 const START: { href: string; title: string; text: string }[] = [
+  { href: "/free-classes", title: "Free classes", text: "Try a live class before you enrol" },
   { href: "/enroll", title: "Enrol in a cohort", text: "Pick a start date and pay online" },
   { href: "/internships", title: "Internships", text: "Real projects, free for our graduates" },
   { href: "/teach-with-us", title: "Teach with us", text: "Share what you do every day" },
@@ -136,11 +138,11 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
               <div className={`${panelClass} grid grid-cols-2 gap-2`}>
                 <div className="flex flex-col">
                   <p className={headingClass}>Learn with us</p>
-                  {ABOUT.slice(0, 3).map(({ href, label, text }) => <MenuLink key={href} href={href} title={label} text={text} onClick={() => setPanel(null)} />)}
+                  {ABOUT.slice(0, 4).map(({ href, label, text }) => <MenuLink key={href} href={href} title={label} text={text} onClick={() => setPanel(null)} />)}
                 </div>
                 <div className="flex flex-col border-l border-line pl-2">
                   <p className={headingClass}>Company</p>
-                  {ABOUT.slice(3).map(({ href, label, text }) => <MenuLink key={href} href={href} title={label} text={text} onClick={() => setPanel(null)} />)}
+                  {ABOUT.slice(4).map(({ href, label, text }) => <MenuLink key={href} href={href} title={label} text={text} onClick={() => setPanel(null)} />)}
                 </div>
               </div>
             </div>
@@ -170,7 +172,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
               <Link href="/courses" className="flex items-center gap-1.5 pt-1 text-[15px] font-semibold text-accent">View all {totalCourses} courses <ArrowRight className="size-4" /></Link>
             </section>
             <section className="flex flex-col border-t border-line pt-5">
-              {[{ href: "/internships", label: "Internships" }, { href: "/teach-with-us", label: "Teach with us" }].map((l) => (
+              {[{ href: "/free-classes", label: "Free classes" }, { href: "/internships", label: "Internships" }, { href: "/teach-with-us", label: "Teach with us" }].map((l) => (
                 <Link key={l.href} href={l.href} className={`flex h-12 items-center justify-between font-display text-lg font-bold ${is(l.href) ? "text-accent" : "text-ink"}`}>{l.label}<ArrowRight className="size-4 text-muted" /></Link>
               ))}
             </section>

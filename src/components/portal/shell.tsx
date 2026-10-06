@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AvatarArt, type Gender } from "@/components/avatar-art";
 import { BrandMark } from "@/components/brand-mark";
-import { AwardIcon, TrendIcon, BellIcon, MoonIcon, MonitorIcon, SunIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GiftIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, XIcon, type Icon } from "@/components/icons";
+import { AwardIcon, TrendIcon, BellIcon, MoonIcon, MonitorIcon, SunIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GiftIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, VideoIcon, XIcon, type Icon } from "@/components/icons";
 import type { Role } from "@/db/schema";
 import type { Permission } from "@/lib/permissions";
 
@@ -19,7 +19,7 @@ const ROLE_LABEL: Record<Role, string> = { admin: "Administrator", instructor: "
 
 const SETTINGS_TABS: [string, string][] = [
   ["general", "General"], ["branding", "Branding"], ["payments", "Payments"], ["email", "Email"], ["templates", "Email templates"],
-  ["reminders", "Reminders"], ["referrals", "Referrals"], ["announcement", "Dashboard pop-up"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
+  ["reminders", "Reminders"], ["whatsapp", "WhatsApp"], ["referrals", "Referrals"], ["announcement", "Dashboard pop-up"], ["seo", "SEO"], ["video", "Video"], ["ai", "AI"],
 ];
 
 function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number; newJobApplications?: number }, perms: Permission[], referrals = false): NavGroup[] {
@@ -30,6 +30,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
       { href: "/dashboard/schedule", label: "Timetable", icon: CalendarIcon },
       { href: "/dashboard/assignments", label: "Assignments", icon: ClipboardIcon },
       { href: "/dashboard/certificates", label: "Certificates", icon: AwardIcon },
+      { href: "/dashboard/showcase", label: "Showcase", icon: TrendIcon },
       { href: "/dashboard/courses", label: "My courses", icon: BookIcon, also: ["/dashboard/cohorts"] },
     ],
   };
@@ -62,6 +63,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
       },
       { href: "/admin/certificates", label: "Certificates", icon: AwardIcon, perm: "certificates.manage" },
       { href: "/admin/reviews", label: "Reviews", icon: MessageIcon, perm: "reviews.manage" },
+      { href: "/admin/showcase", label: "Project showcase", icon: AwardIcon, perm: "showcase.manage" },
     ],
   };
   const peopleAndSales: NavGroup = {
@@ -81,6 +83,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
         ],
       },
       { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon, perm: "leads.view" },
+      { href: "/admin/free-classes", label: "Free classes", icon: VideoIcon, perm: "free_classes.manage" },
       {
         href: "/admin/careers", label: "Careers", icon: BriefcaseIcon, children: [
           { href: "/admin/careers", label: "Job openings", icon: BriefcaseIcon, exact: true, also: ["/admin/careers/new"], perm: "careers.manage" },

@@ -35,7 +35,8 @@ export function ActionForm({
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    // Include the clicked button, so forms can offer several (e.g. name="intent" value="publish").
+    const formData = new FormData(event.currentTarget, (event.nativeEvent as SubmitEvent).submitter);
     startTransition(() => formAction(formData));
   }
 
