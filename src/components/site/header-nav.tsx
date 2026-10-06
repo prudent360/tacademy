@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -154,8 +155,9 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
 
       <button type="button" onClick={() => setMobile(true)} aria-expanded={mobile} aria-label="Open menu" className="flex size-10 items-center justify-center rounded-full text-white ring-1 ring-white/35 transition hover:bg-white/10 lg:hidden"><MenuIcon /></button>
 
-      {mobile && (
-        <div role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-50 flex flex-col bg-white lg:hidden">
+      {/* Rendered on <body>: the header moves with a CSS transform, which would trap a fixed overlay inside it. */}
+      {mobile && createPortal(
+        <div role="dialog" aria-modal="true" aria-label="Menu" className="fixed inset-0 z-[60] flex flex-col bg-white text-ink lg:hidden">
           <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-line px-5">
             {brand}
             <button type="button" onClick={() => setMobile(false)} aria-label="Close menu" className="flex size-10 items-center justify-center rounded-full border border-edge text-ink"><XIcon /></button>
@@ -192,7 +194,8 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
                   <p className="pt-1 text-center text-sm text-muted">New here? <Link href="/register" className="font-semibold text-accent">Create a free account</Link></p>
                 </>}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

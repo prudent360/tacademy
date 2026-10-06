@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { SettingsSectionNav } from "@/components/admin/settings-section-nav";
+import { SettingsMobileNav, SettingsSectionNav } from "@/components/admin/settings-section-nav";
 import { AiTab, AnnouncementTab, BrandingTab, SeoTab, VideoTab, EmailTab, GeneralTab, PaymentsTab, ReferralsTab, RemindersTab, TemplatesTab, WhatsAppTab } from "@/components/admin/settings-tabs";
 import { CardIcon, CogIcon, FileIcon, MailIcon, SparkIcon } from "@/components/icons";
 import { PageHeader, Tabs } from "@/components/ui";
@@ -70,7 +70,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Settings" description={group.description} />
-      <Tabs current={group.key} items={visible.map((g) => ({ key: g.key, label: g.label, icon: g.icon, href: href(g.key) }))} />
+      <SettingsMobileNav current={group.key} groups={visible.map((g) => ({ key: g.key, label: g.label, href: href(g.key), parts: (g.parts as Part[]).map(({ id, label }) => ({ id, label })) }))} />
+      <div className="hidden md:block"><Tabs current={group.key} items={visible.map((g) => ({ key: g.key, label: g.label, icon: g.icon, href: href(g.key) }))} /></div>
       {parts.length > 1 && <SettingsSectionNav label={`${group.label} sections`} parts={parts.map(({ id, label }) => ({ id, label }))} />}
       {parts.map((p, i) => (
         <section key={p.id} id={p.id} aria-labelledby={parts.length > 1 ? `${p.id}-heading` : undefined} className="flex scroll-mt-36 flex-col gap-5">
