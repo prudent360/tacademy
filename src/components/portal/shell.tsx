@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AvatarArt, type Gender } from "@/components/avatar-art";
 import { BrandMark } from "@/components/brand-mark";
+import { CommandPalette, type Command } from "@/components/portal/command-palette";
 import { AwardIcon, TrendIcon, BellIcon, MoonIcon, MonitorIcon, SunIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GiftIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, VideoIcon, XIcon, type Icon } from "@/components/icons";
 import type { Role } from "@/db/schema";
 import type { Permission } from "@/lib/permissions";
@@ -407,6 +408,42 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
     saveTheme(next);
   }
 
+  // Everything the ⌘K palette can jump to: the pages in this menu, the settings sections and quick actions.
+  const commands = useMemo<Command[]>(() => {
+    const has = (p: Permission) => role === "admin" || permissions.includes(p);
+    const pages: Command[] = groups.flatMap((g) => g.items.flatMap((item) => item.children
+      ? item.children.map((child) => ({ id: `page:${child.href}`, title: child.label === "Everyone" ? "People" : child.label, detail: item.label, group: "Pages", icon: child.icon, href: child.href, keywords: `${g.label} ${item.label}` }))
+      : [{ id: `page:${item.href}`, title: item.label, detail: g.label, group: "Pages", icon: item.icon, href: item.href }]));
+    const settings: Command[] = role === "admin" || role === "staff" ? ([
+      ["General", "Academy details", "/admin/settings#details", "name logo contact address"],
+      ["General", "Branding", "/admin/settings#branding", "logo favicon colours"],
+      ["General", "Search & sharing (SEO)", "/admin/settings#seo", "google meta"],
+      ["Payments", "Payment methods & currencies", "/admin/settings?tab=payments#methods", "paystack stripe transactpay bank transfer"],
+      ["Payments", "Referral settings", "/admin/settings?tab=payments#referrals", "commission refer earn"],
+      ["Messages", "Email delivery & daily limit", "/admin/settings?tab=messages#email", "smtp resend hostinger queue"],
+      ["Messages", "Reminders", "/admin/settings?tab=messages#reminders", "class deadline cron"],
+      ["Messages", "WhatsApp", "/admin/settings?tab=messages#whatsapp", "meta cloud api"],
+      ["Messages", "Dashboard pop-up", "/admin/settings?tab=messages#popup", "announcement modal"],
+      ["Integrations", "Video", "/admin/settings?tab=integrations#video", "bunny stream"],
+      ["Integrations", "AI", "/admin/settings?tab=integrations#ai", "openai anthropic claude advisor"],
+    ] as const).filter(() => has("settings.manage")).map(([section, title, href, keywords]) => ({ id: `settings:${href}`, title, detail: `Settings › ${section}`, group: "Settings", icon: CogIcon, href, keywords: `settings ${keywords}` })) : [];
+    const actions: Command[] = [
+      ...(role === "admin" || role === "staff" ? ([
+        has("courses.manage") && { id: "new-course", title: "Create a course", group: "Quick actions", icon: BookIcon, href: "/admin/courses/new", keywords: "new add" },
+        has("users.manage") && { id: "import", title: "Import students from CSV", group: "Quick actions", icon: UsersIcon, href: "/admin/users/import", keywords: "upload spreadsheet bulk" },
+        has("payments.manage") && { id: "payment", title: "Record a payment", group: "Quick actions", icon: CardIcon, href: "/admin/payments", keywords: "offline bank transfer" },
+        has("careers.manage") && { id: "new-job", title: "Post a job opening", group: "Quick actions", icon: BriefcaseIcon, href: "/admin/careers/new", keywords: "careers hire role" },
+      ] as (Command | false)[]).filter((x): x is Command => Boolean(x)) : []),
+      ...(role === "student" ? [{ id: "browse", title: "Browse courses", group: "Quick actions", icon: BookIcon, href: "/courses", keywords: "enrol find" }] : []),
+      ...(role !== "student" ? [{ id: "timetable", title: "Open my timetable", group: "Quick actions", icon: CalendarIcon, href: "/teach/schedule", keywords: "classes schedule" }] : []),
+      { id: "site", title: "Open the website", group: "Quick actions", icon: ExternalIcon, href: "/", keywords: "home public" },
+      ...THEMES.filter((t) => t.value !== theme).map((t) => ({ id: `theme:${t.value}`, title: `Switch to ${t.label.toLowerCase()} theme`, group: "Preferences", icon: t.icon, run: () => setTheme(t.value), keywords: "appearance dark light mode" })),
+      { id: "logout", title: "Sign out", group: "Preferences", icon: LogoutIcon, run: () => { void logout(); }, keywords: "log out exit" },
+    ];
+    return [...actions, ...pages, ...settings];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, permissions, referrals, theme, unread, toGrade]);
+
   const sidebar = (compact: boolean) => (
     <aside className={`relative flex h-full flex-col transition-[width,background-color] duration-300 ${compact ? "w-[88px]" : "w-[276px]"} ${t.aside}`}>
       <div className={`flex h-20 shrink-0 items-center ${compact ? "justify-center" : "justify-between pl-6 pr-4"}`}>
@@ -612,6 +649,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setDrawer(true)} className="flex size-10 items-center justify-center rounded-lg text-ink hover:bg-page lg:hidden" aria-label="Open menu"><MenuIcon /></button>
             <Link href={home} className="flex items-center gap-2 lg:hidden" aria-label={`${siteName} home`}><BrandMark className="size-8" /></Link>
+            <CommandPalette commands={commands} />
           </div>
           <div className="flex items-center gap-2">
             {role !== "student" && toGrade > 0 && (
