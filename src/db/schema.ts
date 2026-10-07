@@ -188,6 +188,8 @@ export type VideoSettings = { bunnyTokenKey: string };
 export type ReferralSettings = { enabled: boolean; percent: number; cookieDays: number; holdDays: number; scope: "first" | "all"; terms: string };
 /** A pop-up shown once on the dashboard. `version` changes on every save, so an edited message shows again. */
 export type AnnouncementSettings = { enabled: boolean; title: string; body: string; buttonLabel: string; buttonUrl: string; audience: "students" | "everyone"; version: string };
+/** The legal entity behind the academy, shown in the footer and emails (UK companies must show these). */
+export type CompanySettings = { legalName: string; number: string; jurisdiction: string; registeredOffice: string };
 export type PayoutDetails = { method: "bank" | "other"; bankName: string; accountName: string; accountNumber: string; other: string };
 /** WhatsApp Cloud API (Meta). The access token is stored encrypted. */
 export type WhatsAppSettings = { enabled: boolean; phoneNumberId: string; accessToken: string; language: string };
@@ -225,6 +227,7 @@ export const settings = pgTable("settings", {
   whatsapp: jsonb("whatsapp").$type<Partial<WhatsAppSettings>>().notNull().default({}),
   referrals: jsonb("referrals").$type<Partial<ReferralSettings>>().notNull().default({}),
   announcement: jsonb("announcement").$type<Partial<AnnouncementSettings>>().notNull().default({}),
+  company: jsonb("company").$type<Partial<CompanySettings>>().notNull().default({}),
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
   seo: jsonb("seo").$type<Partial<SeoSettings>>().notNull().default({}),
   video: jsonb("video").$type<Partial<VideoSettings>>().notNull().default({}),

@@ -7,6 +7,7 @@ import { emailLog, emailTemplates } from "@/db/schema";
 import { emailConfig, type ResolvedEmail } from "./config";
 import { getSettings } from "./data";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "./email-templates";
+import { companyInfo, companyStatement } from "./company";
 import { absoluteUrl, siteUrl } from "./site";
 import { fromZonedInput, toZonedInput } from "./time";
 
@@ -88,6 +89,8 @@ export async function renderEmail(
   const text = fill(source.body, all, false).replace(/^\s*\[\[([^|\]]+)\|([^\]]+)\]\]\s*$/gm, "$1: $2").replace(/\*\*/g, "");
 
   const brand = escapeHtml(settings.siteName);
+  // UK companies must show their registered details on business emails.
+  const company = companyStatement(companyInfo(settings), settings.siteName);
   const home = siteUrl();
   const contact = [
     settings.address && `<tr><td style="padding:0 0 6px;font-size:13px;line-height:1.55;color:#c9c6e4"><span style="color:#8884ab">Address</span>&nbsp; ${escapeHtml(settings.address)}</td></tr>`,
@@ -120,7 +123,7 @@ ${settings.tagline ? `<p style="margin:0 0 24px;font-size:14px;line-height:1.65;
 <td class="email-stack" style="vertical-align:top"><table role="presentation" cellpadding="0" cellspacing="0">${contact}</table></td>
 <td class="email-stack" align="right" style="vertical-align:top">${emailLogo(settings, home, "small")}</td>
 </tr></table>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:1px solid #2f2a55"><tr><td style="padding-top:16px;font-size:12px;line-height:1.6;color:#8884ab">© ${new Date().getFullYear()} ${brand}&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${home}" style="color:#bcb5f7;text-decoration:none">Website</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${absoluteUrl("/account")}" style="color:#bcb5f7;text-decoration:none">Manage email preferences</a></td></tr></table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:1px solid #2f2a55"><tr><td style="padding-top:16px;font-size:12px;line-height:1.6;color:#8884ab">© ${new Date().getFullYear()} ${brand}&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${home}" style="color:#bcb5f7;text-decoration:none">Website</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${absoluteUrl("/account")}" style="color:#bcb5f7;text-decoration:none">Manage email preferences</a></td></tr>${company ? `<tr><td style="padding-top:8px;font-size:11px;line-height:1.6;color:#6f6b94">${escapeHtml(company)}</td></tr>` : ""}</table>
 </td></tr>
 </table></td></tr></table></body></html>`;
   return { subject, html, text };

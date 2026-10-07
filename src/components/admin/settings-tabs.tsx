@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { count, desc, eq } from "drizzle-orm";
-import { runRemindersNow, saveWhatsAppSettings, sendWhatsAppTestNow, saveAiSettings, saveAnnouncement, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { runRemindersNow, saveWhatsAppSettings, sendWhatsAppTestNow, saveAiSettings, saveAnnouncement, saveCompany, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
 import { EmailDriverFields } from "@/components/admin/email-driver";
 import { TransactpayCheckButton } from "@/components/admin/transactpay-check";
 import { ActionButton, ActionForm, FileField, Input, SecretInput, Select, SubmitButton, Switch, Textarea } from "@/components/forms";
-import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, EyeIcon, MailIcon, MessageIcon, SearchIcon, SparkIcon } from "@/components/icons";
+import { AlertIcon, BankIcon, CheckCircleIcon, ClockIcon, EditIcon, ExternalIcon, EyeIcon, MailIcon, MessageIcon, SearchIcon, SparkIcon } from "@/components/icons";
 import { Badge, DataTable, Notice, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
 import { emailLog, emailTemplates, users, whatsappLog, type Settings } from "@/db/schema";
@@ -18,6 +18,7 @@ import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "@/lib/email
 import { CURRENCIES } from "@/lib/money";
 import { testPaymentsAllowed } from "@/lib/payments";
 import { maskSecret } from "@/lib/secrets";
+import { companiesHouseUrl, companyInfo } from "@/lib/company";
 import { referralConfig } from "@/lib/referrals";
 import { seoConfig } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
@@ -83,6 +84,7 @@ export async function GeneralTab({ s }: { s: Settings }) {
     bank.enabled && bank.currency === code ? "Bank transfer" : "",
   ].filter(Boolean);
   return (
+    <>
     <ActionForm action={saveGeneral} className="flex flex-col gap-6">
       <Section title="Academy details" description="Shown across the website, emails and receipts.">
         <div className="grid gap-5 md:grid-cols-2">
@@ -113,6 +115,29 @@ export async function GeneralTab({ s }: { s: Settings }) {
         <Select label="Main currency" name="primaryCurrency" defaultValue={s.currencies[0]} options={CURRENCIES.map((c) => ({ value: c.code, label: `${c.code}: ${c.name}` }))} hint="Shown first on course pages and used for dashboard revenue." className="max-w-[420px]" />
       </Section>
       <div><SubmitButton>Save general settings</SubmitButton></div>
+    </ActionForm>
+    <CompanyForm s={s} />
+    </>
+  );
+}
+
+/** The legal entity: shown in the footer and every email, as UK law requires for registered companies. */
+function CompanyForm({ s }: { s: Settings }) {
+  const c = companyInfo(s);
+  return (
+    <ActionForm action={saveCompany} className="flex flex-col gap-6">
+      <Section title="Company registration" description="Shown in the website footer and at the bottom of every email. UK companies must show their registered name, number, place of registration and registered office." badge={c.number ? <a href={companiesHouseUrl(c.number)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-accent-ink">Companies House <ExternalIcon className="size-3.5" /></a> : undefined}>
+        <div className="grid gap-5 md:grid-cols-2">
+          <Input label="Registered company name" name="legalName" defaultValue={c.legalName} placeholder="e.g. TEKSKILLUP LIMITED" hint="Exactly as on Companies House." />
+          <Input label="Company number" name="number" defaultValue={c.number} placeholder="e.g. 17504595" className="[&_input]:font-mono" />
+        </div>
+        <div className="grid gap-5 md:grid-cols-[1fr_2fr]">
+          <Input label="Registered in" name="jurisdiction" defaultValue={c.jurisdiction} placeholder="England and Wales" />
+          <Input label="Registered office address" name="registeredOffice" defaultValue={c.registeredOffice} />
+        </div>
+        <p className="text-sm text-muted">Clear the name and number to hide these details.</p>
+      </Section>
+      <div><SubmitButton>Save company details</SubmitButton></div>
     </ActionForm>
   );
 }

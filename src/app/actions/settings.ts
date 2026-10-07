@@ -56,6 +56,18 @@ export async function saveGeneral(_state: FormState, formData: FormData): Promis
   return { ok: "General settings saved." };
 }
 
+export async function saveCompany(_state: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requirePermission("settings.manage");
+  const field = (key: string, max: number) => String(formData.get(key) ?? "").trim().replace(/\s+/g, " ").slice(0, max);
+  const company = { legalName: field("legalName", 160), number: field("number", 20).toUpperCase(), jurisdiction: field("jurisdiction", 80), registeredOffice: field("registeredOffice", 300) };
+  if (company.number && !/^[A-Z0-9]{6,10}$/.test(company.number)) return { error: "Company numbers are 8 characters, e.g. 17504595 or SC123456." };
+  if (company.number && !company.legalName) return { error: "Add the registered company name too." };
+  await update({ company });
+  await logAudit(actor, { action: "settings.saved", summary: "updated the company registration details" });
+  revalidatePath("/", "layout");
+  return { ok: company.legalName ? "Saved. The details now show in the website footer and at the bottom of every email." : "Saved. Company details are hidden." };
+}
+
 // ---------- Branding & home page ----------
 
 /** "value | label" per line. */

@@ -1,9 +1,12 @@
 import Link from "next/link";
 import type { Settings } from "@/db/schema";
-import { MailIcon, PinIcon } from "@/components/icons";
+import { ExternalIcon, MailIcon, PinIcon, ShieldIcon } from "@/components/icons";
+import { companiesHouseUrl, companyInfo, companyStatement } from "@/lib/company";
 import { Brand } from "./brand";
 
 export function SiteFooter({ settings }: { settings: Settings }) {
+  const company = companyInfo(settings);
+  const statement = companyStatement(company, settings.siteName);
   return (
     <footer className="site-footer relative bg-[#0c0b12] bg-[radial-gradient(640px_320px_at_92%_0%,rgba(79,63,215,.18),transparent_65%)] text-white">
       <div aria-hidden="true" className="h-px bg-[linear-gradient(90deg,transparent,rgba(49,196,240,.8)_30%,rgba(124,112,240,.8)_70%,transparent)]" />
@@ -11,6 +14,15 @@ export function SiteFooter({ settings }: { settings: Settings }) {
         <div className="flex flex-col gap-4">
           <Brand settings={settings} tone="reversed" />
           {settings.tagline && <p className="max-w-[360px] text-[15px] leading-relaxed text-white/70">{settings.tagline}</p>}
+          {company.number && (
+            <a href={companiesHouseUrl(company.number)} target="_blank" rel="noopener noreferrer" title="View on Companies House" className="group mt-1 flex w-fit items-center gap-3 rounded-[5px] border border-white/10 bg-white/[.04] px-3.5 py-2.5 transition hover:border-white/25 hover:bg-white/[.07]">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-[5px] bg-white/[.08] text-[#b9f0ff]"><ShieldIcon className="size-[18px]" /></span>
+              <span className="flex flex-col">
+                <span className="text-[13px] font-semibold text-white">UK registered company</span>
+                <span className="flex items-center gap-1 text-[12px] text-white/60">Company No. {company.number} <ExternalIcon className="size-3 opacity-0 transition group-hover:opacity-100" /></span>
+              </span>
+            </a>
+          )}
         </div>
         <div className="flex flex-col gap-3">
           <p className="font-display text-base font-bold text-white">Learn</p>
@@ -41,7 +53,10 @@ export function SiteFooter({ settings }: { settings: Settings }) {
         </div>
       </div>
       <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-white/60 sm:px-8"><p>© {new Date().getFullYear()} {settings.siteName}. All rights reserved.</p><div className="flex flex-wrap gap-4"><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/cookies" className="hover:text-white">Cookies</Link></div></div>
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-3 px-5 py-6 text-sm text-white/60 sm:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3"><p>© {new Date().getFullYear()} {settings.siteName}. All rights reserved.</p><div className="flex flex-wrap gap-4"><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/cookies" className="hover:text-white">Cookies</Link></div></div>
+          {statement && <p className="max-w-[880px] text-[12px] leading-relaxed text-white/45">{statement}</p>}
+        </div>
       </div>
     </footer>
   );

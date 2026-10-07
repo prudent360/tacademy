@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PolicyPage, type PolicySection } from "@/components/site/policy-page";
+import { companyInfo, companyStatement } from "@/lib/company";
 import { getSettings } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Privacy Policy", description: "How the academy collects, uses and protects personal information." };
@@ -7,8 +8,9 @@ export const metadata: Metadata = { title: "Privacy Policy", description: "How t
 export default async function PrivacyPage() {
   const settings = await getSettings();
   const email = settings.supportEmail || "our support team";
+  const company = companyInfo(settings);
   const sections: PolicySection[] = [
-    { id: "who-we-are", title: "Who we are", content: <p>{settings.siteName} is responsible for the personal information described in this policy. You can contact us at <a href={`mailto:${email}`}>{email}</a>{settings.address ? ` or at ${settings.address}` : ""}.</p> },
+    { id: "who-we-are", title: "Who we are", content: <>{company.legalName && <p>{companyStatement(company, settings.siteName)}</p>}<p>{company.legalName || settings.siteName} is the data controller responsible for the personal information described in this policy. You can contact us at <a href={`mailto:${email}`}>{email}</a>{settings.address ? ` or at ${settings.address}` : ""}.</p></> },
     { id: "data-we-collect", title: "Information we collect", content: <><p>We collect information you provide, including your name, email, phone number, account details, course choices, assignments, messages and support requests.</p><p>We also receive payment status and transaction references from payment providers. We do not store full card details. Technical information may include device, browser, IP address, sign-in activity and essential cookie data.</p></> },
     { id: "how-we-use", title: "How we use information", content: <ul><li>Create and secure your account.</li><li>Process enrolment and payments.</li><li>Deliver classes, assignments, feedback, certificates and reminders.</li><li>Provide support and communicate important service changes.</li><li>Prevent fraud, maintain security and meet legal obligations.</li><li>Improve courses and the learning experience using aggregated insights.</li></ul> },
     { id: "legal-bases", title: "Our legal bases", content: <><p>We process information where necessary to perform our contract with you, comply with law, pursue legitimate interests such as security and service improvement, or where you have given consent.</p><p>You may withdraw consent at any time, although this does not affect earlier lawful processing.</p></> },

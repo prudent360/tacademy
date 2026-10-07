@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PolicyPage, type PolicySection } from "@/components/site/policy-page";
+import { companiesHouseUrl, companyInfo, companyStatement } from "@/lib/company";
 import { getSettings } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Terms of Use", description: "Terms governing use of the academy website, courses and learning platform." };
@@ -8,7 +9,9 @@ export const metadata: Metadata = { title: "Terms of Use", description: "Terms g
 export default async function TermsPage() {
   const settings = await getSettings();
   const email = settings.supportEmail || "our support team";
+  const company = companyInfo(settings);
   const sections: PolicySection[] = [
+    ...(company.legalName ? [{ id: "who-we-are", title: "Who we are", content: <><p>{companyStatement(company, settings.siteName)}</p><p>These Terms are an agreement between you and {company.legalName}. “We”, “us” and “our” mean {company.legalName}.{company.number && <> You can check our registration on <a href={companiesHouseUrl(company.number)} target="_blank" rel="noopener noreferrer">Companies House</a>.</>}</p></> }] : []),
     { id: "acceptance", title: "Accepting these terms", content: <><p>By creating an account, enrolling on a course, making a payment or using the learning platform, you agree to these Terms and our <Link href="/privacy">Privacy Policy</Link>. If you do not agree, do not use the services.</p><p>You must be at least 18, or have permission from a parent or legal guardian who accepts these Terms for you.</p></> },
     { id: "accounts", title: "Accounts and security", content: <><p>Provide accurate information and keep it up to date. You are responsible for activity under your account and for keeping your password confidential.</p><ul><li>Do not share login details or allow another person to attend in your place.</li><li>Tell us promptly if you believe your account has been compromised.</li><li>We may verify identity where necessary to protect students and payments.</li></ul></> },
     { id: "enrolment", title: "Enrolment and cohort places", content: <><p>A place is confirmed only when we accept your enrolment and any required payment has cleared. Cohort dates, capacity, teaching format and prerequisites are shown on the relevant course page.</p><p>We may refuse or cancel an enrolment where information is inaccurate, payment is unauthorised, a cohort is full, or participation would create a safety or safeguarding risk.</p></> },
