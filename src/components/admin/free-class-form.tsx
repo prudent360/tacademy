@@ -1,5 +1,5 @@
 import { saveFreeClass } from "@/app/actions/free-classes";
-import { ActionForm, Input, Select, SubmitButton, Textarea } from "@/components/forms";
+import { ActionForm, Checkbox, Input, Select, SubmitButton, Textarea } from "@/components/forms";
 import type { FreeClass } from "@/db/schema";
 import { toZonedInput } from "@/lib/time";
 
@@ -42,6 +42,7 @@ export function FreeClassForm({ freeClass: fc, courses, timezone }: { freeClass?
         </div>
         <Input label="Venue (in person)" name="venue" defaultValue={fc?.venue} maxLength={300} placeholder="Full address" />
         <Input label="Places (optional)" name="capacity" inputMode="numeric" defaultValue={fc?.capacity ?? ""} placeholder="No limit" hint="Sign-ups close when it's full." />
+        {fc && <Checkbox label="Tell everyone who signed up if the time, link or venue changes" name="notifyChange" defaultChecked hint="They get an email with the old and new details (and a WhatsApp message if they opted in). Untick to fix something quietly." />}
       </Fieldset>
 
       <Fieldset title="Follow-up offer" hint="An hour after the class ends, everyone who signed up gets a thank-you email with the recording (if added) and a personal, single-use discount code for the course below.">

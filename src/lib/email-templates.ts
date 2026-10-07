@@ -385,6 +385,27 @@ We'll remind you the day before and shortly before it starts. [Add it to your ca
 
 [[See class details|{{classUrl}}]]`,
   },
+  free_class_changed: {
+    name: "Free class: time or place changed",
+    description: "Sent to everyone signed up when a free class moves to a new day or time, or its link or venue changes.",
+    variables: { classTitle: "Intro to Data Analytics", change: "The class has moved to a new day and time.", was: "Tue 14 Oct, 18:00 – 19:30 WAT", when: "Thu 16 Oct, 18:00 – 19:30 WAT", modeLabel: "Live online", location: "Join link: https://meet.google.com/abc-defg-hij", calendarUrl: "https://example.com/free-classes/intro-to-data/calendar.ics", classUrl: "https://example.com/free-classes/intro-to-data" },
+    subject: "Change to {{classTitle}}: new details inside",
+    body: `Hi {{name}},
+
+A quick update about your free class. {{change}}
+
+- **Class:** {{classTitle}}
+- **Now:** {{when}}
+- **Was:** {{was}}
+- **Format:** {{modeLabel}}
+- {{location}}
+
+Your place is still saved, so there's nothing you need to do. If you added the class to your calendar, [add the updated time]({{calendarUrl}}) and remove the old one. We'll still remind you before it starts.
+
+Can't make the new time? Just reply to this email and let us know.
+
+[[See class details|{{classUrl}}]]`,
+  },
   free_class_reminder: {
     name: "Free class: reminder",
     description: "Sent the day before and shortly before a free class starts.",

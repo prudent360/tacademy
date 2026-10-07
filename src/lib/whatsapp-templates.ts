@@ -35,6 +35,12 @@ export const WHATSAPP_TEMPLATES = {
     body: "Hi {{1}}, your free class {{2}} is {{3}} ({{4}}). {{5}}\n\nSee you there!",
     sample: ["Ada", "Your first Power BI dashboard", "tomorrow", "Tue 14 Oct, 18:00 – 19:30 WAT", "Join here: https://meet.google.com/abc-defg-hij"],
   },
+  free_class_changed: {
+    label: "Free class time changed",
+    when: "When a free class moves to a new time or its link or venue changes, to people who ticked “Also remind me on WhatsApp”.",
+    body: "Hi {{1}}, there's a change to your free class {{2}}. It's now {{3}}. {{4}}\n\nYour place is still saved.",
+    sample: ["Ada", "Your first Power BI dashboard", "Thu 16 Oct, 18:00 – 19:30 WAT", "Join here: https://meet.google.com/abc-defg-hij"],
+  },
 } as const;
 
 export type WhatsAppTemplate = keyof typeof WHATSAPP_TEMPLATES;

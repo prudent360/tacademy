@@ -115,3 +115,37 @@ export async function sendDueFollowUps(now = new Date()): Promise<number> {
   for (const fc of due) sent += await sendFollowUp(fc, now);
   return sent;
 }
+
+/**
+ * Tells everyone signed up that a class has moved, or its link or venue changed: an email to all, and a
+ * WhatsApp message to those who opted in. Returns how many people were told.
+ */
+export async function sendChangeNotice(before: FreeClass, after: FreeClass): Promise<{ emailed: number; whatsapp: number }> {
+  const timeChanged = before.startsAt.getTime() !== after.startsAt.getTime() || before.endsAt.getTime() !== after.endsAt.getTime();
+  const placeChanged = before.mode !== after.mode || (before.meetingUrl ?? "") !== (after.meetingUrl ?? "") || before.venue !== after.venue;
+  if (!timeChanged && !placeChanged) return { emailed: 0, whatsapp: 0 };
+  const tz = (await getSettings()).timezone;
+  const dayChanged = new Intl.DateTimeFormat("en-GB", { timeZone: tz, dateStyle: "short" }).format(before.startsAt) !== new Intl.DateTimeFormat("en-GB", { timeZone: tz, dateStyle: "short" }).format(after.startsAt);
+  const change = timeChanged
+    ? `The class has moved to a new ${dayChanged ? "day and time" : "time"}${placeChanged ? `, and the ${after.mode === "virtual" ? "joining link" : "venue"} has changed too` : ""}.`
+    : after.mode !== before.mode ? `The class is now ${freeClassModeLabel(after).toLowerCase()}.` : `The ${after.mode === "virtual" ? "joining link" : "venue"} has changed.`;
+  const when = formatSessionRange(after.startsAt, after.endsAt, tz);
+  const vars = {
+    classTitle: after.title,
+    change,
+    was: formatSessionRange(before.startsAt, before.endsAt, tz),
+    when,
+    modeLabel: freeClassModeLabel(after),
+    location: joinLine(after),
+    calendarUrl: absoluteUrl(`/free-classes/${after.slug}/calendar.ics`),
+    classUrl: absoluteUrl(`/free-classes/${after.slug}`),
+  };
+  const signups = await activeSignups(after.id);
+  await sendEmails(signups.map((s) => ({ to: s.email, template: "free_class_changed", vars: { name: firstName(s.name), ...vars } })));
+  const plainLocation = vars.location.replace(/\*\*/g, "");
+  const { sent } = await sendWhatsApp(signups.flatMap((s) => {
+    const to = s.whatsappOptIn ? whatsappNumber(s.phone) : null;
+    return to ? [{ to, template: "free_class_changed" as const, params: [firstName(s.name), after.title, when, plainLocation] }] : [];
+  }));
+  return { emailed: signups.length, whatsapp: sent };
+}

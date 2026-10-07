@@ -12,7 +12,7 @@ import { requirePermission } from "@/lib/auth";
 import { parseLines } from "@/lib/careers";
 import { getAdmins, getSettings } from "@/lib/data";
 import { sendEmail } from "@/lib/email";
-import { sendFollowUp } from "@/lib/free-class-jobs";
+import { sendChangeNotice, sendFollowUp } from "@/lib/free-class-jobs";
 import { acceptingSignups, freeClassModeLabel, joinLine } from "@/lib/free-classes";
 import { LEAD_BACKGROUNDS } from "@/lib/leads";
 import { notify } from "@/lib/notify";
@@ -91,15 +91,20 @@ export async function saveFreeClass(id: number | null, _state: FormState, formDa
     updatedAt: new Date(),
   };
   let classId = id;
+  let told = { emailed: 0, whatsapp: 0 };
   if (id) {
-    await db.update(freeClasses).set(values).where(eq(freeClasses.id, id));
+    const [after] = await db.update(freeClasses).set(values).where(eq(freeClasses.id, id)).returning();
+    // Tell everyone signed up when the time or place changes, unless it hasn't happened yet… or already has.
+    if (before && after && formData.get("notifyChange") === "on" && after.startsAt > new Date()) told = await sendChangeNotice(before, after);
   } else {
     const [created] = await db.insert(freeClasses).values(values).returning({ id: freeClasses.id });
     classId = created.id;
   }
   await logAudit(actor, { action: id ? "free_class.updated" : "free_class.created", summary: `${id ? "updated" : "created"} the free class “${data.title}”`, target: { type: "free_class", id: classId! } });
+  if (told.emailed) await logAudit(actor, { action: "free_class.change_notice", summary: `told ${told.emailed} ${told.emailed === 1 ? "person" : "people"} about changes to “${data.title}”`, target: { type: "free_class", id: classId! } });
   revalidate();
   if (!id) redirect(`/admin/free-classes/${classId}?created=1`);
+  if (told.emailed) return { ok: `Saved. ${told.emailed === 1 ? "The person" : `All ${told.emailed} people`} signed up ${told.emailed === 1 ? "has" : "have"} been emailed the new details${told.whatsapp ? `, and ${told.whatsapp} got a WhatsApp message` : ""}.` };
   return { ok: data.status === "open" ? "Saved. Sign-ups are open on the Free classes page." : data.status === "draft" ? "Saved as a draft. Only the team can see it." : "Saved. The class is closed to new sign-ups." };
 }
 
