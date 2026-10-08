@@ -161,6 +161,8 @@ export async function acceptApplication(id: number, _state: FormState, formData:
     programme: found.course.title,
     intake: found.cohort.name,
     enrolUrl: absoluteUrl(`/enroll?cohort=${cohortId}`),
+    // Only intakes that are free for graduates mention it; otherwise everyone pays the fee.
+    graduateNote: found.cohort.graduatesFree ? `If you're a graduate of one of our courses, sign in first and your place is free.` : "",
   });
   await logAudit(admin, { action: "application.accepted", summary: `accepted ${application.name}'s internship application onto ${found.cohort.name}`, target: { type: "internship_application", id } });
   revalidatePath("/admin/applications", "layout");

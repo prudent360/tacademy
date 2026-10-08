@@ -8,6 +8,7 @@ import { ExternalIcon, PlusIcon } from "@/components/icons";
 import { Badge, Card, ModeBadge, Notice, PageHeader, buttonClass } from "@/components/ui";
 import { getDb } from "@/db";
 import { cohorts, courses, internshipApplications, type Course } from "@/db/schema";
+import { formatMoney } from "@/lib/money";
 import { aiAvailable } from "@/lib/ai";
 import { curriculumFor } from "@/lib/curriculum";
 import { linkedCourseIds, seatsTaken } from "@/lib/data";
@@ -58,7 +59,8 @@ export async function ProgrammeAdmin({ course, created }: { course: Course; crea
           </Card>
         </div>
       )}
-      <Card title={w.runs} padded={false}>
+      <Card id="intakes" title={`${w.runs} & fees`} action={<Link href={`/admin/cohorts/new?course=${course.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent-ink hover:underline"><PlusIcon className="size-4" /> Add {w.run}</Link>} padded={false}>
+        <p className="border-b border-line bg-panel px-5 py-3 text-sm text-muted md:px-6">Each {w.run} has its own dates, places and fee. Open one to change its price, deposit or registration fee.</p>
         {list.length ? (
           <ul className="flex flex-col divide-y divide-line">
             {list.map((c) => (
@@ -71,6 +73,9 @@ export async function ProgrammeAdmin({ course, created }: { course: Course; crea
                   <span className="flex flex-wrap items-center gap-2">
                     <ModeBadge mode={c.deliveryMode} />
                     <Badge>{taken.get(c.id) ?? 0}{c.capacity ? `/${c.capacity}` : ""} {kind === "internship" ? "interns" : "enrolled"}</Badge>
+                    {Object.values(c.prices).some((v) => (v ?? 0) > 0)
+                      ? <Badge tone="accent">{Object.entries(c.prices).filter((e): e is [string, number] => (e[1] ?? 0) > 0).slice(0, 2).map(([cur, v]) => formatMoney(v, cur)).join(" / ")}{c.depositPercent ? ` · ${c.depositPercent}% deposit` : ""}</Badge>
+                      : <Badge tone="amber">No fee set (free)</Badge>}
                     {c.graduatesFree && <Badge tone="green">Free for graduates</Badge>}
                     {!c.enrollmentOpen && <Badge tone="amber">Closed</Badge>}
                   </span>
@@ -78,14 +83,16 @@ export async function ProgrammeAdmin({ course, created }: { course: Course; crea
               </li>
             ))}
           </ul>
-        ) : <p className="p-6 text-muted">No {w.run}s yet. <Link href={`/admin/cohorts/new?course=${course.id}`} className="font-semibold text-accent-ink">Add the first one</Link>.</p>}
+        ) : <p className="p-6 text-muted">No {w.run}s yet, so nobody can {kind === "internship" ? "join or pay" : "enrol"}. <Link href={`/admin/cohorts/new?course=${course.id}`} className="font-semibold text-accent-ink">Add the first {w.run} and set its fee</Link>.</p>}
       </Card>
       <div id="curriculum" className="scroll-mt-24">
         <Card title="Curriculum" action={<span className="hidden text-sm text-muted sm:block">Shared by every {w.run} of this {kind === "internship" ? "programme" : "course"}</span>}>
           <CurriculumBuilder courseId={course.id} modules={curriculum} lessonHref="/admin/lessons/{id}" canDelete />
         </Card>
       </div>
-      <Card title={w.details}><CourseForm action={updateCourse.bind(null, course.id)} course={course} ai={ai} kind={kind} linkable={courseOptions} linked={linked} /></Card>
+      <Card title={w.details}>
+        <p className="mb-5 rounded-[5px] border border-accent-muted/40 bg-accent-soft px-4 py-3 text-sm text-body">Looking for the price? Fees are set on each {w.run}, under <a href="#intakes" className="font-semibold text-accent-ink hover:underline">{w.runs} & fees</a> above.</p>
+        <CourseForm action={updateCourse.bind(null, course.id)} course={course} ai={ai} kind={kind} linkable={courseOptions} linked={linked} /></Card>
       <div className="flex justify-end"><DeleteButton action={deleteCourse.bind(null, course.id)} label={w.remove} /></div>
     </>
   );

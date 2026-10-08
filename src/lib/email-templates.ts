@@ -338,13 +338,13 @@ The {{siteName}} team`,
   application_accepted: {
     name: "Internship application accepted",
     description: "Sent when an admin accepts an internship application. Includes the link to enrol on the intake.",
-    variables: { programme: "Data Analytics Internship", intake: "January 2027 intake", enrolUrl: "https://example.com/enroll?cohort=1" },
+    variables: { programme: "Data Analytics Internship", intake: "January 2027 intake", enrolUrl: "https://example.com/enroll?cohort=1", graduateNote: "" },
     subject: "You've been accepted: {{programme}}",
     body: `Hi {{name}},
 
 Great news: you've been accepted onto the **{{programme}}** ({{intake}}).
 
-Secure your place using the button below. If you're a graduate of {{siteName}}, sign in first and your place is free.
+Secure your place by completing your enrolment and payment using the button below. {{graduateNote}}
 
 [[Secure my place|{{enrolUrl}}]]
 

@@ -19,6 +19,7 @@ export default async function NewInternshipPage() {
   return (
     <>
       <PageHeader back={{ href: "/admin/internships", label: "Internships" }} title="New internship" description="Create the programme first, then add one or more intakes with dates and fees." />
+      <div className="rounded-[5px] border border-accent-muted/40 bg-accent-soft px-4 py-3 text-sm text-body"><strong className="text-ink">Where&apos;s the price?</strong> Fees belong to each intake, because intakes can run at different times and prices. Save this programme first; on the next page click <strong className="text-ink">Add intake</strong> to set its dates, places and fee (with an optional deposit or registration fee).</div>
       <Card><CourseForm action={createCourse} ai={ai} kind="internship" linkable={linkable} /></Card>
     </>
   );
