@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, AwardIcon, CalendarIcon, CardIcon, CheckIcon, ChevronRight, ClipboardIcon, ClockIcon, FileIcon, LayersIcon, MonitorIcon, PinIcon, PlayIcon, UsersIcon } from "@/components/icons";
+import { ArrowRight, AwardIcon, BriefcaseIcon, CalendarIcon, CardIcon, CheckIcon, ChevronRight, ClipboardIcon, ClockIcon, FileIcon, LayersIcon, MonitorIcon, PinIcon, PlayIcon, UsersIcon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
 import { CourseArt } from "@/components/site/course-art";
 import { CurriculumRequest } from "@/components/site/curriculum-request";
@@ -53,7 +53,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const photo = course.heroImageUrl;
   const open = cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full);
   const nextStart = cohorts.filter((cohort) => cohort.enrollmentOpen && cohort.startDate).map((cohort) => cohort.startDate!).sort()[0];
-  const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, reviews.length > 0 && { href: "#reviews", label: "Reviews" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
+  const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, course.portfolioProjects.length > 0 && { href: "#projects", label: "Projects" }, reviews.length > 0 && { href: "#reviews", label: "Reviews" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -190,10 +190,39 @@ export default async function CoursePage({ params, searchParams }: Props) {
               </ol>
             </section>
           )}
-          {(course.portfolioProjects.length > 0 || course.jobRoles.length > 0) && (
-            <section className="grid gap-5 sm:grid-cols-2">
-              {course.portfolioProjects.length > 0 && <div className="rounded-[5px] border border-edge bg-white p-6"><h2 className="font-display text-xl font-bold text-ink">Portfolio projects</h2><ul className="mt-4 space-y-3">{course.portfolioProjects.map((project) => <li key={project} className="flex gap-2.5 text-[15px] text-body"><CheckIcon className="mt-0.5 size-5 shrink-0 text-cyan-ink" />{project}</li>)}</ul></div>}
-              {course.jobRoles.length > 0 && <div className="rounded-[5px] border border-edge bg-white p-6"><h2 className="font-display text-xl font-bold text-ink">Roles this supports</h2><div className="mt-4 flex flex-wrap gap-2">{course.jobRoles.map((role) => <Badge key={role} tone="accent">{role}</Badge>)}</div></div>}
+          {course.portfolioProjects.length > 0 && (
+            <section id="projects" className="scroll-mt-36 flex flex-col gap-5">
+              <div>
+                <p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Portfolio</p>
+                <h2 className="mt-2 font-display text-2xl font-bold text-ink">What you&apos;ll build</h2>
+                <p className="mt-2 text-[15px] text-muted">Real projects you can show employers, {course.portfolioProjects.length === 1 ? "built" : `${course.portfolioProjects.length} in total, built`} with feedback from your {course.kind === "internship" ? "supervisor" : "instructor"}.</p>
+              </div>
+              <ol className="grid gap-x-8 gap-y-1 rounded-[5px] border border-edge bg-white p-3 sm:grid-cols-2 sm:p-4">
+                {course.portfolioProjects.map((project, i) => {
+                  // The final, bigger piece of work stands out.
+                  const capstone = /capstone|final project|end-to-end/i.test(project);
+                  return (
+                    <li key={project} className={`flex items-start gap-3.5 rounded-[5px] px-3 py-3 ${capstone ? "mt-1 bg-accent-soft sm:col-span-2" : ""}`}>
+                      <span className={`mt-px flex size-7 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-bold ${capstone ? "bg-accent text-white" : "bg-accent-soft text-accent"}`}>{String(i + 1).padStart(2, "0")}</span>
+                      <p className="text-[15px] font-semibold leading-snug text-ink">{project}{capstone && <span className="ml-2 inline-block rounded-full bg-white px-2 py-0.5 align-middle text-[11px] font-semibold uppercase tracking-wider text-accent">Capstone</span>}</p>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          )}
+          {course.jobRoles.length > 0 && (
+            <section className="flex flex-col gap-4 rounded-[5px] border border-accent-muted/40 bg-[linear-gradient(135deg,#f6f5ff_0%,#eeecff_100%)] p-6 sm:flex-row sm:items-start sm:gap-6 sm:p-7">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-[5px] bg-white text-accent shadow-[0_8px_20px_-12px_rgba(79,63,215,.6)]"><BriefcaseIcon className="size-6" /></span>
+              <div className="flex min-w-0 flex-col gap-3">
+                <div>
+                  <h2 className="font-display text-xl font-bold text-ink">Roles this prepares you for</h2>
+                  <p className="mt-1 text-[15px] text-muted">The skills from this {course.kind === "internship" ? "programme" : "course"} are what employers look for in these jobs.</p>
+                </div>
+                <ul className="flex flex-wrap gap-2">
+                  {course.jobRoles.map((role) => <li key={role} className="rounded-full border border-accent-muted/50 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-ink">{role}</li>)}
+                </ul>
+              </div>
             </section>
           )}
           {reviews.length > 0 && rating && (
