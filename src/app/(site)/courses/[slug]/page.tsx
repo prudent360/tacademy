@@ -5,6 +5,7 @@ import { ArrowRight, AwardIcon, BriefcaseIcon, CalendarIcon, CardIcon, CheckIcon
 import { Markdown } from "@/components/markdown";
 import { CourseArt } from "@/components/site/course-art";
 import { CurriculumRequest } from "@/components/site/curriculum-request";
+import { IntroVideo } from "@/components/site/intro-video";
 import { WaitlistForm } from "@/components/site/waitlist-form";
 import { HeroVisual, PageHero, heroButton } from "@/components/site/page-hero";
 import { Avatar, Badge, ModeBadge, Notice } from "@/components/ui";
@@ -20,16 +21,8 @@ import type { Cohort } from "@/db/schema";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { formatDateOnly } from "@/lib/time";
 import { pageMetadata, seoConfig } from "@/lib/seo";
-import { lessonVideo, type EmbeddedVideo } from "@/lib/video";
+import { lessonVideo } from "@/lib/video";
 import { visitorCurrencies } from "@/lib/visitor";
-
-function IntroVideo({ video, title }: { video: EmbeddedVideo; title: string }) {
-  return (
-    <div className="relative aspect-video w-full bg-navy">
-      <iframe src={video.embedUrl} title={`Introduction: ${title}`} className="absolute inset-0 size-full border-0" loading="lazy" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />
-    </div>
-  );
-}
 
 /** Default country code for the curriculum form's phone field, from the academy's main currency. */
 const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA" };
@@ -62,9 +55,12 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const photo = course.heroImageUrl;
   const open = cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full);
   const nextStart = cohorts.filter((cohort) => cohort.enrollmentOpen && cohort.startDate).map((cohort) => cohort.startDate!).sort()[0];
-  // The intro video takes the hero's picture slot; with a full-width hero photo there's no slot, so it opens the page instead.
-  const introBelowHero = intro && photo;
-  const courseNav = [introBelowHero && { href: "#intro", label: "Introduction" }, course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, course.portfolioProjects.length > 0 && { href: "#projects", label: "Projects" }, reviews.length > 0 && { href: "#reviews", label: "Reviews" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
+  const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, course.portfolioProjects.length > 0 && { href: "#projects", label: "Projects" }, reviews.length > 0 && { href: "#reviews", label: "Reviews" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
+
+  const cover = course.imageUrl
+    // eslint-disable-next-line @next/next/no-img-element
+    ? <img src={course.imageUrl} alt="" className="aspect-[16/10] w-full object-cover" />
+    : <CourseArt seed={course.id} className="aspect-[16/10] w-full" />;
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -94,6 +90,8 @@ export default async function CoursePage({ params, searchParams }: Props) {
         lead={course.summary}
         actions={<>
           {open ? <Link href={`/enroll?course=${course.slug}`} className={heroButton.primary}>Enrol now <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></Link> : <a href="#cohorts" className={heroButton.primary}>See dates <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></a>}
+          {/* With a full-width hero photo there's no cover to play from, so the intro gets its own button. */}
+          {intro && photo && <IntroVideo embedUrl={intro.embedUrl} provider={intro.provider} title={course.title} className={`${heroButton.secondary} cursor-pointer`} />}
           {(course.curriculumUrl || curriculum.length > 0) && (
             <CurriculumRequest
               courseId={course.id}
@@ -114,19 +112,12 @@ export default async function CoursePage({ params, searchParams }: Props) {
           { icon: LayersIcon, label: "Level", value: course.level },
           { icon: AwardIcon, label: "Credential", value: course.certificateEnabled ? "Verified certificate" : "Practical outcomes" },
         ]}
-        aside={photo ? undefined : intro ? (
-          <HeroVisual><IntroVideo video={intro} title={course.title} /></HeroVisual>
-        ) : (
+        aside={photo ? undefined : (
           <HeroVisual notes={[
             ...(nextStart ? [{ icon: CalendarIcon, title: `Starts ${formatDateOnly(nextStart)}`, text: open ? "Registration open" : undefined }] : []),
             ...(course.certificateEnabled ? [{ icon: AwardIcon, title: "Verified certificate", text: "With a QR verification link" }] : []),
           ]}>
-            {course.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={course.imageUrl} alt="" className="aspect-[16/10] w-full object-cover" />
-            ) : (
-              <CourseArt seed={course.id} className="aspect-[16/10] w-full" />
-            )}
+            {intro ? <IntroVideo embedUrl={intro.embedUrl} provider={intro.provider} title={course.title}>{cover}</IntroVideo> : cover}
           </HeroVisual>
         )}
       >
@@ -142,12 +133,6 @@ export default async function CoursePage({ params, searchParams }: Props) {
 
       <div className="mx-auto grid max-w-[1200px] items-start gap-10 px-5 py-12 sm:px-8 md:py-16 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex min-w-0 flex-col gap-10">
-          {introBelowHero && (
-            <section id="intro" className="scroll-mt-36 flex flex-col gap-4">
-              <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Introduction</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">Watch the introduction</h2></div>
-              <div className="overflow-hidden rounded-[5px] border border-edge"><IntroVideo video={intro} title={course.title} /></div>
-            </section>
-          )}
           {course.description && (
             <section id="overview" className="scroll-mt-36 flex flex-col gap-4">
               <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Course overview</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What this course is designed to do</h2></div>
