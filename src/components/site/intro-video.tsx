@@ -4,11 +4,11 @@ import { useRef, useState } from "react";
 import { PlayIcon, XIcon } from "@/components/icons";
 
 /**
- * Opens a course's intro video in a large pop-up. With children (the cover image), a play button sits over them;
- * without, it's a hero button. The player only loads when opened and waits for the visitor to press play; closing
+ * Opens a course's intro video in a large pop-up. With children (the cover image), they get a play button and
+ * a "Preview this course" caption; without, it's a hero button. The player only loads when opened and waits for the visitor to press play; closing
  * the pop-up stops it.
  */
-export function IntroVideo({ embedUrl, title, className, children }: { embedUrl: string; title: string; className?: string; children?: React.ReactNode }) {
+export function IntroVideo({ embedUrl, title, label = "Preview this course", className, children }: { embedUrl: string; title: string; label?: string; className?: string; children?: React.ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
   const show = () => { setOpen(true); dialog.current?.showModal(); };
@@ -19,15 +19,16 @@ export function IntroVideo({ embedUrl, title, className, children }: { embedUrl:
       {children ? (
         <button type="button" onClick={show} aria-label={`Watch the introduction to ${title}`} className="group relative block w-full cursor-pointer">
           {children}
-          <span className="absolute inset-0 flex items-center justify-center bg-navy/25 transition group-hover:bg-navy/35">
-            <span className="flex items-center gap-2.5 rounded-full bg-white py-2.5 pl-2.5 pr-5 text-[15px] font-semibold text-ink shadow-[0_18px_40px_-12px_rgba(0,0,0,.55)] transition group-hover:scale-105">
-              <span className="flex size-9 items-center justify-center rounded-full bg-accent text-white"><PlayIcon className="size-5" /></span>
-              Watch intro
+          <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/10 transition group-hover:from-black/85 group-hover:via-black/35" />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="flex size-16 items-center justify-center rounded-full bg-white text-ink shadow-[0_12px_30px_-8px_rgba(0,0,0,.6)] transition group-hover:scale-110 sm:size-20">
+              <svg viewBox="0 0 24 24" className="ml-1 size-7 sm:size-8" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z" /></svg>
             </span>
           </span>
+          <span className="absolute inset-x-0 bottom-0 pb-4 text-center text-base font-bold text-white drop-shadow sm:pb-5 sm:text-lg">{label}</span>
         </button>
       ) : (
-        <button type="button" onClick={show} className={className}><PlayIcon className="size-5" /> Watch intro</button>
+        <button type="button" onClick={show} className={className}><PlayIcon className="size-5" /> {label}</button>
       )}
       <dialog
         ref={dialog}

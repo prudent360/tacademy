@@ -57,6 +57,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const nextStart = cohorts.filter((cohort) => cohort.enrollmentOpen && cohort.startDate).map((cohort) => cohort.startDate!).sort()[0];
   const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, course.portfolioProjects.length > 0 && { href: "#projects", label: "Projects" }, reviews.length > 0 && { href: "#reviews", label: "Reviews" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
 
+  const introLabel = course.kind === "internship" ? "Preview this internship" : "Preview this course";
   const cover = course.imageUrl
     // eslint-disable-next-line @next/next/no-img-element
     ? <img src={course.imageUrl} alt="" className="aspect-[16/10] w-full object-cover" />
@@ -91,7 +92,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
         actions={<>
           {open ? <Link href={`/enroll?course=${course.slug}`} className={heroButton.primary}>Enrol now <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></Link> : <a href="#cohorts" className={heroButton.primary}>See dates <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></a>}
           {/* With a full-width hero photo there's no cover to play from, so the intro gets its own button. */}
-          {intro && photo && <IntroVideo embedUrl={intro.embedUrl} title={course.title} className={`${heroButton.secondary} cursor-pointer`} />}
+          {intro && photo && <IntroVideo embedUrl={intro.embedUrl} title={course.title} label={introLabel} className={`${heroButton.secondary} cursor-pointer`} />}
           {(course.curriculumUrl || curriculum.length > 0) && (
             <CurriculumRequest
               courseId={course.id}
@@ -113,11 +114,12 @@ export default async function CoursePage({ params, searchParams }: Props) {
           { icon: AwardIcon, label: "Credential", value: course.certificateEnabled ? "Verified certificate" : "Practical outcomes" },
         ]}
         aside={photo ? undefined : (
-          <HeroVisual notes={[
+          // Floating notes would cover the preview caption, so a course with an intro video shows the cover alone.
+          <HeroVisual notes={intro ? [] : [
             ...(nextStart ? [{ icon: CalendarIcon, title: `Starts ${formatDateOnly(nextStart)}`, text: open ? "Registration open" : undefined }] : []),
             ...(course.certificateEnabled ? [{ icon: AwardIcon, title: "Verified certificate", text: "With a QR verification link" }] : []),
           ]}>
-            {intro ? <IntroVideo embedUrl={intro.embedUrl} title={course.title}>{cover}</IntroVideo> : cover}
+            {intro ? <IntroVideo embedUrl={intro.embedUrl} title={course.title} label={introLabel}>{cover}</IntroVideo> : cover}
           </HeroVisual>
         )}
       >
