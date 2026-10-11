@@ -266,6 +266,8 @@ export const courses = pgTable("courses", {
   imageUrl: text("image_url"),
   /** Full-width photo behind the course page hero; the hero stays white without one. */
   heroImageUrl: text("hero_image_url"),
+  /** Optional intro video (Bunny Stream, YouTube, Vimeo or Loom link) shown on the course page. */
+  introVideoUrl: text("intro_video_url"),
   /** Optional search result title and description; the title and summary are used when empty. */
   seoTitle: text("seo_title").notNull().default(""),
   seoDescription: text("seo_description").notNull().default(""),

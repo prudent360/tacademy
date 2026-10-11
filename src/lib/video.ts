@@ -48,7 +48,7 @@ export function parseVideoUrl(raw: string | null | undefined): Parsed | null {
   return null;
 }
 
-/** An embeddable player URL for a lesson video, with Bunny links signed when token authentication is set up. */
+/** An embeddable player URL for a lesson or course intro video, with Bunny links signed when token authentication is set up. */
 export async function lessonVideo(raw: string | null | undefined): Promise<EmbeddedVideo | null> {
   const video = parseVideoUrl(raw);
   if (!video) return null;

@@ -20,7 +20,16 @@ import type { Cohort } from "@/db/schema";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { formatDateOnly } from "@/lib/time";
 import { pageMetadata, seoConfig } from "@/lib/seo";
+import { lessonVideo, type EmbeddedVideo } from "@/lib/video";
 import { visitorCurrencies } from "@/lib/visitor";
+
+function IntroVideo({ video, title }: { video: EmbeddedVideo; title: string }) {
+  return (
+    <div className="relative aspect-video w-full bg-navy">
+      <iframe src={video.embedUrl} title={`Introduction: ${title}`} className="absolute inset-0 size-full border-0" loading="lazy" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />
+    </div>
+  );
+}
 
 /** Default country code for the curriculum form's phone field, from the academy's main currency. */
 const PHONE_COUNTRY: Record<string, string> = { NGN: "NG", GBP: "GB", USD: "US", CAD: "CA", EUR: "IE", GHS: "GH", KES: "KE", ZAR: "ZA" };
@@ -37,7 +46,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const [{ slug }, { cancelled }] = await Promise.all([params, searchParams]);
   const course = await getCourseBySlug(slug);
   if (!course) notFound();
-  const [settings, user, [summary], curriculum, reviews, ratings] = await Promise.all([getSettings(), getCurrentUser(), withCohorts([course]), publicCurriculum(course.id, course.curriculum), publishedReviews(course.id), ratingsFor([course.id])]);
+  const [settings, user, [summary], curriculum, reviews, ratings, intro] = await Promise.all([getSettings(), getCurrentUser(), withCohorts([course]), publicCurriculum(course.id, course.curriculum), publishedReviews(course.id), ratingsFor([course.id]), lessonVideo(course.introVideoUrl)]);
   const rating = ratings.get(course.id);
   const cohorts = summary.cohorts;
   const instructorsByCohort = await getInstructorsByCohort(cohorts.map((c) => c.id));
@@ -53,7 +62,9 @@ export default async function CoursePage({ params, searchParams }: Props) {
   const photo = course.heroImageUrl;
   const open = cohorts.some((cohort) => cohort.enrollmentOpen && !cohort.full);
   const nextStart = cohorts.filter((cohort) => cohort.enrollmentOpen && cohort.startDate).map((cohort) => cohort.startDate!).sort()[0];
-  const courseNav = [course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, course.portfolioProjects.length > 0 && { href: "#projects", label: "Projects" }, reviews.length > 0 && { href: "#reviews", label: "Reviews" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
+  // The intro video takes the hero's picture slot; with a full-width hero photo there's no slot, so it opens the page instead.
+  const introBelowHero = intro && photo;
+  const courseNav = [introBelowHero && { href: "#intro", label: "Introduction" }, course.description && { href: "#overview", label: "Overview" }, curriculum.length > 0 && { href: "#curriculum", label: "Curriculum" }, course.outcomes.length > 0 && { href: "#outcomes", label: "Outcomes" }, course.portfolioProjects.length > 0 && { href: "#projects", label: "Projects" }, reviews.length > 0 && { href: "#reviews", label: "Reviews" }, { href: "#cohorts", label: "Dates & fees" }].filter(Boolean) as { href: string; label: string }[];
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -103,7 +114,9 @@ export default async function CoursePage({ params, searchParams }: Props) {
           { icon: LayersIcon, label: "Level", value: course.level },
           { icon: AwardIcon, label: "Credential", value: course.certificateEnabled ? "Verified certificate" : "Practical outcomes" },
         ]}
-        aside={photo ? undefined : (
+        aside={photo ? undefined : intro ? (
+          <HeroVisual><IntroVideo video={intro} title={course.title} /></HeroVisual>
+        ) : (
           <HeroVisual notes={[
             ...(nextStart ? [{ icon: CalendarIcon, title: `Starts ${formatDateOnly(nextStart)}`, text: open ? "Registration open" : undefined }] : []),
             ...(course.certificateEnabled ? [{ icon: AwardIcon, title: "Verified certificate", text: "With a QR verification link" }] : []),
@@ -129,6 +142,12 @@ export default async function CoursePage({ params, searchParams }: Props) {
 
       <div className="mx-auto grid max-w-[1200px] items-start gap-10 px-5 py-12 sm:px-8 md:py-16 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex min-w-0 flex-col gap-10">
+          {introBelowHero && (
+            <section id="intro" className="scroll-mt-36 flex flex-col gap-4">
+              <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Introduction</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">Watch the introduction</h2></div>
+              <div className="overflow-hidden rounded-[5px] border border-edge"><IntroVideo video={intro} title={course.title} /></div>
+            </section>
+          )}
           {course.description && (
             <section id="overview" className="scroll-mt-36 flex flex-col gap-4">
               <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Course overview</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What this course is designed to do</h2></div>

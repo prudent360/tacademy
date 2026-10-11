@@ -288,6 +288,13 @@
       "when": 1791705071853,
       "tag": "0040_community_membership",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791736818279,
+      "tag": "0041_course_intro_video",
+      "breakpoints": true
     }
   ]
 }

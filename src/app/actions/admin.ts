@@ -29,7 +29,8 @@ import { deleteIfReplaced, deleteUpload } from "@/lib/storage";
 import { issueToken } from "@/lib/tokens";
 import { resolveFileField, uploadErrorMessage } from "@/lib/upload-field";
 import { firstName, parseList, slugify } from "@/lib/utils";
-import { dateValue, email as emailSchema, firstError, formValues, required, sortValue, text, type FormState } from "@/lib/validation";
+import { dateValue, email as emailSchema, firstError, formValues, optionalUrl, required, sortValue, text, type FormState } from "@/lib/validation";
+import { parseVideoUrl } from "@/lib/video";
 
 async function imageField(formData: FormData, file: string, remove: string, current: string | null, folder: "courses" | "branding"): Promise<{ url: string | null } | { error: string }> {
   try {
@@ -59,6 +60,7 @@ const courseSchema = z.object({
   certificateMinQuizScore: z.coerce.number().int().min(0).max(100),
   seoTitle: text(70),
   seoDescription: text(200),
+  introVideoUrl: optionalUrl.refine((v) => v === "" || parseVideoUrl(v) !== null, "Paste a Bunny Stream, YouTube, Vimeo or Loom link for the intro video."),
 });
 
 async function saveCourse(id: number | null, formData: FormData): Promise<FormState | number> {
@@ -99,6 +101,7 @@ async function saveCourse(id: number | null, formData: FormData): Promise<FormSt
     featured: formData.get("featured") === "on",
     imageUrl: image.url,
     heroImageUrl: hero.url,
+    introVideoUrl: parsed.data.introVideoUrl || null,
     curriculumUrl,
     updatedAt: new Date(),
   };
