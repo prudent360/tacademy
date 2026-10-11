@@ -10,6 +10,7 @@ import { createSession, destroySession, getCurrentUser, requireUser } from "@/li
 import { sendEmail } from "@/lib/email";
 import { passwordProblem } from "@/lib/password";
 import { clearLoginFailures, loginBlockedFor, recordLoginFailure } from "@/lib/rate-limit";
+import { turnstilePassed } from "@/lib/turnstile";
 import { countryByCode } from "@/lib/countries";
 import { homeFor, PENDING_COOKIE, sessionSecretProblem, signPendingSignIn, signPendingVerification, VERIFY_COOKIE, verifyPendingSignIn, verifyPendingVerification } from "@/lib/session";
 import { decryptSecret } from "@/lib/secrets";
@@ -112,6 +113,7 @@ export async function register(_state: FormState, formData: FormData): Promise<F
   if (problem) return { error: problem };
   if (password !== String(formData.get("confirm") ?? "")) return { error: "The passwords don't match." };
   if (formData.get("terms") !== "on") return { error: "Please agree to the terms and privacy policy to create an account." };
+  if (!(await turnstilePassed(formData, "register"))) return { error: "We couldn't confirm you're not a bot. Wait for the security check above the button to finish, then try again." };
 
   const waitMinutes = await loginBlockedFor(email, "register");
   if (waitMinutes) return { error: `Too many attempts. Try again in ${waitMinutes} minute${waitMinutes === 1 ? "" : "s"}.` };

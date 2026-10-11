@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { register } from "@/app/actions/auth";
 import { EmailField, NameField, PasswordField, ProfileFields } from "@/components/auth/fields";
+import { Turnstile } from "@/components/auth/turnstile";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
+import { turnstileSiteKey } from "@/lib/turnstile";
 import { visitorCountry } from "@/lib/visitor";
 
 export const metadata: Metadata = { title: "Create an account", description: "Create a free account to save your progress and enrol on courses whenever you're ready." };
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const [{ next }, country] = await Promise.all([searchParams, visitorCountry()]);
+  const siteKey = turnstileSiteKey();
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -32,6 +35,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           <input type="checkbox" name="terms" required className="mt-0.5 size-4 shrink-0 accent-accent" />
           <span>I agree to the <Link href="/terms" target="_blank" className="font-semibold text-accent hover:text-accent-dark">terms</Link> and <Link href="/privacy" target="_blank" className="font-semibold text-accent hover:text-accent-dark">privacy policy</Link>.</span>
         </label>
+        {siteKey && <Turnstile siteKey={siteKey} action="register" />}
         <SubmitButton pendingText="Creating your account…" block>Create account</SubmitButton>
       </ActionForm>
       <p className="text-center text-sm text-muted">
