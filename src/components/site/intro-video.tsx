@@ -2,20 +2,13 @@
 
 import { useRef, useState } from "react";
 import { PlayIcon, XIcon } from "@/components/icons";
-import type { VideoProvider } from "@/lib/video";
-
-/** Each player's own way of saying "start playing", since the visitor just clicked play. */
-function withAutoplay(url: string, provider: VideoProvider): string {
-  const u = new URL(url);
-  u.searchParams.set("autoplay", provider === "bunny" ? "true" : "1");
-  return u.toString();
-}
 
 /**
  * Opens a course's intro video in a large pop-up. With children (the cover image), a play button sits over them;
- * without, it's a hero button. The player only loads when opened, and closing the pop-up stops it.
+ * without, it's a hero button. The player only loads when opened and waits for the visitor to press play; closing
+ * the pop-up stops it.
  */
-export function IntroVideo({ embedUrl, provider, title, className, children }: { embedUrl: string; provider: VideoProvider; title: string; className?: string; children?: React.ReactNode }) {
+export function IntroVideo({ embedUrl, title, className, children }: { embedUrl: string; title: string; className?: string; children?: React.ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
   const show = () => { setOpen(true); dialog.current?.showModal(); };
@@ -48,7 +41,7 @@ export function IntroVideo({ embedUrl, provider, title, className, children }: {
             <XIcon className="size-6" />
           </button>
           <div className="relative aspect-video w-full overflow-hidden rounded-[5px] bg-black shadow-2xl">
-            {open && <iframe src={withAutoplay(embedUrl, provider)} title={`Introduction: ${title}`} className="absolute inset-0 size-full border-0" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />}
+            {open && <iframe src={embedUrl} title={`Introduction: ${title}`} className="absolute inset-0 size-full border-0" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" />}
           </div>
         </div>
       </dialog>
