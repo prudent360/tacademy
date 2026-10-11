@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { count, desc, eq } from "drizzle-orm";
-import { runRemindersNow, saveWhatsAppSettings, sendWhatsAppTestNow, saveAiSettings, saveAnnouncement, saveCompany, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { runRemindersNow, saveWhatsAppSettings, sendWhatsAppTestNow, saveAiSettings, saveAnnouncement, saveCompany, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveCommunitySettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
@@ -15,7 +15,8 @@ import { bankTransferConfig, emailConfig, gatewayConfig, reminderConfig, type Re
 import { AI_MODELS, aiConfig } from "@/lib/ai";
 import { REQUIRED_TEMPLATES, sendingAllowance } from "@/lib/email";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "@/lib/email-templates";
-import { CURRENCIES } from "@/lib/money";
+import { communityConfig } from "@/lib/community-access";
+import { CURRENCIES, toMajorInput } from "@/lib/money";
 import { testPaymentsAllowed } from "@/lib/payments";
 import { maskSecret } from "@/lib/secrets";
 import { companiesHouseUrl, companyInfo } from "@/lib/company";
@@ -690,6 +691,40 @@ export async function ReferralsTab() {
           <li><strong className="text-ink">Commission follows the money.</strong> It&apos;s worked out on what the student actually pays, after discounts, in the same currency.</li>
           <li><strong className="text-ink">Refunds are handled.</strong> A refund reduces the commission, or cancels it when the refund is full.</li>
           <li><strong className="text-ink">You pay out.</strong> Payable commissions and each person&apos;s bank details are under <Link href="/admin/referrals" className="font-semibold text-accent-ink">Payments › Referrals</Link>, where you mark them paid.</li>
+        </ul>
+      </Section>
+    </div>
+  );
+}
+
+// ---------- Community ----------
+
+export async function CommunityTab({ s }: { s: Settings }) {
+  const c = await communityConfig();
+  const shown = CURRENCIES.filter((cur) => s.currencies.includes(cur.code) || (c.prices[cur.code] ?? 0) > 0);
+  return (
+    <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <ActionForm action={saveCommunitySettings} className="flex flex-col gap-6">
+        <Section title="Paid community" description="Charge people outside your courses to join the members' community. Current students, graduates, instructors and the team always get in free." badge={c.paid ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> Paid</Badge> : <Badge>Free for everyone</Badge>}>
+          <Switch label="Charge for membership" name="paid" defaultChecked={c.paid} hint="Off: every account can read and post. On: everyone else sees thread titles and a Join button." />
+          <Input label="Each payment buys (months)" name="months" type="number" min={1} max={36} defaultValue={c.months} hint="Renewing adds this on top of the time left, so nobody loses days. Members get a reminder a week before it ends." className="max-w-xs" />
+          <fieldset className="flex flex-col gap-3 rounded-lg border border-edge bg-panel p-4">
+            <legend className="px-1 text-sm font-semibold text-ink">Price</legend>
+            <p className="text-[13px] text-muted">Set a price in each currency you accept, as for cohorts. Bank transfer is offered in your bank-transfer currency when it has a price here.</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {shown.map((cur) => <Input key={cur.code} label={cur.code} name={`price-${cur.code}`} inputMode="decimal" placeholder="0" defaultValue={toMajorInput(c.prices[cur.code])} hint={cur.name} />)}
+            </div>
+          </fieldset>
+          <Textarea label="What members get" name="pitch" defaultValue={c.pitch} rows={5} hint="Shown on the Join page. Markdown works, e.g. a bulleted list of benefits." placeholder={"- Ask instructors and alumni for help\n- Job leads and CV reviews\n- Monthly live Q&As"} />
+        </Section>
+        <div><SubmitButton>Save community settings</SubmitButton></div>
+      </ActionForm>
+      <Section title="How it works">
+        <ul className="flex flex-col gap-2.5 text-sm leading-relaxed text-body">
+          <li><strong className="text-ink">Free for your learners.</strong> Anyone with an active or completed enrolment, and every instructor and team member, gets full access without paying.</li>
+          <li><strong className="text-ink">A teaser for everyone else.</strong> Non-members see thread titles and topics, but posts and replies are locked behind the Join page.</li>
+          <li><strong className="text-ink">Same checkout as courses.</strong> Payments go through your usual gateways or bank transfer and show under Payments. A full refund can end the membership it paid for.</li>
+          <li><strong className="text-ink">Manage members.</strong> See who&apos;s paid and give free access under <Link href="/admin/community" className="font-semibold text-accent-ink">Programmes › Community</Link>.</li>
         </ul>
       </Section>
     </div>

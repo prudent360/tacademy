@@ -27,7 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   testimonials: [],
   payment: {},
   email: {},
-  reminders: {}, referrals: {}, announcement: {}, company: {}, whatsapp: {},
+  reminders: {}, referrals: {}, announcement: {}, company: {}, community: {}, whatsapp: {},
   ai: {},
   seo: {},
   video: {},

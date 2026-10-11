@@ -13,7 +13,8 @@ import { detectTransactpayCurrencies } from "@/lib/payments";
 import { getSettings } from "@/lib/data";
 import { flushEmailQueue, sendEmail } from "@/lib/email";
 import { referralConfig } from "@/lib/referrals";
-import { CURRENCY_CODES } from "@/lib/money";
+import { communityConfig } from "@/lib/community-access";
+import { CURRENCY_CODES, parseMajor } from "@/lib/money";
 import { sendDueReminders } from "@/lib/reminders";
 import { encryptSecret } from "@/lib/secrets";
 import { sendWhatsAppTest, whatsappNumber } from "@/lib/whatsapp";
@@ -460,6 +461,26 @@ export async function saveReferralSettings(_state: FormState, formData: FormData
   await logAudit(actor, { action: "settings.saved", summary: `updated the referral settings${before.percent !== percent ? ` (commission ${before.percent}% → ${percent}%)` : ""}${before.enabled !== next.enabled ? (next.enabled ? ", switched referrals on" : ", switched referrals off") : ""}` });
   revalidatePath("/", "layout");
   return { ok: "Referral settings saved." };
+}
+
+export async function saveCommunitySettings(_state: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requirePermission("settings.manage");
+  const months = Number(String(formData.get("months") ?? "").trim());
+  if (!Number.isInteger(months) || months < 1 || months > 36) return { error: "Membership length must be between 1 and 36 months." };
+  const prices: Record<string, number> = {};
+  for (const code of CURRENCY_CODES) {
+    const minor = parseMajor(String(formData.get(`price-${code}`) ?? ""));
+    if (minor === null) continue;
+    if (Number.isNaN(minor)) return { error: `Enter the ${code} price as a number, e.g. 49 or 49.99.` };
+    if (minor > 0) prices[code] = minor;
+  }
+  const paid = formData.get("paid") === "on";
+  if (paid && !Object.keys(prices).length) return { error: "Add a price in at least one currency to charge for the community." };
+  const before = await communityConfig();
+  await update({ community: { paid, prices, months, pitch: String(formData.get("pitch") ?? "").trim().slice(0, 2000) } });
+  await logAudit(actor, { action: "settings.saved", summary: `updated the community settings${before.paid !== paid ? (paid ? ", started charging for membership" : ", made the community free") : ""}`, details: { prices, months } });
+  revalidatePath("/community", "layout");
+  return { ok: paid ? "Saved. Membership is now paid; students, graduates and the team still get in free." : "Saved. The community is free for every account." };
 }
 
 export async function saveAnnouncement(_state: FormState, formData: FormData): Promise<FormState> {

@@ -3,11 +3,12 @@ import { constants, createPublicKey, publicEncrypt, randomBytes } from "node:cry
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { getDb } from "@/db";
-import { discountCodes, enrollments, payments, users, type Cohort, type Course, type DiscountCode, type EnrollmentSource, type Payment, type PaymentPlan, type User } from "@/db/schema";
+import { discountCodes, enrollments, payments, users, type Cohort, type Course, type DiscountCode, type EnrollmentSource, type Payment, type PaymentPlan, type PaymentProduct, type User } from "@/db/schema";
 import { sendWhatsApp, whatsappNumber } from "./whatsapp";
 import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
+import { communityConfig, grantMembership, isPaidCommunity } from "./community-access";
 import { countryByCode } from "./countries";
 import { recordCommission } from "./referrals";
 import { markWaitlistEnrolled } from "./waitlist";
@@ -159,7 +160,12 @@ export function describePurchase(course: Course, cohort: Cohort): string {
   return `${course.title} – ${cohort.name}`;
 }
 
-async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, currency: string, details: {
+/** What is being bought: the cohort it's for (if any), and where the gateway's "cancel" button goes. */
+type Purchase = { cohortId: number | null; product: PaymentProduct; cancelUrl: string };
+
+const coursePurchase = (course: Course, cohort: Cohort): Purchase => ({ cohortId: cohort.id, product: "course", cancelUrl: absoluteUrl(`/courses/${course.slug}?cancelled=1`) });
+
+async function beginOnlinePayment(user: User, purchase: Purchase, currency: string, details: {
   amount: number;
   originalAmount: number;
   paymentPlan: PaymentPlan;
@@ -180,7 +186,7 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
 
   const reference = newReference();
   const db = await getDb();
-  await db.insert(payments).values({ reference, userId: user.id, cohortId: cohort.id, gateway: configured ? gateway : "test", providerId: configured ? null : `simulated:${gateway}`, amount, currency, description, originalAmount, paymentPlan, registrationFee, discountCodeId });
+  await db.insert(payments).values({ reference, userId: user.id, cohortId: purchase.cohortId, product: purchase.product, gateway: configured ? gateway : "test", providerId: configured ? null : `simulated:${gateway}`, amount, currency, description, originalAmount, paymentPlan, registrationFee, discountCodeId });
   const returnUrl = absoluteUrl(`/checkout/return?ref=${reference}`);
   if (!configured) return { url: `/checkout/test?ref=${reference}`, reference };
 
@@ -194,7 +200,7 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
         payment_intent_data: { metadata: { reference }, description },
         line_items: [{ quantity: 1, price_data: { currency: currency.toLowerCase(), unit_amount: amount, product_data: { name: description } } }],
         success_url: returnUrl,
-        cancel_url: absoluteUrl(`/courses/${course.slug}?cancelled=1`),
+        cancel_url: purchase.cancelUrl,
       });
       await db.update(payments).set({ providerId: session.id }).where(eq(payments.reference, reference));
       return { url: session.url!, reference };
@@ -219,7 +225,7 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
 
     const data = await paystack<{ authorization_url: string; reference: string }>(cfg.secretKey, "/transaction/initialize", {
       method: "POST",
-      body: JSON.stringify({ email: user.email, amount, currency, reference, callback_url: returnUrl, metadata: { reference, cohortId: cohort.id, userId: user.id } }),
+      body: JSON.stringify({ email: user.email, amount, currency, reference, callback_url: returnUrl, metadata: { reference, cohortId: purchase.cohortId, product: purchase.product, userId: user.id } }),
     });
     await db.update(payments).set({ providerId: data.reference }).where(eq(payments.reference, reference));
     return { url: data.authorization_url, reference };
@@ -230,7 +236,7 @@ async function beginOnlinePayment(user: User, course: Course, cohort: Cohort, cu
     // provider (Paystack or Stripe) takes over if it's set up. TransactPay-only currencies have no backup.
     const backup = gatewayFor(currency);
     if (gateway === "transactpay" && backup !== "transactpay" && (await gatewayConfig(backup)).enabled && ((await gatewayConfigured(backup)) || testPaymentsAllowed())) {
-      return beginOnlinePayment(user, course, cohort, currency, { ...details, skipTransactpay: true });
+      return beginOnlinePayment(user, purchase, currency, { ...details, skipTransactpay: true });
     }
     return { error: "We couldn't start the payment. Please try again in a moment." };
   }
@@ -263,7 +269,7 @@ export async function startCheckout(user: User, course: Course, cohort: Cohort, 
   const q = quote(cohort, currency, plan, discount?.percentOff ?? 0);
   const paymentPlan = q.later > 0 ? plan : "full";
   const description = `${describePurchase(course, cohort)}${planNote(paymentPlan, cohort, q.registrationFee)}${discount ? ` · ${discount.code}` : ""}`;
-  return beginOnlinePayment(user, course, cohort, currency, { amount: q.dueNow, originalAmount: q.tuitionPrice, paymentPlan, registrationFee: q.registrationFee, discountCodeId: discount?.id, description });
+  return beginOnlinePayment(user, coursePurchase(course, cohort), currency, { amount: q.dueNow, originalAmount: q.tuitionPrice, paymentPlan, registrationFee: q.registrationFee, discountCodeId: discount?.id, description });
 }
 
 export type PaymentBalance = { total: number; paid: number; remaining: number; currency: string };
@@ -291,7 +297,7 @@ export async function startBalanceCheckout(user: User, course: Course, cohort: C
   if (!balance.remaining) return { error: "This cohort has already been paid in full." };
   const db = await getDb();
   await db.update(payments).set({ status: "failed" }).where(and(eq(payments.userId, user.id), eq(payments.cohortId, cohort.id), eq(payments.currency, currency), eq(payments.paymentPlan, "balance"), eq(payments.status, "pending")));
-  return beginOnlinePayment(user, course, cohort, currency, {
+  return beginOnlinePayment(user, coursePurchase(course, cohort), currency, {
     amount: balance.remaining,
     originalAmount: balance.total,
     paymentPlan: "balance",
@@ -324,6 +330,42 @@ export async function startBankTransfer(user: User, course: Course, cohort: Coho
   await notify((await getAdmins()).map((a) => a.id), {
     kind: "payment",
     title: `Bank transfer expected: ${formatMoney(q.dueNow, bank.currency)}`,
+    body: `${user.name} chose bank transfer for ${description} (ref ${reference}).`,
+    href: "/admin/payments?status=pending",
+  });
+  return { url: `/checkout/transfer?ref=${reference}`, reference };
+}
+
+const communityPurchase = (): Purchase => ({ cohortId: null, product: "community", cancelUrl: absoluteUrl("/community/join?cancelled=1") });
+
+function describeMembership(months: number): string {
+  return `Community membership (${months === 12 ? "1 year" : months === 1 ? "1 month" : `${months} months`})`;
+}
+
+/** Starts an online payment for a period of community membership. */
+export async function startCommunityCheckout(user: User, currency: string): Promise<{ url: string; reference: string } | { error: string }> {
+  const c = await communityConfig();
+  const amount = c.prices[currency] ?? 0;
+  if (!isPaidCommunity(c) || amount <= 0) return { error: "Community membership isn't sold in that currency." };
+  return beginOnlinePayment(user, communityPurchase(), currency, { amount, originalAmount: amount, paymentPlan: "full", description: describeMembership(c.months) });
+}
+
+/** Creates (or reuses) a pending bank transfer for community membership, for the team to confirm under Payments. */
+export async function startCommunityBankTransfer(user: User): Promise<{ url: string; reference: string } | { error: string }> {
+  const [bank, c] = await Promise.all([bankTransferConfig(), communityConfig()]);
+  const amount = c.prices[bank.currency] ?? 0;
+  if (!bank.enabled || !isPaidCommunity(c) || amount <= 0) return { error: "Bank transfer isn't available for community membership." };
+  const db = await getDb();
+  const open = await db.select().from(payments).where(and(eq(payments.userId, user.id), eq(payments.product, "community"), eq(payments.gateway, "manual"), eq(payments.status, "pending")));
+  const same = open.find((p) => p.amount === amount && p.currency === bank.currency);
+  if (same) return { url: `/checkout/transfer?ref=${same.reference}`, reference: same.reference };
+  if (open.length) await db.update(payments).set({ status: "failed" }).where(inArray(payments.id, open.map((p) => p.id)));
+  const reference = newReference();
+  const description = describeMembership(c.months);
+  await db.insert(payments).values({ reference, userId: user.id, cohortId: null, product: "community", gateway: "manual", amount, currency: bank.currency, description, originalAmount: amount });
+  await notify((await getAdmins()).map((a) => a.id), {
+    kind: "payment",
+    title: `Bank transfer expected: ${formatMoney(amount, bank.currency)}`,
     body: `${user.name} chose bank transfer for ${description} (ref ${reference}).`,
     href: "/admin/payments?status=pending",
   });
@@ -445,6 +487,17 @@ export async function fulfilPayment(reference: string): Promise<void> {
   if (whatsappTo) await sendWhatsApp([{ to: whatsappTo, template: "payment_receipt", params: [firstName(user.name), amount, payment.description, payment.reference] }]);
 
   if (payment.cohortId) await activateEnrollment(payment.userId, payment.cohortId, "payment");
+  if (payment.product === "community") {
+    const granted = await grantMembership(payment.userId, (await communityConfig()).months, { paymentId: payment.id });
+    if (granted) {
+      await notify([payment.userId], {
+        kind: "community",
+        title: "Welcome to the community",
+        body: `Your membership runs until ${granted.endsAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.`,
+        href: "/community",
+      });
+    }
+  }
   await recordCommission(payment).catch((e) => console.error("Referral commission:", e));
 
   await notify((await getAdmins()).map((a) => a.id), {

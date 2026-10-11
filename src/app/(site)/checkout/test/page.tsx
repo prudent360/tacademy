@@ -32,7 +32,7 @@ export default async function TestCheckoutPage({ searchParams }: { searchParams:
         <form action={completeTestPayment.bind(null, payment.reference)}>
           <button type="submit" className="flex h-12 w-full cursor-pointer items-center justify-center rounded-lg bg-accent font-semibold text-white hover:bg-accent-dark">Simulate successful payment</button>
         </form>
-        <Link href="/courses" className="text-center text-sm font-semibold text-muted hover:text-ink">Cancel</Link>
+        <Link href={payment.product === "community" ? "/community/join" : "/courses"} className="text-center text-sm font-semibold text-muted hover:text-ink">Cancel</Link>
       </div>
     </div>
   );

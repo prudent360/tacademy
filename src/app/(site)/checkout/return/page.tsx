@@ -29,14 +29,16 @@ export default async function CheckoutReturnPage({ searchParams }: { searchParam
       <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{paid ? "Payment successful" : payment.status === "failed" ? "Payment didn't go through" : "Confirming your payment"}</h1>
       <p className="text-lg text-muted">
         {paid
-          ? <>You paid {formatMoney(payment.amount, payment.currency)} for {payment.description}. Your place is confirmed and a receipt is on its way to {owner?.email}.{needsPassword && <> We&apos;ve also emailed you a link to set your password and open your student dashboard.</>}</>
+          ? <>You paid {formatMoney(payment.amount, payment.currency)} for {payment.description}. {payment.product === "community" ? "Your membership is active" : "Your place is confirmed"} and a receipt is on its way to {owner?.email}.{needsPassword && <> We&apos;ve also emailed you a link to set your password and open your student dashboard.</>}</>
           : payment.status === "failed"
             ? "You haven't been charged. Please try again or use a different payment method."
             : "We're waiting for the payment provider to confirm. This usually takes a few seconds; refresh this page or check your dashboard shortly."}
       </p>
       <p className="font-mono text-xs text-muted">Reference {payment.reference}</p>
       <div className="flex flex-wrap justify-center gap-3">
-        {paid && payment.cohortId && signedIn ? (
+        {paid && payment.product === "community" && signedIn ? (
+          <Link href="/community?joined=1" className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Open the community</Link>
+        ) : paid && payment.cohortId && signedIn ? (
           <Link href={`/dashboard/cohorts/${payment.cohortId}?welcome=1`} className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Open my course</Link>
         ) : paid ? (
           <Link href="/login" className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Sign in</Link>

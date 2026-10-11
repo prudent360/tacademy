@@ -16,6 +16,7 @@ export const PERMISSIONS = [
   "instructors.review",
   "reviews.manage",
   "showcase.manage",
+  "community.manage",
   "payments.view",
   "payments.manage",
   "discounts.manage",
@@ -42,6 +43,7 @@ export const PERMISSION_GROUPS: { title: string; items: { key: Permission; label
     { key: "applications.review", label: "Review internship applications", hint: "Shortlist, accept or decline applicants" },
     { key: "reviews.manage", label: "Moderate student reviews", hint: "Publish or hide reviews on course pages" },
     { key: "showcase.manage", label: "Moderate the project showcase", hint: "Hide or restore projects on the public Projects page" },
+    { key: "community.manage", label: "Moderate the community", hint: "Pin, lock and delete community posts and replies" },
   ] },
   { title: "People", items: [
     { key: "users.view", label: "View people", hint: "Students and instructors, their details and progress" },

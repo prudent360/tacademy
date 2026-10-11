@@ -141,7 +141,9 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
                             <ActionForm action={recordRefund.bind(null, p.reference)} className="flex flex-col gap-3">
                               <Input label={`Amount (${p.currency})`} name="amount" inputMode="decimal" defaultValue={((p.amount - p.refundedAmount) / 100).toFixed(2).replace(/\.00$/, "")} required hint={`Up to ${formatMoney(p.amount - p.refundedAmount, p.currency)}`} />
                               <Input label="Reason" name="reason" required placeholder="e.g. Withdrew before the cohort started" />
-                              <label className="flex items-center gap-2 text-sm text-body"><input type="checkbox" name="removeFromCohort" className="size-4 accent-accent" /> Remove them from the cohort</label>
+                              {p.product === "community"
+                                ? <label className="flex items-center gap-2 text-sm text-body"><input type="checkbox" name="endMembership" defaultChecked className="size-4 accent-accent" /> End the community membership this paid for</label>
+                                : <label className="flex items-center gap-2 text-sm text-body"><input type="checkbox" name="removeFromCohort" className="size-4 accent-accent" /> Remove them from the cohort</label>}
                               <label className="flex items-center gap-2 text-sm text-body"><input type="checkbox" name="notify" defaultChecked className="size-4 accent-accent" /> Email the student</label>
                               <SubmitButton pendingText="Recording…">Record refund</SubmitButton>
                             </ActionForm>

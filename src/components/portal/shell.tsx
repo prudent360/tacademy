@@ -64,6 +64,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
       { href: "/admin/certificates", label: "Certificates", icon: AwardIcon, perm: "certificates.manage" },
       { href: "/admin/reviews", label: "Reviews", icon: MessageIcon, perm: "reviews.manage" },
       { href: "/admin/showcase", label: "Project showcase", icon: AwardIcon, perm: "showcase.manage" },
+      { href: "/admin/community", label: "Community members", icon: UsersIcon, perm: "community.manage" },
     ],
   };
   const peopleAndSales: NavGroup = {
@@ -103,6 +104,10 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
       },
     ],
   };
+  const community: NavGroup = {
+    label: "Community",
+    items: [{ href: "/community", label: "Community", icon: MessageIcon }],
+  };
   const account: NavGroup = {
     label: "Account",
     items: [
@@ -112,8 +117,8 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
       { href: "/account", label: "Profile & security", icon: UserIcon, exact: true },
     ],
   };
-  if (role === "instructor") return [teaching, account];
-  if (role === "student") return [learning, account];
+  if (role === "instructor") return [teaching, community, account];
+  if (role === "student") return [learning, community, account];
   // Admins and staff see what their permissions allow; a parent with one allowed child keeps just that child.
   const allowed = new Set(perms);
   const keep = (items: NavItem[]): NavItem[] => items.flatMap((item) => {
@@ -124,7 +129,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
     return !item.perm || allowed.has(item.perm) ? [item] : [];
   });
   const groups = [overview, programmes, peopleAndSales, ...(role === "admin" ? [teaching] : []), system].map((g) => ({ ...g, items: keep(g.items) })).filter((g) => g.items.length > 0);
-  return [...groups, account];
+  return [...groups, community, account];
 }
 
 function bottomNavFor(role: Role, perms: Permission[]): NavItem[] {

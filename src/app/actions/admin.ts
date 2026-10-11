@@ -21,6 +21,7 @@ import { certificateEligibility } from "@/lib/certificates";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
 import { countryByCode } from "@/lib/countries";
 import { CURRENCY_CODES, formatMoney, parseMajor } from "@/lib/money";
+import { revokeMembershipForPayment } from "@/lib/community-access";
 import { activateEnrollment, describePurchase, fulfilPayment, paymentBalanceFor, verifyPayment } from "@/lib/payments";
 import { notify } from "@/lib/notify";
 import { absoluteUrl } from "@/lib/site";
@@ -546,14 +547,19 @@ export async function recordRefund(reference: string, _state: FormState, formDat
       await offerOpenPlaces(payment.cohortId);
     }
   }
+  // Community payments: optionally take away the period of access it bought.
+  if (formData.get("endMembership") === "on" && payment.product === "community") {
+    removed = await revokeMembershipForPayment(payment.id);
+    if (removed) revalidatePath("/community", "layout");
+  }
   const [student] = await db.select().from(users).where(eq(users.id, payment.userId));
   if (student && formData.get("notify") === "on") {
     await sendEmail(student.email, "refund_processed", { name: firstName(student.name), amount: formatMoney(amount, payment.currency), description: payment.description, reference: payment.reference, paymentsUrl: absoluteUrl("/dashboard/payments") });
   }
-  await logAudit(actor, { action: "refund.recorded", summary: `recorded a ${full ? "full" : "partial"} refund of ${formatMoney(amount, payment.currency)} on ${reference}${student ? ` for ${student.name}` : ""}${removed ? " and removed them from the cohort" : ""}`, target: { type: "payment", id: reference }, details: { reason } });
+  await logAudit(actor, { action: "refund.recorded", summary: `recorded a ${full ? "full" : "partial"} refund of ${formatMoney(amount, payment.currency)} on ${reference}${student ? ` for ${student.name}` : ""}${removed ? (payment.product === "community" ? " and ended their community membership" : " and removed them from the cohort") : ""}`, target: { type: "payment", id: reference }, details: { reason } });
   revalidatePath("/admin/payments");
   revalidatePath("/dashboard/payments");
-  return { ok: `Refund of ${formatMoney(amount, payment.currency)} recorded${removed ? " and the student was removed from the cohort" : ""}.` };
+  return { ok: `Refund of ${formatMoney(amount, payment.currency)} recorded${removed ? (payment.product === "community" ? " and their community membership was ended" : " and the student was removed from the cohort") : ""}.` };
 }
 
 // ---------- Email templates ----------

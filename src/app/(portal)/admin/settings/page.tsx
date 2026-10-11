@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SettingsMobileNav, SettingsSectionNav } from "@/components/admin/settings-section-nav";
-import { AiTab, AnnouncementTab, BrandingTab, SeoTab, VideoTab, EmailTab, GeneralTab, PaymentsTab, ReferralsTab, RemindersTab, TemplatesTab, WhatsAppTab } from "@/components/admin/settings-tabs";
+import { AiTab, AnnouncementTab, BrandingTab, CommunityTab, SeoTab, VideoTab, EmailTab, GeneralTab, PaymentsTab, ReferralsTab, RemindersTab, TemplatesTab, WhatsAppTab } from "@/components/admin/settings-tabs";
 import { CardIcon, CogIcon, FileIcon, MailIcon, SparkIcon } from "@/components/icons";
 import { PageHeader, Tabs } from "@/components/ui";
 import type { Settings } from "@/db/schema";
@@ -19,9 +19,10 @@ const GROUPS = [
     { id: "branding", label: "Branding", render: (s) => <BrandingTab s={s} /> },
     { id: "seo", label: "Search & sharing", render: (s) => <SeoTab s={s} /> },
   ] },
-  { key: "payments", label: "Payments", icon: CardIcon, description: "How students pay, in which currencies, and what people earn for referring others.", parts: [
+  { key: "payments", label: "Payments", icon: CardIcon, description: "How students pay, in which currencies, what people earn for referring others, and community membership.", parts: [
     { id: "methods", label: "Payment methods", render: (s) => <PaymentsTab s={s} /> },
     { id: "referrals", label: "Referrals", render: () => <ReferralsTab /> },
+    { id: "community", label: "Community", render: (s) => <CommunityTab s={s} /> },
   ] },
   { key: "messages", label: "Messages", icon: MailIcon, description: "How the academy reaches people: email, reminders, WhatsApp and the dashboard pop-up.", parts: [
     { id: "email", label: "Email delivery", render: (s) => <EmailTab s={s} /> },

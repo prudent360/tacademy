@@ -24,7 +24,8 @@ export default async function TransferPage({ searchParams }: { searchParams: Pro
     return (
       <div className="mx-auto flex max-w-[560px] flex-col items-center gap-4 px-5 py-20 text-center">
         <h1 className="font-display text-3xl font-bold text-ink">Transfer received</h1>
-        <p className="text-lg text-muted">Your place is confirmed. See you in class!</p>
+        <p className="text-lg text-muted">{payment.product === "community" ? "Your community membership is active. Come and say hello!" : "Your place is confirmed. See you in class!"}</p>
+        {payment.product === "community" && signedIn && <Link href="/community" className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Open the community</Link>}
         {payment.cohortId && signedIn && <Link href={`/dashboard/cohorts/${payment.cohortId}`} className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Open my course</Link>}
       </div>
     );

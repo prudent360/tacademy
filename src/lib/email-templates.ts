@@ -573,6 +573,21 @@ After that, it's offered to the next person on the waitlist.
 
 The {{siteName}} team`,
   },
+  community_expiring: {
+    name: "Community membership ending",
+    description: "Sent a week before someone's paid community membership ends, if they haven't renewed.",
+    variables: { endDate: "12 October 2027", renewUrl: "https://example.com/community/join" },
+    subject: "Your community membership ends on {{endDate}}",
+    body: `Hi {{name}},
+
+Your {{siteName}} community membership ends on **{{endDate}}**. After that you'll still see thread titles, but you won't be able to read posts or reply.
+
+Renew now and the new period starts when the current one ends, so you won't lose any days.
+
+[[Renew my membership|{{renewUrl}}]]
+
+The {{siteName}} team`,
+  },
 } satisfies Record<string, TemplateDef>;
 
 export type TemplateKey = keyof typeof EMAIL_TEMPLATES;

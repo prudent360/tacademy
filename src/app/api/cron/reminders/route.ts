@@ -1,3 +1,4 @@
+import { sendMembershipReminders } from "@/lib/community-access";
 import { flushEmailQueue } from "@/lib/email";
 import { sendDueFollowUps, sendFreeClassReminders } from "@/lib/free-class-jobs";
 import { sendDueReminders } from "@/lib/reminders";
@@ -19,7 +20,9 @@ export async function GET(request: Request) {
   const freeClassFollowUps = await sendDueFollowUps();
   // Waitlist offers that weren't taken in time pass to the next person.
   const expiredOffers = await expireOffers();
+  // Paid community members whose access ends within a week.
+  const communityReminders = await sendMembershipReminders();
   // Emails held back by the daily sending limit.
   const emailQueue = await flushEmailQueue();
-  return Response.json({ ok: true, ...result, freeClassReminders, freeClassFollowUps, expiredOffers, emailQueue });
+  return Response.json({ ok: true, ...result, freeClassReminders, freeClassFollowUps, expiredOffers, communityReminders, emailQueue });
 }

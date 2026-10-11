@@ -22,6 +22,8 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export type Gateway = "stripe" | "paystack" | "transactpay" | "manual" | "test";
 /** full: all tuition now · deposit: part of the tuition now · registration: registration fee only · balance: the rest later. */
 export type PaymentPlan = "full" | "deposit" | "registration" | "balance";
+/** What a payment buys: a place on a cohort, or a period of community membership. */
+export type PaymentProduct = "course" | "community";
 
 export const ATTENDANCE_STATUSES = ["present", "late", "absent", "excused"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
@@ -189,6 +191,8 @@ export type ReferralSettings = { enabled: boolean; percent: number; cookieDays: 
 /** A pop-up shown once on the dashboard. `version` changes on every save, so an edited message shows again. */
 export type AnnouncementSettings = { enabled: boolean; title: string; body: string; buttonLabel: string; buttonUrl: string; audience: "students" | "everyone"; version: string };
 /** The legal entity behind the academy, shown in the footer and emails (UK companies must show these). */
+/** Paid community membership. Off means the community is open to every account. */
+export type CommunitySettings = { paid: boolean; prices: PriceMap; months: number; pitch: string };
 export type CompanySettings = { legalName: string; number: string; jurisdiction: string; registeredOffice: string };
 export type PayoutDetails = { method: "bank" | "other"; bankName: string; accountName: string; accountNumber: string; other: string };
 /** WhatsApp Cloud API (Meta). The access token is stored encrypted. */
@@ -228,6 +232,7 @@ export const settings = pgTable("settings", {
   referrals: jsonb("referrals").$type<Partial<ReferralSettings>>().notNull().default({}),
   announcement: jsonb("announcement").$type<Partial<AnnouncementSettings>>().notNull().default({}),
   company: jsonb("company").$type<Partial<CompanySettings>>().notNull().default({}),
+  community: jsonb("community").$type<Partial<CommunitySettings>>().notNull().default({}),
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
   seo: jsonb("seo").$type<Partial<SeoSettings>>().notNull().default({}),
   video: jsonb("video").$type<Partial<VideoSettings>>().notNull().default({}),
@@ -587,6 +592,7 @@ export const payments = pgTable("payments", {
   reference: text("reference").notNull().unique(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   cohortId: integer("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  product: text("product").$type<PaymentProduct>().notNull().default("course"),
   gateway: text("gateway").$type<Gateway>().notNull(),
   providerId: text("provider_id"),
   amount: integer("amount").notNull(),
@@ -977,3 +983,57 @@ export const showcaseProjects = pgTable("showcase_projects", {
 }, (t) => [index("showcase_projects_status_idx").on(t.status, t.publishedAt), index("showcase_projects_user_idx").on(t.userId)]);
 
 export type ShowcaseProject = typeof showcaseProjects.$inferSelect;
+
+/** Topics in the members' community. Labels and descriptions are in lib/community.ts. */
+export const COMMUNITY_CATEGORIES = ["general", "help", "wins", "jobs", "resources"] as const;
+export type CommunityCategory = (typeof COMMUNITY_CATEGORIES)[number];
+
+/** A thread in the members' community, open to everyone with an account. Bodies are Markdown. */
+export const communityPosts = pgTable("community_posts", {
+  id: serial("id").primaryKey(),
+  authorId: integer("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: text("category").$type<CommunityCategory>().notNull().default("general"),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  /** Pinned threads stay at the top of the list. */
+  pinned: boolean("pinned").notNull().default(false),
+  /** Locked threads can be read but take no new replies. */
+  locked: boolean("locked").notNull().default(false),
+  replyCount: integer("reply_count").notNull().default(0),
+  /** The newest reply, or the post itself; the list is sorted by it. */
+  lastActivityAt: timestamp("last_activity_at", { withTimezone: true }).notNull().defaultNow(),
+  editedAt: timestamp("edited_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("community_posts_activity_idx").on(t.pinned, t.lastActivityAt), index("community_posts_category_idx").on(t.category, t.lastActivityAt), index("community_posts_author_idx").on(t.authorId, t.createdAt)]);
+
+export const communityReplies = pgTable("community_replies", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => communityPosts.id, { onDelete: "cascade" }),
+  authorId: integer("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  editedAt: timestamp("edited_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("community_replies_post_idx").on(t.postId, t.createdAt), index("community_replies_author_idx").on(t.authorId, t.createdAt)]);
+
+export type CommunityPost = typeof communityPosts.$inferSelect;
+export type CommunityReply = typeof communityReplies.$inferSelect;
+
+/**
+ * A period of paid community access: bought (paymentId set) or granted by the team. Renewals start when the
+ * previous period ends. Students, graduates and staff get in without one (lib/community-access.ts).
+ */
+export const communityMemberships = pgTable("community_memberships", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  paymentId: integer("payment_id").unique().references(() => payments.id, { onDelete: "set null" }),
+  grantedById: integer("granted_by_id").references(() => users.id, { onDelete: "set null" }),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  /** Set when the payment is fully refunded or the team takes access away. */
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  /** When the "your membership ends soon" email went out. */
+  reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("community_memberships_user_idx").on(t.userId, t.endsAt), index("community_memberships_ends_idx").on(t.endsAt)]);
+
+export type CommunityMembership = typeof communityMemberships.$inferSelect;
