@@ -131,18 +131,18 @@ export default async function CoursePage({ params, searchParams }: Props) {
         </div>
       </PageHero>
 
-      <nav aria-label="Course sections" className="sticky top-[68px] z-20 border-y border-edge bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-[1200px] gap-1 overflow-x-auto px-5 sm:px-8">{courseNav.map((item) => <a key={item.href} href={item.href} className="shrink-0 border-b-2 border-transparent px-3 py-3.5 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent">{item.label}</a>)}</div></nav>
+      <nav aria-label="Course sections" className="border-y border-edge bg-white"><div className="mx-auto flex max-w-[1200px] gap-1 overflow-x-auto px-5 sm:px-8">{courseNav.map((item) => <a key={item.href} href={item.href} className="shrink-0 border-b-2 border-transparent px-3 py-3.5 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent">{item.label}</a>)}</div></nav>
 
       <div className="mx-auto grid max-w-[1200px] items-start gap-10 px-5 py-12 sm:px-8 md:py-16 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex min-w-0 flex-col gap-10">
           {course.description && (
-            <section id="overview" className="scroll-mt-36 flex flex-col gap-4">
+            <section id="overview" className="scroll-mt-28 flex flex-col gap-4">
               <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Course overview</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What this course is designed to do</h2></div>
               <Markdown>{course.description}</Markdown>
             </section>
           )}
           {course.outcomes.length > 0 && (
-            <section id="outcomes" className="scroll-mt-36 rounded-[5px] border border-edge bg-white p-6 md:p-7">
+            <section id="outcomes" className="scroll-mt-28 rounded-[5px] border border-edge bg-white p-6 md:p-7">
               <h2 className="font-display text-2xl font-bold text-ink">What you&apos;ll be able to do</h2>
               <ul className="mt-5 grid gap-3 sm:grid-cols-2">
                 {course.outcomes.map((o) => (
@@ -161,7 +161,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
             <div><h2 className="font-display text-xl font-bold text-ink">Earn a verified certificate</h2><p className="mt-1 text-[15px] leading-6 text-muted">Complete the course with at least {course.certificateMinAttendance}% attendance, {course.certificateMinAssignments}% of assignments submitted, and a {course.certificateMinScore}% average score. Your certificate includes a public verification link and QR code.</p></div>
           </section>}
           {curriculum.length > 0 && (
-            <section id="curriculum" className="scroll-mt-36 flex flex-col gap-5">
+            <section id="curriculum" className="scroll-mt-28 flex flex-col gap-5">
               <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Curriculum</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What you&apos;ll learn, week by week</h2></div>
               <ol className="divide-y divide-line border-y border-line">
                 {curriculum.map((module, index) => {
@@ -197,7 +197,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
             </section>
           )}
           {course.portfolioProjects.length > 0 && (
-            <section id="projects" className="scroll-mt-36 flex flex-col gap-5">
+            <section id="projects" className="scroll-mt-28 flex flex-col gap-5">
               <div>
                 <p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Portfolio</p>
                 <h2 className="mt-2 font-display text-2xl font-bold text-ink">What you&apos;ll build</h2>
@@ -232,7 +232,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
             </section>
           )}
           {reviews.length > 0 && rating && (
-            <section id="reviews" className="scroll-mt-36 flex flex-col gap-5">
+            <section id="reviews" className="scroll-mt-28 flex flex-col gap-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div><p className="font-mono text-xs font-semibold uppercase tracking-wider text-accent">Reviews</p><h2 className="mt-2 font-display text-2xl font-bold text-ink">What students say</h2></div>
                 <p className="flex items-center gap-2"><span className="flex">{[1, 2, 3, 4, 5].map((i) => <Star key={i} filled={i <= Math.round(rating.average)} className="size-5" />)}</span><strong className="font-display text-xl text-ink">{rating.average.toFixed(1)}</strong><span className="text-sm text-muted">from {rating.count} review{rating.count === 1 ? "" : "s"}</span></p>
@@ -266,7 +266,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
           )}
         </div>
 
-        <aside id="cohorts" className="scroll-mt-36 flex flex-col gap-4 lg:sticky lg:top-36">
+        <aside id="cohorts" className="scroll-mt-28 flex flex-col gap-4 lg:sticky lg:top-24">
           <h2 className="font-display text-xl font-bold text-ink">Choose a cohort</h2>
           {cancelled && <Notice tone="amber">Payment was cancelled, so you haven&apos;t been charged. You can try again whenever you&apos;re ready.</Notice>}
           {cohorts.length === 0 && (
@@ -277,7 +277,7 @@ export default async function CoursePage({ params, searchParams }: Props) {
           {cohorts.map((cohort) => {
             const enrolled = myCohortIds.has(cohort.id);
             return (
-              <div key={cohort.id} id={`cohort-${cohort.id}`} className="flex scroll-mt-36 flex-col gap-4 rounded-[5px] border border-edge bg-white p-5 transition hover:border-accent-muted hover:shadow-[0_18px_40px_-30px_rgba(24,19,64,.4)] target:border-accent target:ring-2 target:ring-accent/20 md:p-6">
+              <div key={cohort.id} id={`cohort-${cohort.id}`} className="flex scroll-mt-28 flex-col gap-4 rounded-[5px] border border-edge bg-white p-5 transition hover:border-accent-muted hover:shadow-[0_18px_40px_-30px_rgba(24,19,64,.4)] target:border-accent target:ring-2 target:ring-accent/20 md:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex flex-col gap-0.5">
                     <p className="font-display text-lg font-bold text-ink">{cohort.name}</p>
