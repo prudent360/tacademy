@@ -22,7 +22,7 @@ const SETTINGS_TABS: [string, string][] = [
   ["general", "General"], ["payments", "Payments"], ["messages", "Messages"], ["templates", "Email templates"], ["integrations", "Integrations"],
 ];
 
-function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number; newJobApplications?: number }, perms: Permission[], referrals = false): NavGroup[] {
+function navFor(role: Role, counts: { unread: number; toGrade: number; newApplications: number; newInstructorApplications: number; newJobApplications?: number; newAmbassadors?: number }, perms: Permission[], referrals = false, ambassador = false): NavGroup[] {
   const learning: NavGroup = {
     label: "Learning",
     items: [
@@ -81,6 +81,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
           { href: "/admin/payments", label: "All payments", icon: CardIcon, perm: "payments.view" },
           { href: "/admin/discounts", label: "Discount codes", icon: CardIcon, perm: "discounts.manage" },
           { href: "/admin/referrals", label: "Referrals", icon: GiftIcon, perm: "referrals.manage" },
+          { href: "/admin/ambassadors", label: "Ambassadors", icon: AwardIcon, badge: counts.newAmbassadors, perm: "referrals.manage" },
         ],
       },
       { href: "/admin/leads", label: "Curriculum requests", icon: DownloadIcon, perm: "leads.view" },
@@ -112,6 +113,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
     label: "Account",
     items: [
       ...(role === "student" ? [{ href: "/dashboard/payments", label: "Payments", icon: CardIcon }] : []),
+      ...(ambassador ? [{ href: "/account/ambassador", label: "Ambassador", icon: AwardIcon }] : []),
       ...(referrals ? [{ href: "/account/referrals", label: "Refer & earn", icon: GiftIcon }] : []),
       { href: "/notifications", label: "Notifications", icon: BellIcon, badge: counts.unread },
       { href: "/account", label: "Profile & security", icon: UserIcon, exact: true },
@@ -357,7 +359,7 @@ function PromoArt() {
   );
 }
 
-export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl = null, theme: initialTheme = "light", unread, toGrade, newApplications = 0, newInstructorApplications = 0, newJobApplications = 0, permissions = [], referrals = false, notifications, studentId, xp, logout, markAllRead }: {
+export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkUrl = null, theme: initialTheme = "light", unread, toGrade, newApplications = 0, newInstructorApplications = 0, newJobApplications = 0, newAmbassadors = 0, permissions = [], referrals = false, ambassador = false, notifications, studentId, xp, logout, markAllRead }: {
   children: React.ReactNode;
   role: Role;
   user: { name: string; email: string; avatarUrl: string | null; gender?: Gender | null };
@@ -373,10 +375,14 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
   newApplications?: number;
   newInstructorApplications?: number;
   newJobApplications?: number;
+  /** Ambassador applications waiting for review. */
+  newAmbassadors?: number;
   /** Admin-area permissions, for admins and staff. */
   permissions?: Permission[];
   /** Refer & earn is switched on. */
   referrals?: boolean;
+  /** Has applied to, or is in, the ambassador programme. */
+  ambassador?: boolean;
   notifications: ShellNotification[];
   /** Shown instead of the date for students. */
   studentId?: string;
@@ -388,7 +394,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
   const pathname = usePathname();
   const tab = useSearchParams().get("tab");
   const [drawer, setDrawer] = useState(false);
-  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications, newJobApplications }, permissions, referrals);
+  const groups = navFor(role, { unread, toGrade, newApplications, newInstructorApplications, newJobApplications, newAmbassadors }, permissions, referrals, ambassador);
   // Which groups and dropdowns are open is remembered in this browser; until changed, groups start open and
   // dropdowns open when they hold the current page.
   const storedNav = useSyncExternalStore(subscribeStorage, readNavState, () => null);
@@ -447,7 +453,7 @@ export function PortalShell({ children, role, user, siteName, logoUrl, logoDarkU
     ];
     return [...actions, ...pages, ...settings];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role, permissions, referrals, theme, unread, toGrade]);
+  }, [role, permissions, referrals, ambassador, theme, unread, toGrade]);
 
   const sidebar = (compact: boolean) => (
     <aside className={`relative flex h-full flex-col transition-[width,background-color] duration-300 ${compact ? "w-[88px]" : "w-[276px]"} ${t.aside}`}>

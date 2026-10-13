@@ -13,6 +13,7 @@ import { detectTransactpayCurrencies } from "@/lib/payments";
 import { getSettings } from "@/lib/data";
 import { flushEmailQueue, sendEmail } from "@/lib/email";
 import { referralConfig } from "@/lib/referrals";
+import { ambassadorConfig } from "@/lib/ambassadors";
 import { communityConfig } from "@/lib/community-access";
 import { CURRENCY_CODES, parseMajor } from "@/lib/money";
 import { sendDueReminders } from "@/lib/reminders";
@@ -461,6 +462,20 @@ export async function saveReferralSettings(_state: FormState, formData: FormData
   await logAudit(actor, { action: "settings.saved", summary: `updated the referral settings${before.percent !== percent ? ` (commission ${before.percent}% → ${percent}%)` : ""}${before.enabled !== next.enabled ? (next.enabled ? ", switched referrals on" : ", switched referrals off") : ""}` });
   revalidatePath("/", "layout");
   return { ok: "Referral settings saved." };
+}
+
+export async function saveAmbassadorSettings(_state: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requirePermission("settings.manage");
+  const percent = Number(String(formData.get("percent") ?? "").trim());
+  const discountPercent = Number(String(formData.get("discountPercent") ?? "").trim());
+  if (!Number.isInteger(percent) || percent < 1 || percent > 90) return { error: "The ambassador commission must be a whole number from 1 to 90." };
+  if (!Number.isInteger(discountPercent) || discountPercent < 0 || discountPercent > 90) return { error: "The ambassador discount must be a whole number from 0 to 90." };
+  const before = await ambassadorConfig();
+  const next = { enabled: formData.get("enabled") === "on", percent, discountPercent, pitch: String(formData.get("pitch") ?? "").trim().slice(0, 2000) };
+  await update({ ambassadors: next });
+  await logAudit(actor, { action: "settings.saved", summary: `updated the ambassador programme${before.percent !== percent ? ` (commission ${before.percent}% → ${percent}%)` : ""}${before.enabled !== next.enabled ? (next.enabled ? ", opened it" : ", closed it") : ""}` });
+  revalidatePath("/", "layout");
+  return { ok: "Ambassador settings saved." };
 }
 
 export async function saveCommunitySettings(_state: FormState, formData: FormData): Promise<FormState> {

@@ -588,6 +588,54 @@ Renew now and the new period starts when the current one ends, so you won't lose
 
 The {{siteName}} team`,
   },
+  ambassador_application_received: {
+    name: "Ambassador application received",
+    description: "Sent when someone applies to become an ambassador.",
+    variables: {},
+    subject: "We've received your ambassador application",
+    body: `Hi {{name}},
+
+Thanks for applying to become a {{siteName}} ambassador. We'll review your application and email you, usually within a few working days.
+
+In the meantime, you can still share your Refer & earn link from your account.
+
+The {{siteName}} team`,
+  },
+  ambassador_approved: {
+    name: "Ambassador approved",
+    description: "Sent when the team approves an ambassador application. Includes their commission and personal discount code.",
+    variables: { percent: "20", discountLine: "- Your followers get **10% off** with your personal code **ADA10**, and every sale using it counts as yours, even if they never clicked your link.", dashboardUrl: "https://example.com/account/ambassador" },
+    subject: "Welcome to the {{siteName}} ambassador programme",
+    body: `Hi {{name}},
+
+Great news: you're now a **{{siteName}} ambassador**.
+
+- You earn **{{percent}}%** of what every student you bring pays, on every course they take.
+{{discountLine}}
+
+Your dashboard has your link, share links for every course, your earnings and this month's leaderboard.
+
+[[Open my ambassador dashboard|{{dashboardUrl}}]]
+
+Add your payout details there so we can pay you.
+
+The {{siteName}} team`,
+  },
+  ambassador_declined: {
+    name: "Ambassador application declined",
+    description: "Sent when the team declines an ambassador application.",
+    variables: {},
+    subject: "Your ambassador application",
+    body: `Hi {{name}},
+
+Thank you for applying to become a {{siteName}} ambassador. We aren't able to offer you a place in the programme right now.
+
+You can still earn through Refer & earn: share your personal link from your account, and you'll get a commission when people you bring join a course.
+
+If you have questions, contact us at {{supportEmail}}.
+
+The {{siteName}} team`,
+  },
 } satisfies Record<string, TemplateDef>;
 
 export type TemplateKey = keyof typeof EMAIL_TEMPLATES;

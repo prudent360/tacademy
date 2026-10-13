@@ -3,7 +3,8 @@ import { randomBytes } from "node:crypto";
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { getDb } from "@/db";
-import { cohorts, courses, referralCommissions, users, type Payment, type ReferralCommission, type ReferralSettings, type User } from "@/db/schema";
+import { cohorts, courses, discountCodes, referralCommissions, users, type Payment, type ReferralCommission, type ReferralSettings, type User } from "@/db/schema";
+import { activeAmbassador, ambassadorConfig, ambassadorRate } from "./ambassadors";
 import { getSettings } from "./data";
 import { formatMoney } from "./money";
 import { notify } from "./notify";
@@ -14,6 +15,11 @@ export const REF_COOKIE = "academy_ref";
 
 export async function referralConfig(): Promise<ReferralSettings> {
   return { ...DEFAULT_REFERRALS, ...((await getSettings()).referrals ?? {}) };
+}
+
+/** Referral links work when Refer & earn is on, and always for active ambassadors (whose programme has its own switch). */
+export async function linkEarns(referrerId: number): Promise<boolean> {
+  return (await referralConfig()).enabled || Boolean(await activeAmbassador(referrerId));
 }
 
 /** Where a commission stands: pending (inside the refund window), ready (can be paid out), paid or cancelled. */
@@ -54,43 +60,60 @@ export async function attachReferrer(userId: number): Promise<void> {
   if (!code) return;
   // The link has done its job (or can't apply), so stop showing "Referred by".
   jar.delete(REF_COOKIE);
-  if (!(await referralConfig()).enabled) return;
   const db = await getDb();
   const [referrer] = await db.select({ id: users.id }).from(users).where(and(eq(users.referralCode, code.toUpperCase()), eq(users.active, true)));
-  if (!referrer || referrer.id === userId) return;
+  if (!referrer || referrer.id === userId || !(await linkEarns(referrer.id))) return;
   await db.update(users).set({ referredById: referrer.id }).where(and(eq(users.id, userId), isNull(users.referredById)));
 }
 
 /** For the "Referred by" card: who referred this visitor, from the referral cookie. Null when there's no valid referral. */
 export async function visitorReferrer(): Promise<{ name: string; avatarUrl: string | null; gender: User["gender"]; code: string } | null> {
   const code = (await cookies()).get(REF_COOKIE)?.value?.toUpperCase();
-  if (!code || !/^[A-Z0-9]{4,20}$/.test(code) || !(await referralConfig()).enabled) return null;
-  const [referrer] = await (await getDb()).select({ name: users.name, avatarUrl: users.avatarUrl, gender: users.gender }).from(users).where(and(eq(users.referralCode, code), eq(users.active, true)));
-  if (!referrer) return null;
+  if (!code || !/^[A-Z0-9]{4,20}$/.test(code)) return null;
+  const [referrer] = await (await getDb()).select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl, gender: users.gender }).from(users).where(and(eq(users.referralCode, code), eq(users.active, true)));
+  if (!referrer || !(await linkEarns(referrer.id))) return null;
   // First name and initial, e.g. "Ada L.": enough to recognise, without the full name.
   const [first, ...rest] = referrer.name.trim().split(/\s+/);
   return { name: `${first}${rest.length ? ` ${rest[rest.length - 1][0].toUpperCase()}.` : ""}`, avatarUrl: referrer.avatarUrl, gender: referrer.gender, code };
 }
 
-/** Records the referrer's commission on a successful payment. Safe to call more than once per payment. */
+/**
+ * Records the referrer's commission on a successful payment. Safe to call more than once per payment.
+ * Who earns: the ambassador whose discount code was used, otherwise whoever referred the student's account.
+ * Ambassadors earn their own rate on every course; everyone else follows the Refer & earn settings.
+ */
 export async function recordCommission(payment: Payment): Promise<void> {
   if (!payment.cohortId || payment.amount <= 0) return;
-  const cfg = await referralConfig();
-  if (!cfg.enabled) return;
+  const [cfg, acfg] = await Promise.all([referralConfig(), ambassadorConfig()]);
   const db = await getDb();
   const [student] = await db.select().from(users).where(eq(users.id, payment.userId));
-  if (!student?.referredById) return;
-  const [referrer] = await db.select().from(users).where(eq(users.id, student.referredById));
+  if (!student) return;
+
+  let referrerId = student.referredById;
+  let source: "link" | "code" = "link";
+  if (payment.discountCodeId) {
+    const [code] = await db.select({ ownerId: discountCodes.ownerId }).from(discountCodes).where(eq(discountCodes.id, payment.discountCodeId));
+    if (code?.ownerId && code.ownerId !== student.id && (await activeAmbassador(code.ownerId))) {
+      referrerId = code.ownerId;
+      source = "code";
+    }
+  }
+  if (!referrerId) return;
+  const [referrer] = await db.select().from(users).where(eq(users.id, referrerId));
   if (!referrer?.active) return;
+  const ambassador = await activeAmbassador(referrer.id);
+  if (!ambassador && !cfg.enabled) return;
+
   const [found] = await db.select({ course: courses }).from(cohorts).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(eq(cohorts.id, payment.cohortId));
   if (!found) return;
   const { course } = found;
-  if (cfg.scope === "first") {
+  if (!ambassador && cfg.scope === "first") {
     // Only the first programme they bought counts (its deposit and balance included).
     const [other] = await db.select({ id: referralCommissions.id }).from(referralCommissions).where(and(eq(referralCommissions.referredUserId, student.id), ne(referralCommissions.courseId, course.id)));
     if (other) return;
   }
-  const percent = course.referralPercent ?? cfg.percent;
+  // A course set to 0% earns nobody anything, ambassadors included.
+  const percent = course.referralPercent === 0 ? 0 : ambassador ? ambassadorRate(ambassador, acfg) : course.referralPercent ?? cfg.percent;
   if (!percent || percent <= 0) return;
   const amount = Math.round((payment.amount * percent) / 100);
   if (amount <= 0) return;
@@ -104,6 +127,8 @@ export async function recordCommission(payment: Payment): Promise<void> {
     paymentAmount: payment.amount,
     percent,
     amount,
+    source,
+    ambassador: Boolean(ambassador),
     availableAt: new Date((payment.paidAt ?? new Date()).getTime() + cfg.holdDays * 86_400_000),
   }).onConflictDoNothing({ target: referralCommissions.paymentId }).returning();
   if (!created) return;
@@ -111,8 +136,8 @@ export async function recordCommission(payment: Payment): Promise<void> {
   await notify([referrer.id], {
     kind: "referral",
     title: `You earned ${money} in referral commission`,
-    body: `${student.name.split(" ")[0]} joined ${course.title} through your link.`,
-    href: "/account/referrals",
+    body: `${student.name.split(" ")[0]} joined ${course.title} ${source === "code" ? "with your code" : "through your link"}.`,
+    href: ambassador ? "/account/ambassador" : "/account/referrals",
     email: { template: "referral_earned", vars: { amount: money, friend: student.name.split(" ")[0], courseTitle: course.title, holdDays: String(cfg.holdDays), referralsUrl: absoluteUrl("/account/referrals") } },
   });
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { count, desc, eq } from "drizzle-orm";
-import { runRemindersNow, saveWhatsAppSettings, sendWhatsAppTestNow, saveAiSettings, saveAnnouncement, saveCompany, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveCommunitySettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
+import { runRemindersNow, saveWhatsAppSettings, sendWhatsAppTestNow, saveAiSettings, saveAnnouncement, saveCompany, saveSeo, saveVideoSettings, saveBranding, saveEmailSettings, saveGeneral, savePayments, saveReferralSettings, saveAmbassadorSettings, saveCommunitySettings, saveReminders, sendQueuedEmailsNow, sendTestEmailNow, testAiConnection } from "@/app/actions/settings";
 import { setTemplateEnabled } from "@/app/actions/admin";
 import { CopyField } from "@/components/copy-field";
 import { AiProviderFields } from "@/components/admin/ai-provider";
@@ -15,6 +15,7 @@ import { bankTransferConfig, emailConfig, gatewayConfig, reminderConfig, type Re
 import { AI_MODELS, aiConfig } from "@/lib/ai";
 import { REQUIRED_TEMPLATES, sendingAllowance } from "@/lib/email";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, type TemplateKey } from "@/lib/email-templates";
+import { ambassadorConfig } from "@/lib/ambassadors";
 import { communityConfig } from "@/lib/community-access";
 import { CURRENCIES, toMajorInput } from "@/lib/money";
 import { testPaymentsAllowed } from "@/lib/payments";
@@ -691,6 +692,35 @@ export async function ReferralsTab() {
           <li><strong className="text-ink">Commission follows the money.</strong> It&apos;s worked out on what the student actually pays, after discounts, in the same currency.</li>
           <li><strong className="text-ink">Refunds are handled.</strong> A refund reduces the commission, or cancels it when the refund is full.</li>
           <li><strong className="text-ink">You pay out.</strong> Payable commissions and each person&apos;s bank details are under <Link href="/admin/referrals" className="font-semibold text-accent-ink">Payments › Referrals</Link>, where you mark them paid.</li>
+        </ul>
+      </Section>
+    </div>
+  );
+}
+
+// ---------- Ambassadors ----------
+
+export async function AmbassadorsTab() {
+  const a = await ambassadorConfig();
+  return (
+    <div className="grid items-start gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <ActionForm action={saveAmbassadorSettings} className="flex flex-col gap-6">
+        <Section title="Ambassador programme" description="People apply to promote the academy. Once you approve them, they earn a higher commission on every course their students buy, and get a personal discount code to share." badge={a.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> Open</Badge> : <Badge>Closed</Badge>}>
+          <Switch label="Open the ambassador programme" name="enabled" defaultChecked={a.enabled} hint="Shows the Ambassadors page and its application form. Closing it stops ambassador rates and codes; everyone falls back to Refer & earn." />
+          <div className="grid gap-5 md:grid-cols-2">
+            <Input label="Default commission (%)" name="percent" type="number" min={1} max={90} defaultValue={a.percent} hint="Of what each student pays, on every course. You can set a different rate per ambassador." />
+            <Input label="Default discount for their audience (%)" name="discountPercent" type="number" min={0} max={90} defaultValue={a.discountPercent} hint="Suggested when you approve someone; 0 means no discount code." />
+          </div>
+          <Textarea label="Programme description (optional)" name="pitch" defaultValue={a.pitch} rows={5} hint="Shown on the public Ambassadors page. Markdown works, e.g. a list of perks or who you're looking for." />
+        </Section>
+        <div><SubmitButton>Save ambassador settings</SubmitButton></div>
+      </ActionForm>
+      <Section title="How it works">
+        <ul className="flex flex-col gap-2.5 text-sm leading-relaxed text-body">
+          <li><strong className="text-ink">Apply and approve.</strong> People apply on the <Link href="/ambassadors" className="font-semibold text-accent-ink">Ambassadors page</Link>; you review them under <Link href="/admin/ambassadors" className="font-semibold text-accent-ink">Payments › Ambassadors</Link>.</li>
+          <li><strong className="text-ink">Link or code.</strong> A student counts as theirs if they signed up through the ambassador&apos;s link, or paid with the ambassador&apos;s discount code.</li>
+          <li><strong className="text-ink">Same payouts.</strong> Commissions use the Refer &amp; earn waiting period and appear under Payments › Referrals, where you mark them paid.</li>
+          <li><strong className="text-ink">Everyone else</strong> keeps earning through Refer &amp; earn at the normal rate.</li>
         </ul>
       </Section>
     </div>

@@ -191,6 +191,8 @@ export type ReferralSettings = { enabled: boolean; percent: number; cookieDays: 
 /** A pop-up shown once on the dashboard. `version` changes on every save, so an edited message shows again. */
 export type AnnouncementSettings = { enabled: boolean; title: string; body: string; buttonLabel: string; buttonUrl: string; audience: "students" | "everyone"; version: string };
 /** The legal entity behind the academy, shown in the footer and emails (UK companies must show these). */
+/** The ambassador programme: approved people earn a higher commission and get their own discount code to share. */
+export type AmbassadorSettings = { enabled: boolean; percent: number; discountPercent: number; pitch: string };
 /** Paid community membership. Off means the community is open to every account. */
 export type CommunitySettings = { paid: boolean; prices: PriceMap; months: number; pitch: string };
 export type CompanySettings = { legalName: string; number: string; jurisdiction: string; registeredOffice: string };
@@ -233,6 +235,7 @@ export const settings = pgTable("settings", {
   announcement: jsonb("announcement").$type<Partial<AnnouncementSettings>>().notNull().default({}),
   company: jsonb("company").$type<Partial<CompanySettings>>().notNull().default({}),
   community: jsonb("community").$type<Partial<CommunitySettings>>().notNull().default({}),
+  ambassadors: jsonb("ambassadors").$type<Partial<AmbassadorSettings>>().notNull().default({}),
   ai: jsonb("ai").$type<Partial<AiSettings>>().notNull().default({}),
   seo: jsonb("seo").$type<Partial<SeoSettings>>().notNull().default({}),
   video: jsonb("video").$type<Partial<VideoSettings>>().notNull().default({}),
@@ -582,6 +585,8 @@ export const discountCodes = pgTable("discount_codes", {
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   /** Deleted codes that had been used are kept (hidden, switched off) so balances on their deposits stay right. */
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  /** An ambassador's personal code: sales using it earn them commission, even without their link. */
+  ownerId: integer("owner_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
   createdAt: createdAt(),
 });
 
@@ -794,6 +799,10 @@ export const referralCommissions = pgTable("referral_commissions", {
   percent: integer("percent").notNull(),
   amount: integer("amount").notNull(),
   status: text("status").$type<CommissionStatus>().notNull().default("pending"),
+  /** link: they signed up through the referral link; code: the payment used the ambassador's discount code. */
+  source: text("source").$type<"link" | "code">().notNull().default("link"),
+  /** Earned at the ambassador rate, for the leaderboard and payouts. */
+  ambassador: boolean("ambassador").notNull().default(false),
   availableAt: timestamp("available_at", { withTimezone: true }).notNull(),
   paidAt: timestamp("paid_at", { withTimezone: true }),
   paidById: integer("paid_by_id").references(() => users.id, { onDelete: "set null" }),
@@ -1039,3 +1048,29 @@ export const communityMemberships = pgTable("community_memberships", {
 }, (t) => [index("community_memberships_user_idx").on(t.userId, t.endsAt), index("community_memberships_ends_idx").on(t.endsAt)]);
 
 export type CommunityMembership = typeof communityMemberships.$inferSelect;
+
+export const AMBASSADOR_STATUSES = ["pending", "active", "paused", "declined"] as const;
+export type AmbassadorStatus = (typeof AMBASSADOR_STATUSES)[number];
+
+/**
+ * Someone in the ambassador programme, from application to approval. Active ambassadors earn their own rate (or the
+ * default in Settings) on every course the people they bring buy, and have a personal discount code to share.
+ */
+export const ambassadors = pgTable("ambassadors", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").$type<AmbassadorStatus>().notNull().default("pending"),
+  /** From the application: who they reach, where, and why they want to join. */
+  audience: text("audience").notNull().default(""),
+  channels: text("channels").notNull().default(""),
+  motivation: text("motivation").notNull().default(""),
+  /** Their commission, overriding the default ambassador rate. Null: use the default. */
+  percent: integer("percent"),
+  discountCodeId: integer("discount_code_id").references(() => discountCodes.id, { onDelete: "set null" }),
+  adminNotes: text("admin_notes").notNull().default(""),
+  decidedById: integer("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("ambassadors_status_idx").on(t.status, t.createdAt)]);
+
+export type Ambassador = typeof ambassadors.$inferSelect;

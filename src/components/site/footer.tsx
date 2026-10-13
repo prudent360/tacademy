@@ -36,6 +36,7 @@ export function SiteFooter({ settings }: { settings: Settings }) {
         <div className="flex flex-col gap-3">
           <p className="font-display text-base font-bold text-white">Company</p>
           <Link href="/teach-with-us" className="text-[15px] text-white/70 transition hover:text-white">Become an instructor</Link>
+          {settings.ambassadors?.enabled && <Link href="/ambassadors" className="text-[15px] text-white/70 transition hover:text-white">Become an ambassador</Link>}
           <Link href="/careers" className="text-[15px] text-white/70 transition hover:text-white">Careers</Link>
           <Link href="/contact" className="text-[15px] text-white/70 transition hover:text-white">Contact us</Link>
           <Link href="/privacy" className="text-[15px] text-white/70 transition hover:text-white">Privacy policy</Link>

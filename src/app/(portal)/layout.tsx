@@ -13,7 +13,7 @@ import { studentId } from "@/lib/utils";
 import { xpForUser } from "@/lib/xp";
 import { count, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { instructorApplications, jobApplications, internshipApplications } from "@/db/schema";
+import { ambassadors, instructorApplications, jobApplications, internshipApplications } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +28,8 @@ export default async function PortalLayout({ children }: { children: React.React
   const theme: Theme = savedTheme === "dark" || savedTheme === "system" ? savedTheme : "light";
   const newApplications = perms.has("applications.review") ? (await (await getDb()).select({ n: count() }).from(internshipApplications).where(eq(internshipApplications.status, "new")))[0]?.n ?? 0 : 0;
   const newJobApplications = perms.has("careers.manage") ? (await (await getDb()).select({ n: count() }).from(jobApplications).where(eq(jobApplications.status, "new")))[0]?.n ?? 0 : 0;
+  const newAmbassadors = perms.has("referrals.manage") ? (await (await getDb()).select({ n: count() }).from(ambassadors).where(eq(ambassadors.status, "pending")))[0]?.n ?? 0 : 0;
+  const [ambassadorRow] = await (await getDb()).select({ status: ambassadors.status }).from(ambassadors).where(eq(ambassadors.userId, user.id));
   const newInstructorApplications = perms.has("instructors.review") ? (await (await getDb()).select({ n: count() }).from(instructorApplications).where(eq(instructorApplications.status, "new")))[0]?.n ?? 0 : 0;
 
   // The admin's dashboard pop-up, until this person closes this version of it.
@@ -49,8 +51,11 @@ export default async function PortalLayout({ children }: { children: React.React
       newApplications={newApplications}
       newInstructorApplications={newInstructorApplications}
       newJobApplications={newJobApplications}
+      newAmbassadors={newAmbassadors}
       permissions={[...perms]}
       referrals={settings.referrals?.enabled === true}
+      // Declined applicants don't keep the link; they can re-apply from the Ambassadors page.
+      ambassador={Boolean(ambassadorRow && ambassadorRow.status !== "declined")}
       studentId={user.role === "student" ? studentId(user) : undefined}
       xp={xp ? { level: xp.level, total: xp.total, percent: xp.percent, toNext: xp.next - xp.total } : undefined}
       notifications={recent.map((n) => ({ id: n.id, title: n.title, body: n.body, href: n.href, read: Boolean(n.readAt), when: relativeTime(n.createdAt) }))}
