@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth";
 import { reviewableFor } from "@/lib/reviews";
 import { submitReview } from "@/app/actions/reviews";
 import { ReviewForm } from "@/components/portal/review-form";
+import { MyProgrammes } from "@/components/portal/my-programmes";
 import { fromPrice, isFree, withCohorts } from "@/lib/catalog";
 import { getPublishedCourses, getSettings, getStudentCohorts, graduateFor } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
@@ -48,6 +49,7 @@ export default async function MyCoursesPage() {
   return (
     <>
       <PageHeader title="My courses" description="Your courses, and what you could take next." />
+      <MyProgrammes userId={user.id} />
       {reviewable.length > 0 && (
         <section id="reviews" className="scroll-mt-24">
           <Card title="Rate your courses">

@@ -12,18 +12,21 @@ export type DeliveryMode = (typeof DELIVERY_MODES)[number];
 export const SESSION_MODES = ["virtual", "physical"] as const;
 export type SessionMode = (typeof SESSION_MODES)[number];
 
-/** graduate: joined free because they completed an academy course. */
-export type EnrollmentSource = "payment" | "free" | "graduate" | "manual";
+/** graduate: joined free because they completed an academy course. programme: claimed as part of a paid programme. */
+export type EnrollmentSource = "payment" | "free" | "graduate" | "manual" | "programme";
 export const ENROLLMENT_STATUSES = ["pending", "active", "completed", "cancelled"] as const;
 export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 
 export const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export type Gateway = "stripe" | "paystack" | "transactpay" | "manual" | "test";
-/** full: all tuition now · deposit: part of the tuition now · registration: registration fee only · balance: the rest later. */
-export type PaymentPlan = "full" | "deposit" | "registration" | "balance";
-/** What a payment buys: a place on a cohort, or a period of community membership. */
-export type PaymentProduct = "course" | "community";
+/**
+ * full: all tuition now · deposit: part of the tuition now · registration: registration fee only · balance: the rest later ·
+ * instalment: one of a programme's monthly instalments.
+ */
+export type PaymentPlan = "full" | "deposit" | "registration" | "balance" | "instalment";
+/** What a payment buys: a place on a cohort, a programme, or a period of community membership. */
+export type PaymentProduct = "course" | "community" | "programme";
 
 export const ATTENDANCE_STATUSES = ["present", "late", "absent", "excused"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
@@ -599,6 +602,8 @@ export const payments = pgTable("payments", {
   reference: text("reference").notNull().unique(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   cohortId: integer("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  /** Programme payments: the programme (cohortId stays empty; the place on each course comes from the programme). */
+  programmeId: integer("programme_id").references((): AnyPgColumn => programmes.id, { onDelete: "set null" }),
   product: text("product").$type<PaymentProduct>().notNull().default("course"),
   gateway: text("gateway").$type<Gateway>().notNull(),
   providerId: text("provider_id"),
@@ -1117,3 +1122,31 @@ export const programmeCourses = pgTable("programme_courses", {
 }, (t) => [primaryKey({ columns: [t.programmeId, t.courseId] }), index("programme_courses_course_idx").on(t.courseId)]);
 
 export type Programme = typeof programmes.$inferSelect;
+
+export const PROGRAMME_ENROLLMENT_STATUSES = ["pending", "active", "cancelled"] as const;
+export type ProgrammeEnrollmentStatus = (typeof PROGRAMME_ENROLLMENT_STATUSES)[number];
+
+/**
+ * A student's place on a programme. Created "pending" at checkout with the agreed fee and instalments, and made
+ * "active" by the first payment, which also enrols them on the first course's chosen cohort. Later courses are
+ * claimed from the dashboard while their instalments are up to date.
+ */
+export const programmeEnrollments = pgTable("programme_enrollments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  programmeId: integer("programme_id").notNull().references(() => programmes.id, { onDelete: "cascade" }),
+  status: text("status").$type<ProgrammeEnrollmentStatus>().notNull().default("pending"),
+  /** The agreed fee after any discount, and how it's paid: 1 instalment means in full. Amounts in minor units. */
+  currency: text("currency").notNull(),
+  total: integer("total").notNull(),
+  instalmentCount: integer("instalment_count").notNull().default(1),
+  firstAmount: integer("first_amount").notNull(),
+  /** Each later instalment. */
+  restAmount: integer("rest_amount").notNull().default(0),
+  /** The first course's cohort chosen at checkout; they're enrolled on it when the first payment arrives. */
+  firstCohortId: integer("first_cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("programme_enrollments_user_programme_idx").on(t.userId, t.programmeId), index("programme_enrollments_programme_idx").on(t.programmeId)]);
+
+export type ProgrammeEnrollment = typeof programmeEnrollments.$inferSelect;

@@ -5,14 +5,16 @@ import { and, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { enrollments, users, type User } from "@/db/schema";
-import { getCurrentUser } from "@/lib/auth";
+import { cohorts, enrollments, programmeCourses, programmeEnrollments, programmes, users, type User } from "@/db/schema";
+import { getCurrentUser, requireUser } from "@/lib/auth";
 import { countryByCode } from "@/lib/countries";
 import { isFree } from "@/lib/catalog";
 import { rememberCheckout } from "@/lib/checkout-access";
 import { getCohortWithCourse, graduateFor, isEnrolled, seatsTaken } from "@/lib/data";
 import { activateEnrollment, findDiscount, startBalanceCheckout, startBankTransfer, startCheckout } from "@/lib/payments";
 import { availablePlans, type EnrolPlan } from "@/lib/pricing";
+import { instalmentStatus, startInstalmentCheckout, startProgrammeCheckout } from "@/lib/programme-enrolment";
+import { revalidatePath } from "next/cache";
 import { loginBlockedFor, recordLoginFailure } from "@/lib/rate-limit";
 import { QUALIFICATIONS } from "@/lib/utils";
 import { dialCode, email, firstError, formatPhone, formValues, phoneNumber, required, type FormState } from "@/lib/validation";
@@ -42,7 +44,7 @@ type Details = z.infer<typeof detailsSchema>;
  * Finds or creates the student for an enrolment. Only enrolled students get a usable account:
  * new students are created without a password and choose one from the email sent when their place is confirmed.
  */
-async function applicantFor(details: Details, next: string, whatsappOptIn: boolean): Promise<{ user: User } | { error: string; signIn?: string }> {
+async function applicantFor(details: Omit<Details, "plan">, next: string, whatsappOptIn: boolean): Promise<{ user: User } | { error: string; signIn?: string }> {
   const db = await getDb();
   const profile = {
     phone: formatPhone(details.dialCode, details.phone), dateOfBirth: details.dateOfBirth, gender: details.gender || null, qualification: details.qualification, country: details.country,
@@ -136,4 +138,82 @@ export async function checkDiscountCode(code: string): Promise<{ code: string; p
     return found;
   }
   return { code: found.code, percentOff: found.percentOff };
+}
+
+// ---------- Programmes ----------
+
+const programmeSchema = detailsSchema.extend({
+  programmeId: z.coerce.number().int().positive(),
+  plan: z.enum(["full", "instalments"]).catch("full"),
+});
+
+/**
+ * The programme checkout: the student's details, the cohort for the programme's first course, and the first
+ * payment (in full or the first instalment). Paying activates the programme and books that cohort.
+ */
+export async function enrolProgramme(_state: EnrolState, formData: FormData): Promise<EnrolState> {
+  const parsed = programmeSchema.safeParse(formValues(formData));
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const details = parsed.data;
+  const db = await getDb();
+  const [programme] = await db.select().from(programmes).where(and(eq(programmes.id, details.programmeId), eq(programmes.published, true)));
+  if (!programme) return { error: "This programme is no longer available." };
+  const [first] = await db.select({ courseId: programmeCourses.courseId }).from(programmeCourses).where(eq(programmeCourses.programmeId, programme.id)).orderBy(programmeCourses.position).limit(1);
+  const found = await getCohortWithCourse(details.cohortId);
+  if (!found || found.cohort.courseId !== first?.courseId) return { error: "Choose a start date for the first course." };
+  const { cohort } = found;
+  if (!cohort.enrollmentOpen) return { error: "Enrolment for this cohort has closed. Please choose another start date." };
+  if (cohort.capacity && ((await seatsTaken([cohort.id])).get(cohort.id) ?? 0) >= cohort.capacity) return { error: "Sorry, this cohort is full. Please choose another start date." };
+
+  const wait = await loginBlockedFor(details.email, "enrol");
+  if (wait) return { error: `Too many attempts. Please try again in ${wait} minute${wait === 1 ? "" : "s"}.` };
+  await recordLoginFailure(details.email, "enrol");
+
+  const applicant = await applicantFor(details, `/programmes/${programme.slug}/enrol`, formData.get("whatsapp") === "on");
+  if ("error" in applicant) return applicant;
+  const result = await startProgrammeCheckout(applicant.user, programme, cohort, { currency: details.currency, plan: details.plan, method: details.method, discountCode: details.discountCode });
+  if ("error" in result) return { error: result.error, ...(result.error.startsWith("You're already") ? { signIn: "/dashboard/courses#programmes" } : {}) };
+  await rememberCheckout(result.reference);
+  redirect(result.url);
+}
+
+async function ownProgrammeEnrolment(enrolmentId: number) {
+  const user = await requireUser();
+  const db = await getDb();
+  const [row] = await db.select({ enrolment: programmeEnrollments, programme: programmes }).from(programmeEnrollments).innerJoin(programmes, eq(programmes.id, programmeEnrollments.programmeId))
+    .where(and(eq(programmeEnrollments.id, enrolmentId), eq(programmeEnrollments.userId, user.id), eq(programmeEnrollments.status, "active")));
+  return row ? { user, ...row } : null;
+}
+
+/** Pays the student's next programme instalment online. */
+export async function payProgrammeInstalment(enrolmentId: number, state: FormState): Promise<FormState> {
+  void state;
+  const found = await ownProgrammeEnrolment(enrolmentId);
+  if (!found) return { error: "That programme wasn't found." };
+  const result = await startInstalmentCheckout(found.user, found.programme, found.enrolment);
+  if ("error" in result) return { error: result.error };
+  redirect(result.url);
+}
+
+/** Takes a free place on a later course of the student's programme, while their instalments are up to date. */
+export async function claimProgrammeCourse(enrolmentId: number, state: FormState, formData: FormData): Promise<FormState> {
+  void state;
+  const found = await ownProgrammeEnrolment(enrolmentId);
+  if (!found) return { error: "That programme wasn't found." };
+  const cohortId = Number(formData.get("cohortId"));
+  const db = await getDb();
+  const [cohort] = Number.isInteger(cohortId) ? await db.select().from(cohorts).where(eq(cohorts.id, cohortId)) : [];
+  if (!cohort) return { error: "Choose a start date." };
+  const [inProgramme] = await db.select().from(programmeCourses).where(and(eq(programmeCourses.programmeId, found.programme.id), eq(programmeCourses.courseId, cohort.courseId)));
+  if (!inProgramme) return { error: "That course isn't part of your programme." };
+  if (!cohort.enrollmentOpen) return { error: "Enrolment for this cohort has closed. Please choose another start date." };
+  if (cohort.capacity && ((await seatsTaken([cohort.id])).get(cohort.id) ?? 0) >= cohort.capacity) return { error: "Sorry, this cohort is full. Please choose another start date." };
+  // One place per course: they can't take the same course twice through the programme.
+  const [already] = await db.select({ id: enrollments.id }).from(enrollments).innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
+    .where(and(eq(enrollments.userId, found.user.id), eq(cohorts.courseId, cohort.courseId), inArray(enrollments.status, ["active", "completed"])));
+  if (already) return { error: "You already have a place on this course." };
+  if ((await instalmentStatus(found.enrolment)).overdue) return { error: "Please pay your overdue instalment first, then claim your place." };
+  await activateEnrollment(found.user.id, cohort.id, "programme");
+  revalidatePath("/dashboard", "layout");
+  return { ok: "Your place is booked. You'll find the course below." };
 }

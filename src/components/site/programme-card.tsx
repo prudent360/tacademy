@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BookIcon, ClockIcon } from "@/components/icons";
 import type { Course, Programme } from "@/db/schema";
 import { formatMoney } from "@/lib/money";
-import { instalmentPlan } from "@/lib/programmes";
+import { instalmentPlan } from "@/lib/programme-pricing";
 import { CourseArt } from "./course-art";
 
 export function ProgrammeCard({ programme, courses, fee }: { programme: Programme; courses: Pick<Course, "id" | "title">[]; fee: { amount: number; currency: string } | null }) {

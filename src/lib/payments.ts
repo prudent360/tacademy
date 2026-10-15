@@ -3,7 +3,7 @@ import { constants, createPublicKey, publicEncrypt, randomBytes } from "node:cry
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { getDb } from "@/db";
-import { discountCodes, enrollments, payments, users, type Cohort, type Course, type DiscountCode, type EnrollmentSource, type Payment, type PaymentPlan, type PaymentProduct, type User } from "@/db/schema";
+import { discountCodes, enrollments, payments, programmeEnrollments, programmes, users, type Cohort, type Course, type DiscountCode, type EnrollmentSource, type Payment, type PaymentPlan, type PaymentProduct, type User } from "@/db/schema";
 import { sendWhatsApp, whatsappNumber } from "./whatsapp";
 import { getAdmins, getCohortWithCourse, getSettings } from "./data";
 import { sendEmails } from "./email";
@@ -152,7 +152,7 @@ async function transactpay<T>(path: string, apiKey: string, body: unknown): Prom
   return data;
 }
 
-function newReference(): string {
+export function newReference(): string {
   return `TSU-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
@@ -160,12 +160,12 @@ export function describePurchase(course: Course, cohort: Cohort): string {
   return `${course.title} – ${cohort.name}`;
 }
 
-/** What is being bought: the cohort it's for (if any), and where the gateway's "cancel" button goes. */
-type Purchase = { cohortId: number | null; product: PaymentProduct; cancelUrl: string };
+/** What is being bought: the cohort or programme it's for (if any), and where the gateway's "cancel" button goes. */
+export type Purchase = { cohortId: number | null; programmeId?: number | null; product: PaymentProduct; cancelUrl: string };
 
 const coursePurchase = (course: Course, cohort: Cohort): Purchase => ({ cohortId: cohort.id, product: "course", cancelUrl: absoluteUrl(`/courses/${course.slug}?cancelled=1`) });
 
-async function beginOnlinePayment(user: User, purchase: Purchase, currency: string, details: {
+export async function beginOnlinePayment(user: User, purchase: Purchase, currency: string, details: {
   amount: number;
   originalAmount: number;
   paymentPlan: PaymentPlan;
@@ -186,7 +186,7 @@ async function beginOnlinePayment(user: User, purchase: Purchase, currency: stri
 
   const reference = newReference();
   const db = await getDb();
-  await db.insert(payments).values({ reference, userId: user.id, cohortId: purchase.cohortId, product: purchase.product, gateway: configured ? gateway : "test", providerId: configured ? null : `simulated:${gateway}`, amount, currency, description, originalAmount, paymentPlan, registrationFee, discountCodeId });
+  await db.insert(payments).values({ reference, userId: user.id, cohortId: purchase.cohortId, programmeId: purchase.programmeId ?? null, product: purchase.product, gateway: configured ? gateway : "test", providerId: configured ? null : `simulated:${gateway}`, amount, currency, description, originalAmount, paymentPlan, registrationFee, discountCodeId });
   const returnUrl = absoluteUrl(`/checkout/return?ref=${reference}`);
   if (!configured) return { url: `/checkout/test?ref=${reference}`, reference };
 
@@ -451,6 +451,25 @@ export async function activateEnrollment(userId: number, cohortId: number, sourc
 }
 
 /**
+ * The first programme payment: makes the student's programme place active and enrols them on the first course's
+ * cohort they chose at checkout. Later instalments find it already active and change nothing.
+ */
+async function activateProgrammeEnrollment(userId: number, programmeId: number): Promise<void> {
+  const db = await getDb();
+  const [activated] = await db.update(programmeEnrollments).set({ status: "active", activatedAt: new Date() })
+    .where(and(eq(programmeEnrollments.userId, userId), eq(programmeEnrollments.programmeId, programmeId), eq(programmeEnrollments.status, "pending"))).returning();
+  if (!activated) return;
+  if (activated.firstCohortId) await activateEnrollment(userId, activated.firstCohortId, "programme");
+  const [programme] = await db.select({ title: programmes.title }).from(programmes).where(eq(programmes.id, programmeId));
+  await notify([userId], {
+    kind: "enrollment",
+    title: `You're on the ${programme?.title ?? "programme"}`,
+    body: "Your first course is booked. Claim your place on the next courses from My courses when you're ready.",
+    href: "/dashboard/courses#programmes",
+  });
+}
+
+/**
  * Marks a payment paid exactly once (webhooks and the return page can race) and enrols the student.
  * Safe to call repeatedly.
  */
@@ -487,6 +506,7 @@ export async function fulfilPayment(reference: string): Promise<void> {
   if (whatsappTo) await sendWhatsApp([{ to: whatsappTo, template: "payment_receipt", params: [firstName(user.name), amount, payment.description, payment.reference] }]);
 
   if (payment.cohortId) await activateEnrollment(payment.userId, payment.cohortId, "payment");
+  if (payment.product === "programme" && payment.programmeId) await activateProgrammeEnrollment(payment.userId, payment.programmeId);
   if (payment.product === "community") {
     const granted = await grantMembership(payment.userId, (await communityConfig()).months, { paymentId: payment.id });
     if (granted) {

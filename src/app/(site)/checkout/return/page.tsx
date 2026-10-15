@@ -38,6 +38,8 @@ export default async function CheckoutReturnPage({ searchParams }: { searchParam
       <div className="flex flex-wrap justify-center gap-3">
         {paid && payment.product === "community" && signedIn ? (
           <Link href="/community?joined=1" className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Open the community</Link>
+        ) : paid && payment.product === "programme" && signedIn ? (
+          <Link href="/dashboard/courses#programmes" className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Open my programme</Link>
         ) : paid && payment.cohortId && signedIn ? (
           <Link href={`/dashboard/cohorts/${payment.cohortId}?welcome=1`} className="flex h-12 items-center rounded-lg bg-accent px-6 font-semibold text-white hover:bg-accent-dark">Open my course</Link>
         ) : paid ? (

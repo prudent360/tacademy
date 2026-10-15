@@ -1,13 +1,14 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { and, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { getDb } from "@/db";
-import { cohorts, courses, discountCodes, referralCommissions, users, type Payment, type ReferralCommission, type ReferralSettings, type User } from "@/db/schema";
+import { cohorts, courses, discountCodes, programmeCourses, programmes, referralCommissions, users, type Payment, type ReferralCommission, type ReferralSettings, type User } from "@/db/schema";
 import { activeAmbassador, ambassadorConfig, ambassadorRate } from "./ambassadors";
 import { getSettings } from "./data";
 import { formatMoney } from "./money";
 import { notify } from "./notify";
+import { programmeName } from "./programme-pricing";
 import { absoluteUrl } from "./site";
 
 export const DEFAULT_REFERRALS: ReferralSettings = { enabled: false, percent: 10, cookieDays: 30, holdDays: 14, scope: "first", terms: "" };
@@ -83,7 +84,7 @@ export async function visitorReferrer(): Promise<{ name: string; avatarUrl: stri
  * Ambassadors earn their own rate on every course; everyone else follows the Refer & earn settings.
  */
 export async function recordCommission(payment: Payment): Promise<void> {
-  if (!payment.cohortId || payment.amount <= 0) return;
+  if ((!payment.cohortId && !payment.programmeId) || payment.amount <= 0) return;
   const [cfg, acfg] = await Promise.all([referralConfig(), ambassadorConfig()]);
   const db = await getDb();
   const [student] = await db.select().from(users).where(eq(users.id, payment.userId));
@@ -104,9 +105,14 @@ export async function recordCommission(payment: Payment): Promise<void> {
   const ambassador = await activeAmbassador(referrer.id);
   if (!ambassador && !cfg.enabled) return;
 
-  const [found] = await db.select({ course: courses }).from(cohorts).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(eq(cohorts.id, payment.cohortId));
+  // A programme payment earns at its first course's rate (or the default), and is listed under the programme's name.
+  const [found] = payment.cohortId
+    ? await db.select({ course: courses }).from(cohorts).innerJoin(courses, eq(courses.id, cohorts.courseId)).where(eq(cohorts.id, payment.cohortId))
+    : await db.select({ course: courses, title: programmes.title }).from(programmeCourses).innerJoin(courses, eq(courses.id, programmeCourses.courseId)).innerJoin(programmes, eq(programmes.id, programmeCourses.programmeId))
+      .where(eq(programmeCourses.programmeId, payment.programmeId!)).orderBy(asc(programmeCourses.position)).limit(1);
   if (!found) return;
   const { course } = found;
+  const title = "title" in found && typeof found.title === "string" ? programmeName(found.title) : course.title;
   if (!ambassador && cfg.scope === "first") {
     // Only the first programme they bought counts (its deposit and balance included).
     const [other] = await db.select({ id: referralCommissions.id }).from(referralCommissions).where(and(eq(referralCommissions.referredUserId, student.id), ne(referralCommissions.courseId, course.id)));
@@ -122,7 +128,7 @@ export async function recordCommission(payment: Payment): Promise<void> {
     referredUserId: student.id,
     paymentId: payment.id,
     courseId: course.id,
-    courseTitle: course.title,
+    courseTitle: title,
     currency: payment.currency,
     paymentAmount: payment.amount,
     percent,
@@ -136,7 +142,7 @@ export async function recordCommission(payment: Payment): Promise<void> {
   await notify([referrer.id], {
     kind: "referral",
     title: `You earned ${money} in referral commission`,
-    body: `${student.name.split(" ")[0]} joined ${course.title} ${source === "code" ? "with your code" : "through your link"}.`,
+    body: `${student.name.split(" ")[0]} joined ${title} ${source === "code" ? "with your code" : "through your link"}.`,
     href: ambassador ? "/account/ambassador" : "/account/referrals",
     email: { template: "referral_earned", vars: { amount: money, friend: student.name.split(" ")[0], courseTitle: course.title, holdDays: String(cfg.holdDays), referralsUrl: absoluteUrl("/account/referrals") } },
   });

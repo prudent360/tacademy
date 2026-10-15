@@ -32,24 +32,24 @@ export type EnrolCohort = {
   currencies: { code: string; online: boolean; provider?: OnlineProvider; bank: boolean }[];
 };
 
-type Method = "online" | "bank";
+export type Method = "online" | "bank";
 export type OnlineProvider = "stripe" | "paystack" | "transactpay";
 
 /** How "Pay online" is described for each provider. */
-const ONLINE_LABEL: Record<OnlineProvider, { short: string; long: string }> = {
+export const ONLINE_LABEL: Record<OnlineProvider, { short: string; long: string }> = {
   stripe: { short: "Card via Stripe", long: "Secure card payment via Stripe" },
   paystack: { short: "Paystack (card, bank transfer, USSD)", long: "Card, bank transfer or USSD via Paystack" },
   transactpay: { short: "TransactPay (card, bank transfer, OPay)", long: "Card, bank transfer or OPay via TransactPay" },
 };
 
-type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; gender: string; qualification: string; country: string };
+export type Prefill = { firstName: string; lastName: string; email: string; dial: string; phone: string; dateOfBirth: string; gender: string; qualification: string; country: string };
 
-const METHOD_LABEL = (method: Method, provider: OnlineProvider | undefined) =>
+export const METHOD_LABEL = (method: Method, provider: OnlineProvider | undefined) =>
   method === "online" && provider ? ONLINE_LABEL[provider].short : method === "online" ? "Pay online" : "Direct bank transfer";
 
-const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10 read-only:bg-panel read-only:text-muted";
+export const inputClass = "h-12 w-full rounded-[5px] border border-edge-strong bg-white px-3.5 text-[15px] text-ink transition placeholder:text-[#878598] hover:border-accent-muted focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10 read-only:bg-panel read-only:text-muted";
 
-function Field({ label, htmlFor, required, children, className = "" }: { label: string; htmlFor: string; required?: boolean; children: React.ReactNode; className?: string }) {
+export function Field({ label, htmlFor, required, children, className = "" }: { label: string; htmlFor: string; required?: boolean; children: React.ReactNode; className?: string }) {
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       <label htmlFor={htmlFor} className="text-sm font-medium text-ink">{label}{required && <span className="text-red-600" aria-hidden="true"> *</span>}</label>
@@ -58,7 +58,7 @@ function Field({ label, htmlFor, required, children, className = "" }: { label: 
   );
 }
 
-function Choice({ name, value, checked, onChange, children }: { name: string; value: string; checked: boolean; onChange: () => void; children: React.ReactNode }) {
+export function Choice({ name, value, checked, onChange, children }: { name: string; value: string; checked: boolean; onChange: () => void; children: React.ReactNode }) {
   return (
     <label className={`flex cursor-pointer items-start gap-3 rounded-[8px] border p-4 transition ${checked ? "border-accent bg-accent-soft/60 ring-2 ring-accent/15" : "border-edge-strong hover:border-accent-muted"}`}>
       <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="mt-1 size-4 shrink-0 accent-accent" />
@@ -116,32 +116,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, initialDiscount
     setCurrency("");
     setShowCurrencies(false);
   }
-  // A discount code is checked when "Apply" is pressed, so the saving shows before paying. It's checked again at payment.
-  const [codeInput, setCodeInput] = useState(initialDiscount?.code ?? "");
   const [discount, setDiscount] = useState<{ code: string; percentOff: number } | null>(initialDiscount);
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const [checkingCode, setCheckingCode] = useState(false);
-  const codeRequest = useRef(0);
-  async function applyCode() {
-    if (!codeInput.trim()) { setCodeError("Enter a code first."); return; }
-    // Only the latest check counts, if someone applies twice quickly.
-    const request = ++codeRequest.current;
-    setCheckingCode(true);
-    setCodeError(null);
-    const result = await checkDiscountCode(codeInput);
-    if (request !== codeRequest.current) return;
-    setCheckingCode(false);
-    if ("error" in result) { setDiscount(null); setCodeError(result.error); return; }
-    setCodeError(null);
-    setDiscount(result);
-    setCodeInput(result.code);
-  }
-  function removeCode() {
-    codeRequest.current++;
-    setDiscount(null);
-    setCodeInput("");
-    setCodeError(null);
-  }
   const q = cohort && currency && !cohort.free ? quote(cohort, currency.code, plan, discount?.percentOff ?? 0) : null;
   const saving = q ? q.tuitionPrice - q.tuition : 0;
   const money = (minor: number) => (currency ? formatMoney(minor, currency.code) : "—");
@@ -180,46 +155,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, initialDiscount
 
         {/* Step 1 stays mounted while hidden so its values are submitted with step 2. */}
         <div className={step === 1 ? "flex flex-col gap-6" : "hidden"}>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <Field label="First Name" htmlFor={`${id}-first`} required><input id={`${id}-first`} name="firstName" required maxLength={60} autoComplete="given-name" placeholder="Enter first name" defaultValue={signedIn?.firstName} className={inputClass} /></Field>
-            <Field label="Last Name" htmlFor={`${id}-last`} required><input id={`${id}-last`} name="lastName" required maxLength={60} autoComplete="family-name" placeholder="Enter last name" defaultValue={signedIn?.lastName} className={inputClass} /></Field>
-          </div>
-          <Field label="Email Address" htmlFor={`${id}-email`} required>
-            <input id={`${id}-email`} name="email" type="email" required maxLength={200} autoComplete="email" placeholder="Enter email address" defaultValue={signedIn?.email} readOnly={Boolean(signedIn)} className={inputClass} />
-          </Field>
-          <Field label="Country you live in" htmlFor={`${id}-country`} required>
-            <select id={`${id}-country`} name="country" required value={country} onChange={(e) => chooseCountry(e.target.value)} className={`${inputClass} cursor-pointer`}>
-              <option value="">Select your country</option>
-              {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{flag(c.code)} {c.name}</option>)}
-            </select>
-            <p className="text-[13px] text-muted">We&apos;ll show your price in your local currency where we can, and the ways you can pay from there.</p>
-          </Field>
-          <Field label="Phone Number (WhatsApp preferred)" htmlFor={`${id}-phone`} required>
-            <PhoneInput id={`${id}-phone`} country={phoneCountry} onCountryChange={setPhoneCountry} defaultValue={signedIn?.phone} />
-            {whatsapp && (
-              <label className="flex cursor-pointer items-start gap-2.5 pt-1 text-sm text-body">
-                <input type="checkbox" name="whatsapp" defaultChecked className="mt-0.5 size-4 shrink-0 accent-accent" />
-                <span>Send my class reminders and receipts on WhatsApp too</span>
-              </label>
-            )}
-          </Field>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Date of Birth" htmlFor={`${id}-dob`} required>
-              <input id={`${id}-dob`} name="dateOfBirth" type="date" required min="1920-01-01" max={new Date().toISOString().slice(0, 10)} defaultValue={signedIn?.dateOfBirth} className={inputClass} />
-            </Field>
-            <Field label="Gender" htmlFor={`${id}-gender`}>
-              <select id={`${id}-gender`} name="gender" defaultValue={signedIn?.gender ?? ""} className={`${inputClass} cursor-pointer`}>
-                {GENDER_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
-              </select>
-            </Field>
-          </div>
-          <Field label="Highest academic qualification" htmlFor={`${id}-qual`}>
-            <select id={`${id}-qual`} name="qualification" defaultValue={signedIn?.qualification ?? ""} className={`${inputClass} cursor-pointer`}>
-              <option value="">Select an option</option>
-              {QUALIFICATIONS.map((q) => <option key={q} value={q}>{q}</option>)}
-            </select>
-          </Field>
-          {!signedIn && <p className="text-sm text-muted">Already a student? <Link href="/login?next=/enroll" className="font-semibold text-accent hover:text-accent-dark">Sign in</Link> to enrol with your account.</p>}
+          <StudentDetails id={id} signedIn={signedIn} country={country} onCountry={chooseCountry} phoneCountry={phoneCountry} onPhoneCountry={setPhoneCountry} whatsapp={whatsapp} next="/enroll" />
           <div className="border-t border-line pt-6">
             <button type="submit" className="flex h-13 w-full cursor-pointer items-center justify-center rounded-[8px] bg-accent text-[16px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(79,63,215,.9)] transition hover:bg-accent-dark">Next</button>
           </div>
@@ -315,28 +251,7 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, initialDiscount
             <input type="hidden" name="method" value={method} />
 
             {cohort && !cohort.free && (
-              <Field label="Discount code" htmlFor={`${id}-discount`}>
-                {discount ? (
-                  <div className="flex h-12 items-center justify-between gap-3 rounded-[5px] border border-emerald-300 bg-emerald-50 px-3.5">
-                    <span className="text-[15px] text-emerald-900"><strong className="font-mono">{discount.code}</strong> applied · {discount.percentOff}% off tuition</span>
-                    <button type="button" onClick={removeCode} className="cursor-pointer text-sm font-semibold text-emerald-900 underline-offset-2 hover:underline">Remove</button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      id={`${id}-discount`} value={codeInput} maxLength={40} placeholder="Optional" autoComplete="off"
-                      onChange={(e) => { setCodeInput(e.target.value); setCodeError(null); }}
-                      // Enter applies the code rather than submitting the whole form.
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCode(); } }}
-                      aria-invalid={Boolean(codeError)} aria-describedby={codeError ? `${id}-discount-error` : undefined}
-                      className={`${inputClass} uppercase placeholder:normal-case`}
-                    />
-                    <button type="button" onClick={applyCode} disabled={checkingCode} className="h-12 shrink-0 cursor-pointer rounded-[5px] border-[1.5px] border-accent px-5 text-[15px] font-semibold text-accent transition hover:bg-accent-soft disabled:cursor-wait disabled:opacity-60">{checkingCode ? "Checking…" : "Apply"}</button>
-                  </div>
-                )}
-                {codeError && <p id={`${id}-discount-error`} role="alert" className="text-[13px] text-red-700">{codeError}</p>}
-                <input type="hidden" name="discountCode" value={discount?.code ?? codeInput} />
-              </Field>
+              <DiscountField id={id} initial={initialDiscount} onChange={setDiscount} />
             )}
 
             <div aria-live="polite" className="empty:hidden">
@@ -393,5 +308,119 @@ export function EnrolForm({ cohorts, preferred, initialCohortId, initialDiscount
         </button>
       </aside>
     </div>
+  );
+}
+
+type Discount = { code: string; percentOff: number };
+
+/** The student's name, contact details and background; the country they live in sets the currency offered. */
+export function StudentDetails({ id, signedIn, country, onCountry, phoneCountry, onPhoneCountry, whatsapp, next }: {
+  id: string;
+  signedIn: Prefill | null;
+  country: string;
+  onCountry: (code: string) => void;
+  phoneCountry: string;
+  onPhoneCountry: (code: string) => void;
+  whatsapp: boolean;
+  /** Where "Sign in" comes back to. */
+  next: string;
+}) {
+  return (
+    <>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Field label="First Name" htmlFor={`${id}-first`} required><input id={`${id}-first`} name="firstName" required maxLength={60} autoComplete="given-name" placeholder="Enter first name" defaultValue={signedIn?.firstName} className={inputClass} /></Field>
+        <Field label="Last Name" htmlFor={`${id}-last`} required><input id={`${id}-last`} name="lastName" required maxLength={60} autoComplete="family-name" placeholder="Enter last name" defaultValue={signedIn?.lastName} className={inputClass} /></Field>
+      </div>
+      <Field label="Email Address" htmlFor={`${id}-email`} required>
+        <input id={`${id}-email`} name="email" type="email" required maxLength={200} autoComplete="email" placeholder="Enter email address" defaultValue={signedIn?.email} readOnly={Boolean(signedIn)} className={inputClass} />
+      </Field>
+      <Field label="Country you live in" htmlFor={`${id}-country`} required>
+        <select id={`${id}-country`} name="country" required value={country} onChange={(e) => onCountry(e.target.value)} className={`${inputClass} cursor-pointer`}>
+          <option value="">Select your country</option>
+          {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{flag(c.code)} {c.name}</option>)}
+        </select>
+        <p className="text-[13px] text-muted">We&apos;ll show your price in your local currency where we can, and the ways you can pay from there.</p>
+      </Field>
+      <Field label="Phone Number (WhatsApp preferred)" htmlFor={`${id}-phone`} required>
+        <PhoneInput id={`${id}-phone`} country={phoneCountry} onCountryChange={onPhoneCountry} defaultValue={signedIn?.phone} />
+        {whatsapp && (
+          <label className="flex cursor-pointer items-start gap-2.5 pt-1 text-sm text-body">
+            <input type="checkbox" name="whatsapp" defaultChecked className="mt-0.5 size-4 shrink-0 accent-accent" />
+            <span>Send my class reminders and receipts on WhatsApp too</span>
+          </label>
+        )}
+      </Field>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Date of Birth" htmlFor={`${id}-dob`} required>
+          <input id={`${id}-dob`} name="dateOfBirth" type="date" required min="1920-01-01" max={new Date().toISOString().slice(0, 10)} defaultValue={signedIn?.dateOfBirth} className={inputClass} />
+        </Field>
+        <Field label="Gender" htmlFor={`${id}-gender`}>
+          <select id={`${id}-gender`} name="gender" defaultValue={signedIn?.gender ?? ""} className={`${inputClass} cursor-pointer`}>
+            {GENDER_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+          </select>
+        </Field>
+      </div>
+      <Field label="Highest academic qualification" htmlFor={`${id}-qual`}>
+        <select id={`${id}-qual`} name="qualification" defaultValue={signedIn?.qualification ?? ""} className={`${inputClass} cursor-pointer`}>
+          <option value="">Select an option</option>
+          {QUALIFICATIONS.map((q) => <option key={q} value={q}>{q}</option>)}
+        </select>
+      </Field>
+      {!signedIn && <p className="text-sm text-muted">Already a student? <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-accent hover:text-accent-dark">Sign in</Link> to enrol with your account.</p>}
+    </>
+  );
+}
+
+/** A discount code, checked when "Apply" is pressed so the saving shows before paying. It's checked again at payment. */
+export function DiscountField({ id, initial, onChange }: { id: string; initial: Discount | null; onChange: (discount: Discount | null) => void }) {
+  const [discount, setApplied] = useState(initial);
+  const setDiscount = (next: Discount | null) => { setApplied(next); onChange(next); };
+  const [codeInput, setCodeInput] = useState(initial?.code ?? "");
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
+  const codeRequest = useRef(0);
+  async function applyCode() {
+    if (!codeInput.trim()) { setCodeError("Enter a code first."); return; }
+    // Only the latest check counts, if someone applies twice quickly.
+    const request = ++codeRequest.current;
+    setCheckingCode(true);
+    setCodeError(null);
+    const result = await checkDiscountCode(codeInput);
+    if (request !== codeRequest.current) return;
+    setCheckingCode(false);
+    if ("error" in result) { setDiscount(null); setCodeError(result.error); return; }
+    setCodeError(null);
+    setDiscount(result);
+    setCodeInput(result.code);
+  }
+  function removeCode() {
+    codeRequest.current++;
+    setDiscount(null);
+    setCodeInput("");
+    setCodeError(null);
+  }
+  return (
+    <Field label="Discount code" htmlFor={`${id}-discount`}>
+      {discount ? (
+        <div className="flex h-12 items-center justify-between gap-3 rounded-[5px] border border-emerald-300 bg-emerald-50 px-3.5">
+          <span className="text-[15px] text-emerald-900"><strong className="font-mono">{discount.code}</strong> applied · {discount.percentOff}% off tuition</span>
+          <button type="button" onClick={removeCode} className="cursor-pointer text-sm font-semibold text-emerald-900 underline-offset-2 hover:underline">Remove</button>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            id={`${id}-discount`} value={codeInput} maxLength={40} placeholder="Optional" autoComplete="off"
+            onChange={(e) => { setCodeInput(e.target.value); setCodeError(null); }}
+            // Enter applies the code rather than submitting the whole form.
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCode(); } }}
+            aria-invalid={Boolean(codeError)} aria-describedby={codeError ? `${id}-discount-error` : undefined}
+            className={`${inputClass} uppercase placeholder:normal-case`}
+          />
+          <button type="button" onClick={applyCode} disabled={checkingCode} className="h-12 shrink-0 cursor-pointer rounded-[5px] border-[1.5px] border-accent px-5 text-[15px] font-semibold text-accent transition hover:bg-accent-soft disabled:cursor-wait disabled:opacity-60">{checkingCode ? "Checking…" : "Apply"}</button>
+        </div>
+      )}
+      {codeError && <p id={`${id}-discount-error`} role="alert" className="text-[13px] text-red-700">{codeError}</p>}
+      <input type="hidden" name="discountCode" value={discount?.code ?? codeInput} />
+    </Field>
   );
 }

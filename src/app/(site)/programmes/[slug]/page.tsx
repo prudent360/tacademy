@@ -9,7 +9,8 @@ import { ModeBadge } from "@/components/ui";
 import { withCohorts } from "@/lib/catalog";
 import { getSettings } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
-import { getProgrammeBySlug, instalmentPlan, programmeCourseMap, programmeFee, separateTotal } from "@/lib/programmes";
+import { instalmentPlan } from "@/lib/programme-pricing";
+import { getProgrammeBySlug, programmeCourseMap, programmeFee, separateTotal } from "@/lib/programmes";
 import { pageMetadata, seoConfig } from "@/lib/seo";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { formatDateOnly } from "@/lib/time";
@@ -65,7 +66,9 @@ export default async function ProgrammePage({ params }: Props) {
         title={programme.title}
         lead={programme.summary}
         actions={<>
-          <a href={enquire} className={heroButton.primary}>Enquire about this programme <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></a>
+          {fee
+            ? <Link href={`/programmes/${programme.slug}/enrol`} className={heroButton.primary}>Enrol now <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></Link>
+            : <a href={enquire} className={heroButton.primary}>Enquire about this programme <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></a>}
           <a href="#path" className={heroButton.secondary}>See the courses</a>
         </>}
         facts={[
@@ -166,8 +169,15 @@ export default async function ProgrammePage({ params }: Props) {
             <li className="flex gap-2"><BookIcon className="size-4 shrink-0 text-accent" /> {summaries.length} courses, taught live</li>
             <li className="flex gap-2"><AwardIcon className="size-4 shrink-0 text-accent" /> A verified certificate for each course</li>
           </ul>
-          <a href={enquire} className="flex h-12 items-center justify-center gap-2 rounded-[5px] bg-accent font-semibold text-white transition hover:bg-accent-dark">Enquire about this programme <ArrowRight className="size-4" /></a>
-          {first && <Link href={`/courses/${first.slug}`} className="text-center text-sm font-semibold text-accent hover:underline">Or start with {first.title}</Link>}
+          {fee
+            ? <>
+                <Link href={`/programmes/${programme.slug}/enrol`} className="flex h-12 items-center justify-center gap-2 rounded-[5px] bg-accent font-semibold text-white transition hover:bg-accent-dark">Enrol now <ArrowRight className="size-4" /></Link>
+                <a href={enquire} className="text-center text-sm font-semibold text-accent hover:underline">Questions? Ask us about this programme</a>
+              </>
+            : <>
+                <a href={enquire} className="flex h-12 items-center justify-center gap-2 rounded-[5px] bg-accent font-semibold text-white transition hover:bg-accent-dark">Enquire about this programme <ArrowRight className="size-4" /></a>
+                {first && <Link href={`/courses/${first.slug}`} className="text-center text-sm font-semibold text-accent hover:underline">Or start with {first.title}</Link>}
+              </>}
         </aside>
       </div>
     </>

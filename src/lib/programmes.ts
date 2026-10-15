@@ -51,17 +51,3 @@ export function separateTotal(summaries: CourseSummary[], currency: string): num
   }
   return total;
 }
-
-export type InstalmentPlan = { count: number; first: number; rest: number };
-
-/**
- * Splits a fee (minor units) into monthly instalments: the first is `firstPercent` of the fee (or an equal share),
- * the others equal. Later instalments are rounded down to whole units and the first takes the remainder, so the
- * parts always add up to the fee exactly.
- */
-export function instalmentPlan(total: number, count: number | null, firstPercent: number | null): InstalmentPlan | null {
-  if (!count || count < 2 || total <= 0) return null;
-  const firstTarget = firstPercent ? total * firstPercent / 100 : total / count;
-  const rest = Math.floor((total - firstTarget) / (count - 1) / 100) * 100;
-  return { count, first: total - rest * (count - 1), rest };
-}

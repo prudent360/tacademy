@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
-import { payBalance } from "@/app/actions/enroll";
+import { and, desc, eq } from "drizzle-orm";
+import { payBalance, payProgrammeInstalment } from "@/app/actions/enroll";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { CardIcon } from "@/components/icons";
 import { Card, DataTable, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { getDb } from "@/db";
-import { cohorts, courses, payments } from "@/db/schema";
+import { cohorts, courses, payments, programmeEnrollments, programmes } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { payableCurrencies, paymentBalanceFor } from "@/lib/payments";
 import { PART_PAYMENT_PLANS, PLAN_LABEL } from "@/lib/pricing";
-import { formatDateTime, hoursAgo } from "@/lib/time";
+import { instalmentStatus } from "@/lib/programme-enrolment";
+import { formatDateOnly, formatDateTime, hoursAgo } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -27,11 +28,20 @@ export default async function PaymentsPage() {
     if (!detail) return null;
     return { ...detail, balance: await paymentBalanceFor(user.id, detail.cohort, deposit.currency) };
   }))).filter((row): row is NonNullable<typeof row> => Boolean(row?.balance.remaining));
+  const programmeRows = await db.select({ enrolment: programmeEnrollments, programme: programmes }).from(programmeEnrollments).innerJoin(programmes, eq(programmes.id, programmeEnrollments.programmeId))
+    .where(and(eq(programmeEnrollments.userId, user.id), eq(programmeEnrollments.status, "active")));
+  const instalments = (await Promise.all(programmeRows.map(async (row) => ({ ...row, status: await instalmentStatus(row.enrolment) })))).filter((row) => row.status.next);
   const cutoff = hoursAgo(24);
   const visible = rows.filter((p) => p.status !== "pending" || p.gateway === "manual" || new Date(p.createdAt) > cutoff);
   return (
     <>
       <PageHeader title="Payments" description="Your payment history and references. Receipts are emailed after each payment." />
+      {instalments.length > 0 && <div className="grid gap-4 md:grid-cols-2">{instalments.map(({ enrolment, programme, status }) => <Card key={enrolment.id} className={status.overdue ? "border-amber-200 bg-amber-50/30" : ""}>
+        <p className={`text-xs font-bold uppercase tracking-[1.2px] ${status.overdue ? "text-amber-800" : "text-accent"}`}>{status.overdue ? "Instalment overdue" : "Next instalment"}</p>
+        <h2 className="mt-2 font-display text-lg font-bold text-ink">{programme.title}</h2><p className="text-sm text-muted">Instalment {status.next!.number} of {enrolment.instalmentCount}{status.overdue ? "" : `, due ${formatDateOnly(status.next!.dueDate.toISOString().slice(0, 10))}`}</p>
+        <div className="mt-4 flex items-end justify-between gap-4"><div><p className="font-display text-2xl font-bold text-ink">{formatMoney(status.next!.amount, enrolment.currency)}</p><p className="text-xs text-muted">{status.paid} of {enrolment.instalmentCount} paid · {formatMoney(enrolment.total, enrolment.currency)} in total</p></div>
+        {payable.includes(enrolment.currency) ? <ActionForm action={payProgrammeInstalment.bind(null, enrolment.id)} className="items-end"><SubmitButton pendingText="Opening…">Pay instalment</SubmitButton></ActionForm> : <p className="max-w-40 text-right text-xs text-muted">Online payments in {enrolment.currency} are currently unavailable. Contact support.</p>}</div>
+      </Card>)}</div>}
       {balances.length > 0 && <div className="grid gap-4 md:grid-cols-2">{balances.map(({ cohort, course, balance }) => <Card key={`${cohort.id}:${balance.currency}`} className="border-amber-200 bg-amber-50/30">
         <p className="text-xs font-bold uppercase tracking-[1.2px] text-amber-800">Balance due</p>
         <h2 className="mt-2 font-display text-lg font-bold text-ink">{course.title}</h2><p className="text-sm text-muted">{cohort.name}</p>

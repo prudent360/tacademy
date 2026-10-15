@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
 import {
-  certificates, cohortInstructors, cohorts, courses, DELIVERY_MODES, discountCodes, emailTemplates, enrollments, internshipCourses, payments, ROLES, users,
+  certificates, cohortInstructors, cohorts, courses, DELIVERY_MODES, discountCodes, emailTemplates, enrollments, internshipCourses, payments, programmeCourses, programmeEnrollments, ROLES, users,
   type Role,
 } from "@/db/schema";
 import { can, requirePermission } from "@/lib/auth";
@@ -538,6 +538,21 @@ export async function recordRefund(reference: string, _state: FormState, formDat
       await offerOpenPlaces(payment.cohortId);
     }
   }
+  // Programme payments: optionally cancel the programme and the course places taken through it.
+  if (formData.get("cancelProgramme") === "on" && payment.programmeId) {
+    const [cancelled] = await db.update(programmeEnrollments).set({ status: "cancelled" }).where(and(eq(programmeEnrollments.userId, payment.userId), eq(programmeEnrollments.programmeId, payment.programmeId))).returning({ id: programmeEnrollments.id });
+    if (cancelled) {
+      const courseIds = (await db.select({ id: programmeCourses.courseId }).from(programmeCourses).where(eq(programmeCourses.programmeId, payment.programmeId))).map((r) => r.id);
+      const places = courseIds.length ? await db.select({ id: enrollments.id, cohortId: enrollments.cohortId }).from(enrollments).innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
+        .where(and(eq(enrollments.userId, payment.userId), eq(enrollments.source, "programme"), inArray(cohorts.courseId, courseIds), inArray(enrollments.status, ["active", "completed"]))) : [];
+      if (places.length) {
+        await db.update(enrollments).set({ status: "cancelled", completedAt: null }).where(inArray(enrollments.id, places.map((p) => p.id)));
+        await db.update(certificates).set({ revokedAt: new Date() }).where(inArray(certificates.enrollmentId, places.map((p) => p.id)));
+        for (const place of places) await offerOpenPlaces(place.cohortId);
+      }
+      removed = true;
+    }
+  }
   // Community payments: optionally take away the period of access it bought.
   if (formData.get("endMembership") === "on" && payment.product === "community") {
     removed = await revokeMembershipForPayment(payment.id);
@@ -547,10 +562,10 @@ export async function recordRefund(reference: string, _state: FormState, formDat
   if (student && formData.get("notify") === "on") {
     await sendEmail(student.email, "refund_processed", { name: firstName(student.name), amount: formatMoney(amount, payment.currency), description: payment.description, reference: payment.reference, paymentsUrl: absoluteUrl("/dashboard/payments") });
   }
-  await logAudit(actor, { action: "refund.recorded", summary: `recorded a ${full ? "full" : "partial"} refund of ${formatMoney(amount, payment.currency)} on ${reference}${student ? ` for ${student.name}` : ""}${removed ? (payment.product === "community" ? " and ended their community membership" : " and removed them from the cohort") : ""}`, target: { type: "payment", id: reference }, details: { reason } });
+  await logAudit(actor, { action: "refund.recorded", summary: `recorded a ${full ? "full" : "partial"} refund of ${formatMoney(amount, payment.currency)} on ${reference}${student ? ` for ${student.name}` : ""}${removed ? (payment.product === "community" ? " and ended their community membership" : payment.product === "programme" ? " and cancelled their programme place" : " and removed them from the cohort") : ""}`, target: { type: "payment", id: reference }, details: { reason } });
   revalidatePath("/admin/payments");
   revalidatePath("/dashboard/payments");
-  return { ok: `Refund of ${formatMoney(amount, payment.currency)} recorded${removed ? (payment.product === "community" ? " and their community membership was ended" : " and the student was removed from the cohort") : ""}.` };
+  return { ok: `Refund of ${formatMoney(amount, payment.currency)} recorded${removed ? (payment.product === "community" ? " and their community membership was ended" : payment.product === "programme" ? " and their programme place was cancelled" : " and the student was removed from the cohort") : ""}.` };
 }
 
 // ---------- Email templates ----------

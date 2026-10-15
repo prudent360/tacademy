@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { courses, programmeCourses, programmes } from "@/db/schema";
+import { courses, programmeCourses, programmeEnrollments, programmes } from "@/db/schema";
 import { requirePermission } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { parsePrices } from "@/lib/money";
@@ -115,6 +115,9 @@ export async function updateProgramme(id: number, _state: FormState, formData: F
 
 export async function deleteProgramme(id: number): Promise<void> {
   const actor = await requirePermission("courses.manage");
+  // Deleting would erase students' places and instalment plans; unpublish it instead.
+  const [enrolled] = await (await getDb()).select({ id: programmeEnrollments.id }).from(programmeEnrollments).where(and(eq(programmeEnrollments.programmeId, id), eq(programmeEnrollments.status, "active"))).limit(1);
+  if (enrolled) redirect(`/admin/programmes/${id}?inUse=1`);
   const [removed] = await (await getDb()).delete(programmes).where(eq(programmes.id, id)).returning({ title: programmes.title, imageUrl: programmes.imageUrl, heroImageUrl: programmes.heroImageUrl });
   await Promise.all([deleteUpload(removed?.imageUrl), deleteUpload(removed?.heroImageUrl)]);
   if (removed) await logAudit(actor, { action: "programme.deleted", summary: `deleted the programme “${removed.title}”`, target: { type: "programme", id } });

@@ -45,7 +45,7 @@ export function cohortCurrencies(cohort: PricedCohort): string[] {
   return [...new Set([...Object.keys(cohort.prices), ...Object.keys(cohort.registrationFees)])].filter((c) => (cohort.prices[c] ?? 0) > 0 || (cohort.registrationFees[c] ?? 0) > 0);
 }
 
-export const PLAN_LABEL: Record<PaymentPlan, string> = { full: "Full payment", deposit: "Deposit", registration: "Registration fee only", balance: "Balance" };
+export const PLAN_LABEL: Record<PaymentPlan, string> = { full: "Full payment", deposit: "Deposit", registration: "Registration fee only", balance: "Balance", instalment: "Instalment" };
 
 /** Payments that leave tuition to be paid later. */
 export const PART_PAYMENT_PLANS: PaymentPlan[] = ["deposit", "registration"];

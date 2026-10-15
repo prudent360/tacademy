@@ -316,6 +316,13 @@
       "when": 1792066222900,
       "tag": "0044_programme_instalments",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792067927432,
+      "tag": "0045_programme_enrollments",
+      "breakpoints": true
     }
   ]
 }
