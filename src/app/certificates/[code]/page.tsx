@@ -6,39 +6,29 @@ import { CertificateActions } from "@/components/portal/certificate-actions";
 import { CheckCircleIcon } from "@/components/icons";
 import { LinkedInButtons } from "@/components/linkedin-buttons";
 import { getCurrentUser } from "@/lib/auth";
-import { certificateByCode } from "@/lib/certificates";
+import { verifiedCertificate } from "@/lib/certificates";
 import { getSettings } from "@/lib/data";
 import { formatDateOnly } from "@/lib/time";
 import { absoluteUrl } from "@/lib/site";
 import QRCode from "qrcode";
 
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  const row = await certificateByCode((await params).code);
+  const row = await verifiedCertificate((await params).code);
   if (!row) return { title: "Certificate verification", robots: { index: false } };
   const settings = await getSettings();
-  const title = `${row.student.name}: ${row.course.title}`;
-  const description = `${row.student.name} completed ${row.course.title} at ${settings.siteName}. Verified certificate ${row.certificate.code}.`;
+  const title = `${row.student.name}: ${row.title}`;
+  const description = `${row.student.name} completed ${row.title} at ${settings.siteName}. Verified certificate ${row.code}.`;
   return { title, description, robots: { index: true, follow: false }, openGraph: { title, description, type: "website", siteName: settings.siteName } };
 }
 
 export default async function CertificatePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const row = await certificateByCode(code);
+  const row = await verifiedCertificate(code);
   if (!row) notFound();
   const [settings, viewer] = await Promise.all([getSettings(), getCurrentUser()]);
-  const url = absoluteUrl(`/certificates/${row.certificate.code}`);
+  const url = absoluteUrl(`/certificates/${row.code}`);
   const qr = await QRCode.toDataURL(url, { width: 200, margin: 1, color: { dark: "#181340", light: "#ffffff" } });
-  const issued = formatDateOnly(row.certificate.issuedAt.toISOString().slice(0, 10));
-  const MODE = { virtual: "Live online", physical: "In person", hybrid: "Hybrid" } as const;
-  const dates = row.cohort.startDate && row.cohort.endDate ? `${formatDateOnly(row.cohort.startDate)} – ${formatDateOnly(row.cohort.endDate)}` : "";
-  const programme = [row.cohort.name, dates, MODE[row.cohort.deliveryMode], row.course.durationWeeks ? `${row.course.durationWeeks}-week programme` : ""].filter(Boolean).join(" · ");
-  const details: [string, string][] = [
-    ["Issued to", row.student.name],
-    ["Course", row.course.title],
-    ["Cohort", row.cohort.name],
-    ["Date issued", issued],
-    ["Certificate ID", row.certificate.code],
-  ];
+  const issued = formatDateOnly(row.issuedAt.toISOString().slice(0, 10));
 
   return (
     <main className="certificate-page min-h-dvh bg-page px-3 py-6 sm:px-8 sm:py-8">
@@ -54,7 +44,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
           <p className="text-sm text-body">
             <strong className="text-ink">Congratulations!</strong> Add it to your LinkedIn profile or share it with your network.
           </p>
-          <LinkedInButtons course={row.course.title} organisation={settings.siteName} issuedAt={row.certificate.issuedAt} url={url} code={row.certificate.code} />
+          <LinkedInButtons course={row.title} organisation={settings.siteName} issuedAt={row.issuedAt} url={url} code={row.code} />
         </div>
       )}
 
@@ -70,7 +60,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
           </header>
 
           <div className="relative flex flex-1 flex-col justify-center py-8 sm:py-0">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[.32em] text-accent sm:text-[13px]">Certificate of completion</p>
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[.32em] text-accent sm:text-[13px]">{row.kind === "programme" ? "Programme certificate" : "Certificate of completion"}</p>
             <p className="mt-5 text-sm text-muted sm:mt-[3.5%] sm:text-base">This is to certify that</p>
             <h1 className="mt-1.5 font-display text-[34px] font-bold leading-[1.05] tracking-tight text-ink sm:text-[clamp(2.5rem,5.6vw,4.4rem)]">{row.student.name}</h1>
             <div className="mt-4 flex items-center gap-1.5 sm:mt-[2.5%]" aria-hidden="true">
@@ -78,14 +68,14 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
               <span className="h-1 w-5 bg-cyan" />
             </div>
             <p className="mt-4 text-sm text-muted sm:mt-[2.5%] sm:text-base">has successfully completed</p>
-            <p className="mt-1 max-w-[30ch] font-display text-2xl font-bold leading-tight text-accent sm:text-[clamp(1.5rem,3vw,2.35rem)]">{row.course.title}</p>
-            {programme && <p className="mt-2 text-sm text-body sm:mt-3 sm:text-[15px]">{programme}</p>}
+            <p className="mt-1 max-w-[30ch] font-display text-2xl font-bold leading-tight text-accent sm:text-[clamp(1.5rem,3vw,2.35rem)]">{row.title}</p>
+            {row.line && <p className="mt-2 text-sm text-body sm:mt-3 sm:text-[15px]">{row.line}</p>}
           </div>
 
           <dl className="relative grid grid-cols-2 gap-x-6 gap-y-4 border-t border-line pt-4 text-sm sm:grid-cols-3 sm:pt-5">
             <div><dt className="text-xs text-muted">Issued by</dt><dd className="mt-0.5 font-semibold text-ink">{settings.siteName}</dd></div>
             <div><dt className="text-xs text-muted">Date issued</dt><dd className="mt-0.5 font-semibold text-ink">{issued}</dd></div>
-            <div className="col-span-2 sm:col-span-1"><dt className="text-xs text-muted">Certificate ID</dt><dd className="mt-0.5 font-mono font-semibold text-ink">{row.certificate.code}</dd></div>
+            <div className="col-span-2 sm:col-span-1"><dt className="text-xs text-muted">Certificate ID</dt><dd className="mt-0.5 font-mono font-semibold text-ink">{row.code}</dd></div>
           </dl>
         </div>
 
@@ -106,7 +96,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
             <p className="mt-0.5 hidden font-mono text-[10px] leading-snug text-white/60 sm:block">
               {new URL(url).host}
               <br />
-              /certificates/{row.certificate.code}
+              /certificates/{row.code}
             </p>
           </div>
         </aside>
@@ -119,7 +109,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
         </h2>
         <p className="mt-1 text-sm text-muted">Issued by {settings.siteName} and recorded in our system. It hasn&apos;t been revoked.</p>
         <dl className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-          {details.map(([label, value]) => (
+          {row.details.map(([label, value]) => (
             <div key={label} className="flex flex-col gap-0.5 border-t border-line pt-3">
               <dt className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</dt>
               <dd className={`text-[15px] font-semibold text-ink ${label === "Certificate ID" ? "break-all font-mono" : ""}`}>{value}</dd>

@@ -18,6 +18,7 @@ import { getCohortWithCourse, getSettings } from "@/lib/data";
 import { fromZonedInput } from "@/lib/time";
 import { REQUIRED_TEMPLATES, sendEmail } from "@/lib/email";
 import { certificateEligibility } from "@/lib/certificates";
+import { syncProgrammeCertificates } from "@/lib/programme-progress";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
 import { countryByCode } from "@/lib/countries";
 import { CURRENCY_CODES, formatMoney, parseMajor, parsePrices } from "@/lib/money";
@@ -272,6 +273,8 @@ export async function setEnrollmentStatus(enrollmentId: number, status: "active"
     // A place has opened: offer it to the waitlist.
     await offerOpenPlaces(row.cohortId);
   }
+  // Finishing (or losing) a course can complete (or undo) a programme.
+  await syncProgrammeCertificates(row.userId);
   revalidatePath(`/teach/cohorts/${row.cohortId}`);
   revalidatePath(`/admin/users/${row.userId}`);
   revalidatePath("/dashboard", "layout");
@@ -553,6 +556,7 @@ export async function recordRefund(reference: string, _state: FormState, formDat
       removed = true;
     }
   }
+  if (removed && payment.product !== "community") await syncProgrammeCertificates(payment.userId);
   // Community payments: optionally take away the period of access it bought.
   if (formData.get("endMembership") === "on" && payment.product === "community") {
     removed = await revokeMembershipForPayment(payment.id);

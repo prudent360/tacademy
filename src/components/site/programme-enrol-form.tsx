@@ -19,9 +19,9 @@ export type ProgrammeCheckout = {
   prices: PriceMap;
   instalmentCount: number | null;
   instalmentFirstPercent: number | null;
-  /** The courses in order; the first is booked now, the rest claimed later. */
-  courses: string[];
-  /** Open cohorts of the first course. */
+  /** The courses in order: one booked now, the rest claimed later, and any the student has already taken. */
+  courses: { title: string; status: "now" | "later" | "completed" | "booked" }[];
+  /** Open cohorts of the course booked now. */
   cohorts: { id: number; name: string; dates: string; deliveryMode: DeliveryMode }[];
   /** Currencies the fee can be paid in, and how. */
   currencies: { code: string; online: boolean; provider?: OnlineProvider; bank: boolean }[];
@@ -39,6 +39,9 @@ export function ProgrammeEnrolForm({ programme, preferred, whatsapp = false, sig
   const top = useRef<HTMLDivElement>(null);
   const [state, formAction, pending] = useActionState<EnrolState, FormData>(enrolProgramme, undefined);
   const [step, setStep] = useState<1 | 2>(1);
+  const now = programme.courses.find((c) => c.status === "now")?.title ?? "";
+  const later = programme.courses.filter((c) => c.status === "later").map((c) => c.title);
+  const credited = programme.courses.filter((c) => c.status === "completed" || c.status === "booked").map((c) => c.title);
   const [cohortId, setCohortId] = useState<number | null>(programme.cohorts.length === 1 ? programme.cohorts[0].id : null);
   const cohort = programme.cohorts.find((c) => c.id === cohortId) ?? null;
 
@@ -110,14 +113,15 @@ export function ProgrammeEnrolForm({ programme, preferred, whatsapp = false, sig
         {step === 2 && (
           <div className="flex flex-col gap-7">
             <fieldset className="flex flex-col gap-2.5">
-              <legend className="mb-2 text-sm font-medium text-ink">When do you want to start {programme.courses[0]}?<span className="text-red-600" aria-hidden="true"> *</span></legend>
+              <legend className="mb-2 text-sm font-medium text-ink">When do you want to start {now}?<span className="text-red-600" aria-hidden="true"> *</span></legend>
               {programme.cohorts.map((c) => (
                 <Choice key={c.id} name="cohortChoice" value={String(c.id)} checked={cohortId === c.id} onChange={() => setCohortId(c.id)}>
                   <span className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold text-ink">{c.name}</span><span className="rounded-full bg-page px-2.5 py-0.5 text-xs font-semibold text-body">{MODE_LABEL[c.deliveryMode]}</span></span>
                   <span className="text-sm text-muted">{c.dates}</span>
                 </Choice>
               ))}
-              <p className="text-[13px] text-muted">You&apos;ll choose dates for {programme.courses.slice(1).join(", ")} from your dashboard when you&apos;re ready, at no extra cost.</p>
+              {credited.length > 0 && <p className="text-[13px] text-emerald-800">{credited.join(", ")} already count{credited.length === 1 ? "s" : ""} towards this programme.</p>}
+              {later.length > 0 && <p className="text-[13px] text-muted">You&apos;ll choose dates for {later.join(", ")} from your dashboard when you&apos;re ready, at no extra cost.</p>}
             </fieldset>
             {cohort && <input type="hidden" name="cohortId" value={cohort.id} />}
 
@@ -199,10 +203,10 @@ export function ProgrammeEnrolForm({ programme, preferred, whatsapp = false, sig
         <div className="flex flex-col gap-2.5">
           <p className="text-xs font-semibold uppercase tracking-[1.2px] text-white/55">{programme.title}</p>
           <ol className="flex flex-col gap-2 rounded-[12px] bg-white/[.06] p-4 text-sm">
-            {programme.courses.map((title, i) => (
+            {programme.courses.map(({ title, status }, i) => (
               <li key={title} className="flex justify-between gap-4">
                 <span className="flex gap-2"><span className="font-mono text-xs leading-5 text-white/45">{String(i + 1).padStart(2, "0")}</span>{title}</span>
-                <span className="shrink-0 text-right text-white/65">{i === 0 ? cohort?.name ?? "Choose a date" : "Choose later"}</span>
+                <span className={`shrink-0 text-right ${status === "completed" || status === "booked" ? "text-emerald-300" : "text-white/65"}`}>{status === "now" ? cohort?.name ?? "Choose a date" : status === "completed" ? "Completed" : status === "booked" ? "Already booked" : "Choose later"}</span>
               </li>
             ))}
             <li className="mt-1 flex justify-between gap-4 border-t border-white/10 pt-2"><span className="text-white/65">Duration</span><span>{programme.duration}</span></li>

@@ -1,16 +1,17 @@
 import Link from "next/link";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { claimProgrammeCourse, payProgrammeInstalment } from "@/app/actions/enroll";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { ArrowRight, CapIcon, CheckIcon } from "@/components/icons";
-import { Badge, Card } from "@/components/ui";
+import { ArrowRight, AwardIcon, CapIcon, CheckIcon } from "@/components/icons";
+import { ProgressBar } from "@/components/portal/dash";
+import { Badge, Card, buttonClass } from "@/components/ui";
 import { getDb } from "@/db";
-import { cohorts, enrollments, programmeEnrollments, programmes } from "@/db/schema";
+import { programmeCertificates, programmeEnrollments, programmes } from "@/db/schema";
 import { withCohorts } from "@/lib/catalog";
 import { formatMoney } from "@/lib/money";
 import { payableCurrencies } from "@/lib/payments";
 import { instalmentStatus } from "@/lib/programme-enrolment";
-import { programmeCourseMap } from "@/lib/programmes";
+import { programmeProgress } from "@/lib/programme-progress";
 import { formatDateOnly } from "@/lib/time";
 import { MODE_LABEL } from "@/lib/utils";
 
@@ -22,20 +23,20 @@ export async function MyProgrammes({ userId }: { userId: number }) {
   const rows = await db.select({ enrolment: programmeEnrollments, programme: programmes }).from(programmeEnrollments).innerJoin(programmes, eq(programmes.id, programmeEnrollments.programmeId))
     .where(and(eq(programmeEnrollments.userId, userId), eq(programmeEnrollments.status, "active")));
   if (!rows.length) return null;
-  const [included, places, payable] = await Promise.all([
-    programmeCourseMap(rows.map((r) => r.programme.id)),
-    db.select({ cohortId: cohorts.id, courseId: cohorts.courseId, name: cohorts.name, startDate: cohorts.startDate }).from(enrollments).innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
-      .where(and(eq(enrollments.userId, userId), inArray(enrollments.status, ["active", "completed"]))),
+  const [progress, certs, payable] = await Promise.all([
+    programmeProgress(userId, rows.map((r) => r.programme.id)),
+    db.select().from(programmeCertificates).where(and(eq(programmeCertificates.userId, userId), isNull(programmeCertificates.revokedAt))),
     payableCurrencies(),
   ]);
-  const summaries = await withCohorts([...new Map([...included.values()].flat().map((c) => [c.id, c])).values()]);
+  const summaries = await withCohorts([...new Map([...progress.values()].flatMap((p) => p.steps).map((s) => [s.course.id, s.course])).values()]);
 
   return (
     <section id="programmes" className="flex scroll-mt-24 flex-col gap-4">
       {await Promise.all(rows.map(async ({ enrolment, programme }) => {
         const status = await instalmentStatus(enrolment);
-        const list = included.get(programme.id) ?? [];
-        const booked = list.filter((c) => places.some((p) => p.courseId === c.id)).length;
+        const p = progress.get(programme.id);
+        if (!p) return null;
+        const cert = certs.find((c) => c.programmeId === programme.id);
         return (
           <Card key={enrolment.id} padded={false}>
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5 md:p-6">
@@ -44,7 +45,7 @@ export async function MyProgrammes({ userId }: { userId: number }) {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[1.2px] text-accent">My programme</p>
                   <h2 className="font-display text-xl font-bold text-ink">{programme.title}</h2>
-                  <p className="text-sm text-muted">{booked} of {list.length} courses booked · {programme.duration}</p>
+                  <p className="text-sm text-muted">{p.completed} of {p.steps.length} courses completed · {programme.duration}</p>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2 text-right">
@@ -61,16 +62,21 @@ export async function MyProgrammes({ userId }: { userId: number }) {
                 )}
               </div>
             </div>
+            <div className="flex flex-col gap-4 border-b border-line p-5 sm:flex-row sm:items-center md:px-6">
+              <div className="grow"><ProgressBar value={p.percent} tone={cert ? "green" : "purple"} label="Programme progress" detail={`${p.percent}%`} /></div>
+              {cert
+                ? <Link href={`/certificates/${cert.code}`} target="_blank" className={`${buttonClass.primary} shrink-0`}><AwardIcon className="size-4" /> View programme certificate</Link>
+                : p.current && <Link href={`/dashboard/cohorts/${p.current.place!.cohortId}`} className={`${buttonClass.primary} shrink-0`}>Continue {p.current.course.title} <ArrowRight className="size-4" /></Link>}
+            </div>
             <ol className="flex flex-col divide-y divide-line">
-              {list.map((course, i) => {
-                const place = places.find((p) => p.courseId === course.id);
+              {p.steps.map(({ course, place, done, lessons }, i) => {
                 const open = summaries.find((s) => s.id === course.id)?.cohorts.filter((c) => c.enrollmentOpen && !c.full) ?? [];
                 return (
                   <li key={course.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center md:px-6">
-                    <span className={`flex size-8 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold ${place ? "bg-emerald-50 text-emerald-700" : "bg-accent-soft text-accent"}`}>{place ? <CheckIcon className="size-4" /> : String(i + 1).padStart(2, "0")}</span>
+                    <span className={`flex size-8 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold ${done ? "bg-emerald-500 text-white" : "bg-accent-soft text-accent"}`}>{done ? <CheckIcon className="size-4" /> : String(i + 1).padStart(2, "0")}</span>
                     <div className="min-w-0 grow">
-                      <p className="font-semibold text-ink">{course.title}</p>
-                      <p className="text-sm text-muted">{place ? `${place.name}${place.startDate ? `, starts ${formatDateOnly(place.startDate)}` : ""}` : open.length ? "Choose your start date when you're ready" : "New dates coming soon"}</p>
+                      <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">{course.title}{done ? <Badge tone="green">Completed</Badge> : place?.completed ? <Badge tone="amber">Completed, certificate pending</Badge> : place ? <Badge tone="accent">{lessons}% of lessons</Badge> : null}</p>
+                      <p className="text-sm text-muted">{place ? `${place.cohortName}${place.startDate ? `, ${place.startDate < new Date().toISOString().slice(0, 10) ? "started" : "starts"} ${formatDateOnly(place.startDate)}` : ""}` : open.length ? "Choose your start date when you're ready" : "New dates coming soon"}</p>
                     </div>
                     {place ? (
                       <Link href={`/dashboard/cohorts/${place.cohortId}`} className="flex shrink-0 items-center gap-1 text-sm font-semibold text-accent hover:underline">Open course <ArrowRight className="size-4" /></Link>

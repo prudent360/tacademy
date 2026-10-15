@@ -13,7 +13,7 @@ import { rememberCheckout } from "@/lib/checkout-access";
 import { getCohortWithCourse, graduateFor, isEnrolled, seatsTaken } from "@/lib/data";
 import { activateEnrollment, findDiscount, startBalanceCheckout, startBankTransfer, startCheckout } from "@/lib/payments";
 import { availablePlans, type EnrolPlan } from "@/lib/pricing";
-import { instalmentStatus, startInstalmentCheckout, startProgrammeCheckout } from "@/lib/programme-enrolment";
+import { instalmentStatus, startInstalmentCheckout, startProgrammeCheckout, takenCourses } from "@/lib/programme-enrolment";
 import { revalidatePath } from "next/cache";
 import { loginBlockedFor, recordLoginFailure } from "@/lib/rate-limit";
 import { QUALIFICATIONS } from "@/lib/utils";
@@ -158,9 +158,9 @@ export async function enrolProgramme(_state: EnrolState, formData: FormData): Pr
   const db = await getDb();
   const [programme] = await db.select().from(programmes).where(and(eq(programmes.id, details.programmeId), eq(programmes.published, true)));
   if (!programme) return { error: "This programme is no longer available." };
-  const [first] = await db.select({ courseId: programmeCourses.courseId }).from(programmeCourses).where(eq(programmeCourses.programmeId, programme.id)).orderBy(programmeCourses.position).limit(1);
+  const order = (await db.select({ courseId: programmeCourses.courseId }).from(programmeCourses).where(eq(programmeCourses.programmeId, programme.id)).orderBy(programmeCourses.position)).map((r) => r.courseId);
   const found = await getCohortWithCourse(details.cohortId);
-  if (!found || found.cohort.courseId !== first?.courseId) return { error: "Choose a start date for the first course." };
+  if (!found || !order.includes(found.cohort.courseId)) return { error: "Choose a start date for your first course." };
   const { cohort } = found;
   if (!cohort.enrollmentOpen) return { error: "Enrolment for this cohort has closed. Please choose another start date." };
   if (cohort.capacity && ((await seatsTaken([cohort.id])).get(cohort.id) ?? 0) >= cohort.capacity) return { error: "Sorry, this cohort is full. Please choose another start date." };
@@ -171,6 +171,11 @@ export async function enrolProgramme(_state: EnrolState, formData: FormData): Pr
 
   const applicant = await applicantFor(details, `/programmes/${programme.slug}/enrol`, formData.get("whatsapp") === "on");
   if ("error" in applicant) return applicant;
+  // Courses they've already finished or booked count, so they start with the first one they haven't taken.
+  const taken = await takenCourses(applicant.user.id, order);
+  const next = order.find((id) => !taken.has(id));
+  if (!next) return { error: "You've already taken every course in this programme. Contact us if you'd like the programme certificate." };
+  if (found.cohort.courseId !== next) return { error: "Please choose a start date for the first course you haven't taken yet. Refresh the page to see it." };
   const result = await startProgrammeCheckout(applicant.user, programme, cohort, { currency: details.currency, plan: details.plan, method: details.method, discountCode: details.discountCode });
   if ("error" in result) return { error: result.error, ...(result.error.startsWith("You're already") ? { signIn: "/dashboard/courses#programmes" } : {}) };
   await rememberCheckout(result.reference);

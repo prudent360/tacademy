@@ -10,6 +10,7 @@ import { sendEmails } from "./email";
 import { bankTransferConfig, gatewayConfig, type Gateway } from "./config";
 import { communityConfig, grantMembership, isPaidCommunity } from "./community-access";
 import { countryByCode } from "./countries";
+import { syncProgrammeCertificates } from "./programme-progress";
 import { recordCommission } from "./referrals";
 import { markWaitlistEnrolled } from "./waitlist";
 import { CURRENCIES, CURRENCY_CODES, formatMoney, gatewayFor } from "./money";
@@ -460,6 +461,8 @@ async function activateProgrammeEnrollment(userId: number, programmeId: number):
     .where(and(eq(programmeEnrollments.userId, userId), eq(programmeEnrollments.programmeId, programmeId), eq(programmeEnrollments.status, "pending"))).returning();
   if (!activated) return;
   if (activated.firstCohortId) await activateEnrollment(userId, activated.firstCohortId, "programme");
+  // Courses already finished count towards the programme, so it may be complete from the start.
+  await syncProgrammeCertificates(userId);
   const [programme] = await db.select({ title: programmes.title }).from(programmes).where(eq(programmes.id, programmeId));
   await notify([userId], {
     kind: "enrollment",

@@ -1,7 +1,10 @@
 import "server-only";
 import { and, eq, isNull, lt } from "drizzle-orm";
 import { getDb } from "@/db";
-import { assignments, attendance, certificates, classSessions, cohorts, courses, enrollments, submissions, users } from "@/db/schema";
+import { assignments, attendance, certificates, classSessions, cohorts, courses, enrollments, programmeCertificates, programmes, submissions, users, type User } from "@/db/schema";
+import { programmeName } from "./programme-pricing";
+import { formatDateOnly } from "./time";
+import { programmeCourseMap } from "./programmes";
 import { courseQuizAverage } from "./quiz";
 
 export type CertificateEligibility = {
@@ -57,4 +60,43 @@ export async function certificateByCode(code: string) {
     .innerJoin(courses, eq(courses.id, cohorts.courseId))
     .where(and(eq(certificates.code, code), isNull(certificates.revokedAt)));
   return row ?? null;
+}
+
+const MODE = { virtual: "Live online", physical: "In person", hybrid: "Hybrid" } as const;
+
+/** A valid course or programme certificate, in one shape for the verification page and its share image. */
+export type VerifiedCertificate = {
+  kind: "course" | "programme";
+  code: string;
+  issuedAt: Date;
+  student: Pick<User, "id" | "name">;
+  /** What was completed, e.g. "Data Analytics with Power BI" or "Data Career Programme". */
+  title: string;
+  /** A line under the title: the cohort and format, or the courses in the programme. */
+  line: string;
+  details: [string, string][];
+};
+
+export async function verifiedCertificate(code: string): Promise<VerifiedCertificate | null> {
+  const course = await certificateByCode(code);
+  const issued = (d: Date) => formatDateOnly(d.toISOString().slice(0, 10));
+  if (course) {
+    const { certificate, student, cohort } = course;
+    const dates = cohort.startDate && cohort.endDate ? `${formatDateOnly(cohort.startDate)} – ${formatDateOnly(cohort.endDate)}` : "";
+    return {
+      kind: "course", code: certificate.code, issuedAt: certificate.issuedAt, student, title: course.course.title,
+      line: [cohort.name, dates, MODE[cohort.deliveryMode], course.course.durationWeeks ? `${course.course.durationWeeks}-week programme` : ""].filter(Boolean).join(" · "),
+      details: [["Issued to", student.name], ["Course", course.course.title], ["Cohort", cohort.name], ["Date issued", issued(certificate.issuedAt)], ["Certificate ID", certificate.code]],
+    };
+  }
+  const [row] = await (await getDb()).select({ certificate: programmeCertificates, student: users, programme: programmes }).from(programmeCertificates)
+    .innerJoin(users, eq(users.id, programmeCertificates.userId)).innerJoin(programmes, eq(programmes.id, programmeCertificates.programmeId))
+    .where(and(eq(programmeCertificates.code, code), isNull(programmeCertificates.revokedAt)));
+  if (!row) return null;
+  const list = (await programmeCourseMap([row.programme.id])).get(row.programme.id) ?? [];
+  return {
+    kind: "programme", code: row.certificate.code, issuedAt: row.certificate.issuedAt, student: row.student, title: programmeName(row.programme.title),
+    line: `${list.length} courses: ${list.map((c) => c.title).join(" · ")}`,
+    details: [["Issued to", row.student.name], ["Programme", row.programme.title], ["Courses completed", String(list.length)], ["Date issued", issued(row.certificate.issuedAt)], ["Certificate ID", row.certificate.code]],
+  };
 }

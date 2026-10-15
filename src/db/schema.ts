@@ -1150,3 +1150,18 @@ export const programmeEnrollments = pgTable("programme_enrollments", {
 }, (t) => [uniqueIndex("programme_enrollments_user_programme_idx").on(t.userId, t.programmeId), index("programme_enrollments_programme_idx").on(t.programmeId)]);
 
 export type ProgrammeEnrollment = typeof programmeEnrollments.$inferSelect;
+
+/**
+ * Issued automatically when a student on a programme holds a valid certificate for every course in it (or has
+ * completed the ones that don't issue certificates). Revoked if that stops being true. Verified at /certificates/[code].
+ */
+export const programmeCertificates = pgTable("programme_certificates", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  programmeId: integer("programme_id").notNull().references(() => programmes.id, { onDelete: "cascade" }),
+  code: text("code").notNull().unique(),
+  issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (t) => [uniqueIndex("programme_certificates_user_programme_idx").on(t.userId, t.programmeId)]);
+
+export type ProgrammeCertificate = typeof programmeCertificates.$inferSelect;

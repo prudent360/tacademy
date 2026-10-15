@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { certificateByCode } from "@/lib/certificates";
+import { verifiedCertificate } from "@/lib/certificates";
 import { getSettings } from "@/lib/data";
 import { formatDateOnly } from "@/lib/time";
 
@@ -13,10 +13,10 @@ export const contentType = "image/png";
 export default async function Image({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const fonts = join(process.cwd(), "src/assets/fonts");
-  const [row, settings, regular, extraBold] = await Promise.all([certificateByCode(code), getSettings(), readFile(join(fonts, "PlusJakartaSans-Regular.woff")), readFile(join(fonts, "PlusJakartaSans-ExtraBold.woff"))]);
+  const [row, settings, regular, extraBold] = await Promise.all([verifiedCertificate(code), getSettings(), readFile(join(fonts, "PlusJakartaSans-Regular.woff")), readFile(join(fonts, "PlusJakartaSans-ExtraBold.woff"))]);
   const name = row?.student.name ?? "Certificate";
-  const course = row?.course.title ?? settings.siteName;
-  const issued = row ? formatDateOnly(row.certificate.issuedAt.toISOString().slice(0, 10)) : "";
+  const course = row?.title ?? settings.siteName;
+  const issued = row ? formatDateOnly(row.issuedAt.toISOString().slice(0, 10)) : "";
 
   // Same layout as the certificate: white main panel, navy brand panel with the seal.
   return new ImageResponse(
@@ -29,7 +29,7 @@ export default async function Image({ params }: { params: Promise<{ code: string
             <span style={{ fontSize: 24, fontWeight: 800, color: "#181340" }}>{settings.siteName}</span>
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ fontSize: 17, letterSpacing: 6, textTransform: "uppercase", color: "#4F3FD7", fontWeight: 800 }}>Certificate of completion</div>
+            <div style={{ fontSize: 17, letterSpacing: 6, textTransform: "uppercase", color: "#4F3FD7", fontWeight: 800 }}>{row?.kind === "programme" ? "Programme certificate" : "Certificate of completion"}</div>
             <div style={{ marginTop: 18, fontSize: 70, fontWeight: 800, color: "#181340", lineHeight: 1.05, letterSpacing: -1.5 }}>{name}</div>
             <div style={{ marginTop: 18, display: "flex", gap: 6 }}>
               <div style={{ width: 64, height: 5, background: "#4F3FD7" }} />
@@ -40,7 +40,7 @@ export default async function Image({ params }: { params: Promise<{ code: string
           </div>
           <div style={{ display: "flex", gap: 40, fontSize: 18, color: "#59576d", borderTop: "1.5px solid #e8e6f0", paddingTop: 16 }}>
             {issued && <span>Issued {issued}</span>}
-            {row && <span>ID {row.certificate.code}</span>}
+            {row && <span>ID {row.code}</span>}
           </div>
         </div>
         <div style={{ width: 330, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#181340", position: "relative" }}>

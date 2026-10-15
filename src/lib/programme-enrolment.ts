@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { getDb } from "@/db";
-import { payments, programmeEnrollments, type Cohort, type Programme, type ProgrammeEnrollment, type User } from "@/db/schema";
+import { cohorts, enrollments, payments, programmeEnrollments, type Cohort, type Programme, type ProgrammeEnrollment, type User } from "@/db/schema";
 import { bankTransferConfig } from "./config";
 import { getAdmins } from "./data";
 import { formatMoney } from "./money";
@@ -55,6 +55,16 @@ export async function startProgrammeCheckout(user: User, programme: Programme, f
     href: "/admin/payments?status=pending",
   });
   return { url: `/checkout/transfer?ref=${reference}`, reference };
+}
+
+/** How a student already stands on each course: finished it, or has a current place. Counts towards a programme. */
+export async function takenCourses(userId: number, courseIds: number[]): Promise<Map<number, "completed" | "booked">> {
+  const out = new Map<number, "completed" | "booked">();
+  if (!courseIds.length) return out;
+  const rows = await (await getDb()).select({ courseId: cohorts.courseId, status: enrollments.status }).from(enrollments).innerJoin(cohorts, eq(cohorts.id, enrollments.cohortId))
+    .where(and(eq(enrollments.userId, userId), inArray(cohorts.courseId, courseIds), inArray(enrollments.status, ["active", "completed"])));
+  for (const row of rows) if (out.get(row.courseId) !== "completed") out.set(row.courseId, row.status === "completed" ? "completed" : "booked");
+  return out;
 }
 
 export type InstalmentStatus = {

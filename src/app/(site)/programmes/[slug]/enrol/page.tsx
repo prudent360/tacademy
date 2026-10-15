@@ -11,6 +11,7 @@ import { withCohorts } from "@/lib/catalog";
 import { bankTransferConfig } from "@/lib/config";
 import { getSettings } from "@/lib/data";
 import { onlineProviders, payableCurrencies } from "@/lib/payments";
+import { takenCourses } from "@/lib/programme-enrolment";
 import { getProgrammeBySlug, programmeCourseMap } from "@/lib/programmes";
 import { formatDateOnly } from "@/lib/time";
 import { visitorCurrencies } from "@/lib/visitor";
@@ -32,17 +33,20 @@ export default async function ProgrammeEnrolPage({ params }: Props) {
   const [settings, user, included, payable, bank, providers] = await Promise.all([getSettings(), getCurrentUser(), programmeCourseMap([programme.id], { publishedOnly: true }), payableCurrencies(), bankTransferConfig(), onlineProviders()]);
   const list = included.get(programme.id) ?? [];
   if (list.length < 2) notFound();
-  const [[first], visitor] = await Promise.all([withCohorts([list[0]]), visitorCurrencies(settings)]);
+  // A signed-in student's finished or booked courses count: they start with the first one they haven't taken.
+  const taken = user ? await takenCourses(user.id, list.map((c) => c.id)) : new Map<number, "completed" | "booked">();
+  const toBook = list.find((c) => !taken.has(c.id));
+  const [[first], visitor] = await Promise.all([withCohorts(toBook ? [toBook] : []), visitorCurrencies(settings)]);
   const [existing] = user ? await (await getDb()).select().from(programmeEnrollments).where(and(eq(programmeEnrollments.userId, user.id), eq(programmeEnrollments.programmeId, programme.id), eq(programmeEnrollments.status, "active"))) : [];
 
-  const cohorts = first.cohorts.filter((c) => c.enrollmentOpen && !c.full).map((c) => ({
+  const cohorts = (first?.cohorts ?? []).filter((c) => c.enrollmentOpen && !c.full).map((c) => ({
     id: c.id, name: c.name, deliveryMode: c.deliveryMode,
     dates: c.startDate ? `${formatDateOnly(c.startDate)}${c.endDate ? ` – ${formatDateOnly(c.endDate)}` : ""}` : "Dates to be confirmed",
   }));
   const currencies = Object.entries(programme.prices).filter(([code, amount]) => (amount ?? 0) > 0 && (payable.includes(code) || (bank.enabled && code === bank.currency)))
     .map(([code]) => ({ code, online: payable.includes(code), provider: providers[code], bank: bank.enabled && code === bank.currency }));
   const [phoneDial, ...phoneRest] = user?.phone.includes(" ") ? user.phone.split(" ") : [];
-  const unavailable = existing ? null : !currencies.length ? "This programme can't be paid for online yet." : !cohorts.length ? `There are no open dates for ${first.title} right now.` : null;
+  const unavailable = existing ? null : !first ? "You've already taken every course in this programme." : !currencies.length ? "This programme can't be paid for online yet." : !cohorts.length ? `There are no open dates for ${first.title} right now.` : null;
 
   return (
     <div data-under-header className="relative bg-navy">
@@ -68,7 +72,7 @@ export default async function ProgrammeEnrolPage({ params }: Props) {
             </div>
           ) : (
             <ProgrammeEnrolForm
-              programme={{ id: programme.id, slug: programme.slug, title: programme.title, duration: programme.duration, prices: programme.prices, instalmentCount: programme.instalmentCount, instalmentFirstPercent: programme.instalmentFirstPercent, courses: list.map((c) => c.title), cohorts, currencies }}
+              programme={{ id: programme.id, slug: programme.slug, title: programme.title, duration: programme.duration, prices: programme.prices, instalmentCount: programme.instalmentCount, instalmentFirstPercent: programme.instalmentFirstPercent, courses: list.map((c) => ({ title: c.title, status: taken.get(c.id) ?? (c.id === toBook?.id ? "now" : "later") })), cohorts, currencies }}
               preferred={visitor.currencies}
               whatsapp={(await whatsappConfig()).ready}
               signedIn={user ? { firstName: user.name.split(" ")[0], lastName: user.name.split(" ").slice(1).join(" "), email: user.email, dial: phoneDial ?? "", phone: phoneRest.join(" "), dateOfBirth: user.dateOfBirth ?? "", gender: user.gender ?? "", qualification: user.qualification, country: user.country ?? "" } : null}
