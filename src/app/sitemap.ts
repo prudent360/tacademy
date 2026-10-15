@@ -5,16 +5,19 @@ import { freeClasses, jobOpenings } from "@/db/schema";
 import { isAccepting } from "@/lib/careers";
 import { publishedProjects } from "@/lib/showcase-data";
 import { getPublishedCourses } from "@/lib/data";
+import { getPublishedProgrammes } from "@/lib/programmes";
 import { absoluteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [courses, jobs, classes, projects] = await Promise.all([getPublishedCourses(), (await getDb()).select().from(jobOpenings).where(eq(jobOpenings.status, "open")), (await getDb()).select().from(freeClasses).where(and(eq(freeClasses.status, "open"), gt(freeClasses.endsAt, new Date()))), publishedProjects()]);
+  const [courses, programmes, jobs, classes, projects] = await Promise.all([getPublishedCourses(), getPublishedProgrammes(), (await getDb()).select().from(jobOpenings).where(eq(jobOpenings.status, "open")), (await getDb()).select().from(freeClasses).where(and(eq(freeClasses.status, "open"), gt(freeClasses.endsAt, new Date()))), publishedProjects()]);
   return [
     { url: absoluteUrl("/"), changeFrequency: "weekly", priority: 1 },
     { url: absoluteUrl("/courses"), changeFrequency: "weekly", priority: 0.9 },
     { url: absoluteUrl("/internships"), changeFrequency: "weekly", priority: 0.8 },
+    ...(programmes.length ? [{ url: absoluteUrl("/programmes"), changeFrequency: "weekly" as const, priority: 0.9 }] : []),
+    ...programmes.map((p) => ({ url: absoluteUrl(`/programmes/${p.slug}`), lastModified: p.updatedAt, changeFrequency: "weekly" as const, priority: 0.8 })),
     { url: absoluteUrl("/internships/apply"), changeFrequency: "monthly", priority: 0.7 },
     { url: absoluteUrl("/teach-with-us"), changeFrequency: "monthly", priority: 0.7 },
     { url: absoluteUrl("/teach-with-us/apply"), changeFrequency: "monthly", priority: 0.6 },

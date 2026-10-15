@@ -60,3 +60,16 @@ export function toMajorInput(minor: number | undefined): string {
   const major = minor / 100;
   return Number.isInteger(major) ? String(major) : major.toFixed(2);
 }
+
+/** Reads `${prefix}-GBP`, `${prefix}-NGN`… form fields into a price map; empty or zero amounts are left out. */
+export function parsePrices(formData: FormData, prefix = "price", label = "price"): { prices: Partial<Record<string, number>> } | { error: string } {
+  const prices: Partial<Record<string, number>> = {};
+  for (const code of CURRENCY_CODES) {
+    const raw = String(formData.get(`${prefix}-${code}`) ?? "");
+    const minor = parseMajor(raw);
+    if (minor === null) continue;
+    if (Number.isNaN(minor)) return { error: `Enter the ${code} ${label} as a number, e.g. 499 or 499.99.` };
+    if (minor > 0) prices[code] = minor;
+  }
+  return { prices };
+}

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import {
   certificates, cohortInstructors, cohorts, courses, DELIVERY_MODES, discountCodes, emailTemplates, enrollments, internshipCourses, payments, ROLES, users,
-  type PriceMap, type Role,
+  type Role,
 } from "@/db/schema";
 import { can, requirePermission } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
@@ -20,7 +20,7 @@ import { REQUIRED_TEMPLATES, sendEmail } from "@/lib/email";
 import { certificateEligibility } from "@/lib/certificates";
 import { COMMON_VARIABLES, EMAIL_TEMPLATES, isTemplateKey } from "@/lib/email-templates";
 import { countryByCode } from "@/lib/countries";
-import { CURRENCY_CODES, formatMoney, parseMajor } from "@/lib/money";
+import { CURRENCY_CODES, formatMoney, parseMajor, parsePrices } from "@/lib/money";
 import { revokeMembershipForPayment } from "@/lib/community-access";
 import { activateEnrollment, describePurchase, fulfilPayment, paymentBalanceFor, verifyPayment } from "@/lib/payments";
 import { notify } from "@/lib/notify";
@@ -164,18 +164,6 @@ const cohortSchema = z
   })
   .refine((v) => !v.startDate || !v.endDate || v.startDate <= v.endDate, "The end date must be on or after the start date.")
   .refine((v) => v.deliveryMode === "virtual" || v.venue.length > 0, "Add a venue for in-person or hybrid cohorts.");
-
-function parsePrices(formData: FormData, prefix = "price", label = "price"): { prices: PriceMap } | { error: string } {
-  const prices: PriceMap = {};
-  for (const code of CURRENCY_CODES) {
-    const raw = String(formData.get(`${prefix}-${code}`) ?? "");
-    const minor = parseMajor(raw);
-    if (minor === null) continue;
-    if (Number.isNaN(minor)) return { error: `Enter the ${code} ${label} as a number, e.g. 499 or 499.99.` };
-    if (minor > 0) prices[code] = minor;
-  }
-  return { prices };
-}
 
 async function setInstructors(cohortId: number, formData: FormData) {
   const db = await getDb();

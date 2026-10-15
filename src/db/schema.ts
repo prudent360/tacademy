@@ -1074,3 +1074,42 @@ export const ambassadors = pgTable("ambassadors", {
 }, (t) => [index("ambassadors_status_idx").on(t.status, t.createdAt)]);
 
 export type Ambassador = typeof ambassadors.$inferSelect;
+
+/**
+ * A programme bundles several courses into one learning path, with its own duration and fee. Students still learn in
+ * each course's cohorts; the programme is how it's presented and priced on the website.
+ */
+export const programmes = pgTable("programmes", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  description: text("description").notNull().default(""),
+  category: text("category").notNull().default(""),
+  level: text("level").notNull().default("Beginner"),
+  /** Free text, e.g. "6 months" or "24 weeks". */
+  duration: text("duration").notNull().default(""),
+  /** The programme fee, in minor units by currency. Empty: no fee shown ("Contact us"). */
+  prices: jsonb("prices").$type<PriceMap>().notNull().default({}),
+  /** Shown under the fee, e.g. "Pay in 3 monthly instalments". */
+  feeNote: text("fee_note").notNull().default(""),
+  outcomes: jsonb("outcomes").$type<string[]>().notNull().default([]),
+  jobRoles: jsonb("job_roles").$type<string[]>().notNull().default([]),
+  imageUrl: text("image_url"),
+  heroImageUrl: text("hero_image_url"),
+  seoTitle: text("seo_title").notNull().default(""),
+  seoDescription: text("seo_description").notNull().default(""),
+  published: boolean("published").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** The courses in a programme, in the order they're taken. */
+export const programmeCourses = pgTable("programme_courses", {
+  programmeId: integer("programme_id").notNull().references(() => programmes.id, { onDelete: "cascade" }),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  position: integer("position").notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.programmeId, t.courseId] }), index("programme_courses_course_idx").on(t.courseId)]);
+
+export type Programme = typeof programmes.$inferSelect;

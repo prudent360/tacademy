@@ -65,7 +65,7 @@ const START: { href: string; title: string; text: string }[] = [
 ];
 
 /** The header's menu: Courses and About open white panels on hover or click; phones get a full-screen menu. */
-export function HeaderNav({ courses, totalCourses, account, brand }: { courses: MenuCourse[]; totalCourses: number; account: { href: string; label: string } | null; brand: React.ReactNode }) {
+export function HeaderNav({ courses, totalCourses, programmes = false, account, brand }: { courses: MenuCourse[]; totalCourses: number; /** Any published programmes to link to. */ programmes?: boolean; account: { href: string; label: string } | null; brand: React.ReactNode }) {
   const pathname = usePathname();
   const [panel, setPanel] = useState<Panel>(null);
   const [mobile, setMobile] = useState(false);
@@ -97,6 +97,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
   const hoverOpen = (p: Panel) => { if (closeTimer.current) window.clearTimeout(closeTimer.current); setPanel(p); };
   const hoverClose = () => { closeTimer.current = window.setTimeout(() => setPanel(null), 140); };
   const is = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
+  const start = programmes ? [{ href: "/programmes", title: "Programmes", text: "Courses bundled into one career path" }, ...START] : START;
 
   const signIn = account
     ? <Link href={account.href} className="flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-[15px] font-semibold text-[#4f3fd7] transition hover:bg-white/90">{account.label} <ArrowRight className="size-4" /></Link>
@@ -109,7 +110,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
     <div ref={root} className="contents">
       <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
         <div className="relative" onMouseEnter={() => hoverOpen("courses")} onMouseLeave={hoverClose}>
-          <button type="button" aria-expanded={panel === "courses"} aria-controls="menu-courses" onClick={() => setPanel(panel === "courses" ? null : "courses")} className={itemClass(is("/courses"), panel === "courses")}>
+          <button type="button" aria-expanded={panel === "courses"} aria-controls="menu-courses" onClick={() => setPanel(panel === "courses" ? null : "courses")} className={itemClass(is("/courses") || is("/programmes"), panel === "courses")}>
             Courses <ChevronDown className={`size-4 transition-transform ${panel === "courses" ? "rotate-180" : ""}`} />
           </button>
           {panel === "courses" && (
@@ -122,7 +123,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
                 </div>
                 <div className="flex flex-col border-l border-line pl-2">
                   <p className={headingClass}>Start here</p>
-                  {START.map((l) => <MenuLink key={l.href} {...l} />)}
+                  {start.map((l) => <MenuLink key={l.href} {...l} />)}
                 </div>
               </div>
             </div>
@@ -174,7 +175,7 @@ export function HeaderNav({ courses, totalCourses, account, brand }: { courses: 
               <Link href="/courses" className="flex items-center gap-1.5 pt-1 text-[15px] font-semibold text-accent">View all {totalCourses} courses <ArrowRight className="size-4" /></Link>
             </section>
             <section className="flex flex-col border-t border-line pt-5">
-              {[{ href: "/free-classes", label: "Free classes" }, { href: "/internships", label: "Internships" }, { href: "/teach-with-us", label: "Teach with us" }].map((l) => (
+              {[...(programmes ? [{ href: "/programmes", label: "Programmes" }] : []), { href: "/free-classes", label: "Free classes" }, { href: "/internships", label: "Internships" }, { href: "/teach-with-us", label: "Teach with us" }].map((l) => (
                 <Link key={l.href} href={l.href} className={`flex h-12 items-center justify-between font-display text-lg font-bold ${is(l.href) ? "text-accent" : "text-ink"}`}>{l.label}<ArrowRight className="size-4 text-muted" /></Link>
               ))}
             </section>

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { AvatarArt, type Gender } from "@/components/avatar-art";
 import { BrandMark } from "@/components/brand-mark";
 import { CommandPalette, type Command } from "@/components/portal/command-palette";
-import { AwardIcon, TrendIcon, BellIcon, MoonIcon, MonitorIcon, SunIcon, BookIcon, BriefcaseIcon, CalendarIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GiftIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, VideoIcon, XIcon, type Icon } from "@/components/icons";
+import { AwardIcon, TrendIcon, BellIcon, MoonIcon, MonitorIcon, SunIcon, BookIcon, BriefcaseIcon, CalendarIcon, CapIcon, CardIcon, MessageIcon, ShieldIcon, ChartIcon, ChevronDown, ChevronRight, ClipboardIcon, CogIcon, DatabaseIcon, DownloadIcon, ExternalIcon, GiftIcon, GridIcon, IdCardIcon, LayersIcon, LogoutIcon, MenuIcon, UserIcon, UsersIcon, VideoIcon, XIcon, type Icon } from "@/components/icons";
 import type { Role } from "@/db/schema";
 import type { Permission } from "@/lib/permissions";
 
@@ -55,6 +55,7 @@ function navFor(role: Role, counts: { unread: number; toGrade: number; newApplic
     label: "Programmes",
     items: [
       { href: "/admin/courses", label: "Courses & cohorts", icon: BookIcon, also: ["/admin/cohorts", "/teach/cohorts", "/admin/modules", "/admin/lessons"], perm: "courses.manage" },
+      { href: "/admin/programmes", label: "Programmes", icon: CapIcon, perm: "courses.manage" },
       {
         href: "/admin/internships", label: "Internships", icon: BriefcaseIcon, children: [
           { href: "/admin/internships", label: "Programmes", icon: BriefcaseIcon, perm: "courses.manage" },

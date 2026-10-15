@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Settings, User } from "@/db/schema";
 import { withCohorts } from "@/lib/catalog";
 import { getPublishedCourses } from "@/lib/data";
+import { getPublishedProgrammes } from "@/lib/programmes";
 import { homeFor } from "@/lib/session";
 import { formatDateOnly } from "@/lib/time";
 import { Brand } from "./brand";
@@ -14,7 +15,7 @@ import { HeaderScrollState } from "./header-scroll";
  * show the filled pill from the start. `--nav-p` (0 → 1 over the first scroll) is set by HeaderScrollState.
  */
 export async function SiteHeader({ settings, user }: { settings: Settings; user: User | null }) {
-  const summaries = await withCohorts((await getPublishedCourses()).filter((c) => c.kind === "course"));
+  const [summaries, programmes] = await Promise.all([getPublishedCourses().then((all) => withCohorts(all.filter((c) => c.kind === "course"))), getPublishedProgrammes()]);
   const today = new Date().toISOString().slice(0, 10);
   const courses: MenuCourse[] = summaries.slice(0, 6).map((c) => {
     const next = c.cohorts.filter((co) => co.enrollmentOpen && co.startDate && co.startDate >= today).map((co) => co.startDate!).sort()[0];
@@ -40,6 +41,7 @@ export async function SiteHeader({ settings, user }: { settings: Settings; user:
         <HeaderNav
           courses={courses}
           totalCourses={summaries.length}
+          programmes={programmes.length > 0}
           account={user ? { href: homeFor(user.role), label: "My dashboard" } : null}
           brand={<Brand settings={settings} />}
         />
