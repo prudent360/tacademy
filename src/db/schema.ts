@@ -1091,8 +1091,12 @@ export const programmes = pgTable("programmes", {
   duration: text("duration").notNull().default(""),
   /** The programme fee, in minor units by currency. Empty: no fee shown ("Contact us"). */
   prices: jsonb("prices").$type<PriceMap>().notNull().default({}),
-  /** Shown under the fee, e.g. "Pay in 3 monthly instalments". */
+  /** Shown under the fee, e.g. "Includes exam vouchers". */
   feeNote: text("fee_note").notNull().default(""),
+  /** Monthly instalments offered for the fee (2–12). Null: pay in full only. */
+  instalmentCount: integer("instalment_count"),
+  /** The first instalment as a percentage of the fee; the rest is split equally. Null: all instalments equal. */
+  instalmentFirstPercent: integer("instalment_first_percent"),
   outcomes: jsonb("outcomes").$type<string[]>().notNull().default([]),
   jobRoles: jsonb("job_roles").$type<string[]>().notNull().default([]),
   imageUrl: text("image_url"),

@@ -9,7 +9,7 @@ import { ModeBadge } from "@/components/ui";
 import { withCohorts } from "@/lib/catalog";
 import { getSettings } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
-import { getProgrammeBySlug, programmeCourseMap, programmeFee, separateTotal } from "@/lib/programmes";
+import { getProgrammeBySlug, instalmentPlan, programmeCourseMap, programmeFee, separateTotal } from "@/lib/programmes";
 import { pageMetadata, seoConfig } from "@/lib/seo";
 import { absoluteUrl, jsonLd } from "@/lib/site";
 import { formatDateOnly } from "@/lib/time";
@@ -33,6 +33,7 @@ export default async function ProgrammePage({ params }: Props) {
   const fee = programmeFee(programme.prices, currencies);
   const separately = fee ? separateTotal(summaries, fee.currency) : null;
   const saving = fee && separately && separately > fee.amount ? separately - fee.amount : 0;
+  const plan = fee ? instalmentPlan(fee.amount, programme.instalmentCount, programme.instalmentFirstPercent) : null;
   const weeks = summaries.reduce((sum, c) => sum + (c.durationWeeks ?? 0), 0);
   const first = summaries[0];
   const supportEmail = settings.supportEmail || "hello@tekskillup.com";
@@ -79,6 +80,7 @@ export default async function ProgrammePage({ params }: Props) {
           <p className="text-sm text-white/90">
             <span className="text-white/75">Programme fee </span><strong className="font-display text-2xl font-bold text-white">{formatMoney(fee.amount, fee.currency)}</strong>
             {saving > 0 && <span className="ml-3 inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700">Save {formatMoney(saving, fee.currency)}</span>}
+            {plan && <span className="mt-1 block text-white/80">or {plan.count} monthly payments{plan.first === plan.rest ? ` of ${formatMoney(plan.rest, fee.currency)}` : `, first payment ${formatMoney(plan.first, fee.currency)}`}</span>}
           </p>
         )}
       </PageHero>
@@ -145,6 +147,19 @@ export default async function ProgrammePage({ params }: Props) {
               {saving > 0 && <p className="text-sm text-body"><span className="text-muted line-through">{formatMoney(separately!, fee.currency)}</span> if you take the courses separately. <strong className="text-emerald-700">You save {formatMoney(saving, fee.currency)}.</strong></p>}
             </>
           ) : <p className="font-display text-2xl font-bold text-ink">Contact us for fees</p>}
+          {fee && plan && (
+            <div className="rounded-[5px] border border-accent-muted/40 bg-accent-soft/50 p-4">
+              <p className="text-sm font-semibold text-ink">Or pay in {plan.count} monthly instalments</p>
+              <ul className="mt-2 flex flex-col gap-1 text-sm text-body">
+                {plan.first === plan.rest
+                  ? <li className="flex justify-between gap-3"><span>{plan.count} payments of</span><strong className="text-ink">{formatMoney(plan.rest, fee.currency)}</strong></li>
+                  : <>
+                      <li className="flex justify-between gap-3"><span>First payment</span><strong className="text-ink">{formatMoney(plan.first, fee.currency)}</strong></li>
+                      <li className="flex justify-between gap-3"><span>Then {plan.count - 1} monthly payment{plan.count === 2 ? "" : "s"} of</span><strong className="text-ink">{formatMoney(plan.rest, fee.currency)}</strong></li>
+                    </>}
+              </ul>
+            </div>
+          )}
           {programme.feeNote && <p className="text-sm text-muted">{programme.feeNote}</p>}
           <ul className="flex flex-col gap-2 border-t border-line pt-4 text-sm text-body">
             <li className="flex gap-2"><ClockIcon className="size-4 shrink-0 text-accent" /> {programme.duration}</li>

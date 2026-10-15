@@ -2,9 +2,11 @@ import Link from "next/link";
 import { ArrowRight, BookIcon, ClockIcon } from "@/components/icons";
 import type { Course, Programme } from "@/db/schema";
 import { formatMoney } from "@/lib/money";
+import { instalmentPlan } from "@/lib/programmes";
 import { CourseArt } from "./course-art";
 
 export function ProgrammeCard({ programme, courses, fee }: { programme: Programme; courses: Pick<Course, "id" | "title">[]; fee: { amount: number; currency: string } | null }) {
+  const plan = fee ? instalmentPlan(fee.amount, programme.instalmentCount, programme.instalmentFirstPercent) : null;
   return (
     <Link href={`/programmes/${programme.slug}`} className="group flex flex-col overflow-hidden rounded-[5px] border border-edge bg-white transition duration-300 hover:-translate-y-1 hover:border-accent-muted hover:shadow-[0_20px_48px_-22px_rgba(24,19,64,0.4)]">
       <div className="relative aspect-[16/9] overflow-hidden bg-accent-soft">
@@ -27,7 +29,7 @@ export function ProgrammeCard({ programme, courses, fee }: { programme: Programm
           <span className="flex items-center gap-1.5"><BookIcon className="size-4 text-muted" /> {courses.length} courses</span>
         </div>
         <div className="flex items-center justify-between border-t border-line pt-4">
-          <p className="text-sm text-muted">{fee ? <span className="font-display text-lg font-bold text-ink">{formatMoney(fee.amount, fee.currency)}</span> : "Contact us for fees"}</p>
+          <p className="flex flex-col text-sm text-muted">{fee ? <><span className="font-display text-lg font-bold text-ink">{formatMoney(fee.amount, fee.currency)}</span>{plan && <span className="text-xs">or {plan.count} monthly payments</span>}</> : "Contact us for fees"}</p>
           <span className="flex items-center gap-1 text-sm font-semibold text-accent">View programme <ArrowRight className="size-4 transition group-hover:translate-x-0.5" /></span>
         </div>
       </div>

@@ -30,7 +30,7 @@ export default async function AdminProgrammesPage() {
                   <td><Link href={`/admin/programmes/${r.id}`} className="font-semibold text-ink hover:text-accent-ink">{r.title}</Link><p className="text-sm text-muted">/programmes/{r.slug}</p></td>
                   <td className="text-sm text-body">{(included.get(r.id) ?? []).map((c) => c.title).join(" → ") || <span className="text-muted">None</span>}</td>
                   <td className="text-sm">{r.duration}</td>
-                  <td>{fees.length ? <Badge tone="accent">{fees.slice(0, 2).map(([cur, v]) => formatMoney(v, cur)).join(" / ")}</Badge> : <span className="text-sm text-muted">Not set</span>}</td>
+                  <td>{fees.length ? <span className="flex flex-wrap gap-1.5"><Badge tone="accent">{fees.slice(0, 2).map(([cur, v]) => formatMoney(v, cur)).join(" / ")}</Badge>{r.instalmentCount && <Badge>{r.instalmentCount} instalments</Badge>}</span> : <span className="text-sm text-muted">Not set</span>}</td>
                   <td>{r.published ? <Badge tone="green">Published</Badge> : <Badge>Draft</Badge>}</td>
                 </tr>
               );

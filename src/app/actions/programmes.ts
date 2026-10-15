@@ -23,6 +23,8 @@ const programmeSchema = z.object({
   level: text(40),
   duration: required("Duration", 60),
   feeNote: text(200),
+  instalmentCount: z.string().trim().refine((v) => v === "" || (/^\d{1,2}$/.test(v) && Number(v) >= 2 && Number(v) <= 12), "Instalments must be a number from 2 to 12."),
+  instalmentFirstPercent: z.string().trim().refine((v) => v === "" || (/^\d{1,2}$/.test(v) && Number(v) >= 10 && Number(v) <= 90), "The first instalment must be between 10% and 90%."),
   sortOrder: sortValue,
   seoTitle: text(70),
   seoDescription: text(200),
@@ -60,6 +62,9 @@ async function saveProgramme(id: number | null, formData: FormData): Promise<For
   if (courseIds.length < 2) return { error: "Choose at least two courses for the programme." };
   const priced = parsePrices(formData, "price", "fee");
   if ("error" in priced) return priced;
+  const instalmentCount = parsed.data.instalmentCount ? Number(parsed.data.instalmentCount) : null;
+  const instalmentFirstPercent = instalmentCount && parsed.data.instalmentFirstPercent ? Number(parsed.data.instalmentFirstPercent) : null;
+  if (instalmentCount && !Object.keys(priced.prices).length) return { error: "Set a programme fee before offering instalments." };
   const db = await getDb();
   const clash = await db.select({ id: programmes.id }).from(programmes).where(id ? and(eq(programmes.slug, slug), ne(programmes.id, id)) : eq(programmes.slug, slug));
   if (clash.length) return { error: `Another programme already uses the address "/programmes/${slug}".` };
@@ -73,6 +78,8 @@ async function saveProgramme(id: number | null, formData: FormData): Promise<For
     ...parsed.data,
     slug,
     prices: priced.prices,
+    instalmentCount,
+    instalmentFirstPercent,
     outcomes: parseList(formData.get("outcomes"), /\n/).slice(0, 20),
     jobRoles: parseList(formData.get("jobRoles"), /\n/).slice(0, 20),
     published: formData.get("published") === "on",

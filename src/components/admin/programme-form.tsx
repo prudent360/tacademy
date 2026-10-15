@@ -58,11 +58,15 @@ export function ProgrammeForm({ action, programme, courses, included = [], curre
       </div>
       <fieldset className="flex flex-col gap-3 rounded-[5px] border border-edge bg-panel p-4">
         <legend className="px-1 text-sm font-semibold text-ink">Programme fee</legend>
-        <p className="text-[13px] text-muted">The price for the whole programme in each currency you offer. Where every course also has a price in that currency, the page shows how much students save against taking the courses separately. Leave empty to show “Contact us for fees”.</p>
+        <p className="text-[13px] text-muted">The price for the whole programme in each currency you offer. Where every course also has a price in that currency, the page shows how much students save against taking the courses separately. Leave empty to show “Contact us for fees”. Instalments are worked out from each currency&apos;s fee and shown on the programme page.</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {shown.map((c) => <Input key={c.code} label={c.code} name={`price-${c.code}`} inputMode="decimal" placeholder="0" defaultValue={toMajorInput(programme?.prices[c.code])} hint={c.name} />)}
         </div>
-        <Input label="Fee note (optional)" name="feeNote" defaultValue={programme?.feeNote} maxLength={200} placeholder="e.g. Pay in 3 monthly instalments" />
+        <div className="grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
+          <Input label="Monthly instalments" name="instalmentCount" type="number" min={2} max={12} defaultValue={programme?.instalmentCount ?? ""} placeholder="Pay in full only" hint="Optional. How many monthly payments students can spread the fee over (2–12)." />
+          <Input label="First instalment (%)" name="instalmentFirstPercent" type="number" min={10} max={90} defaultValue={programme?.instalmentFirstPercent ?? ""} placeholder="Equal parts" hint="Optional. A bigger first payment, e.g. 40; the rest is split equally. Leave empty for equal instalments." />
+        </div>
+        <Input label="Fee note (optional)" name="feeNote" defaultValue={programme?.feeNote} maxLength={200} placeholder="e.g. Includes exam vouchers and course materials" />
       </fieldset>
       <RichTextEditor label="Full description" name="description" defaultValue={programme?.description} minHeight={240} placeholder="Who the programme is for, how the courses build on each other and where it leads." hint="Shown on the programme page." />
       <div className="grid gap-5 md:grid-cols-2">
