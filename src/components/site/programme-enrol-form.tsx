@@ -64,6 +64,7 @@ export function ProgrammeEnrolForm({ programme, preferred, whatsapp = false, sig
   const q = currency ? programmeQuote(programme, currency.code, plan, discount?.percentOff ?? 0) : null;
   const money = (minor: number) => (currency ? formatMoney(minor, currency.code) : "—");
   const saving = q ? q.fee - q.total : 0;
+  const split = currency && canSplit ? programmeQuote(programme, currency.code, "instalments", discount?.percentOff ?? 0) : null;
 
   function chooseCountry(code: string) {
     setCountryCode(code);
@@ -213,11 +214,21 @@ export function ProgrammeEnrolForm({ programme, preferred, whatsapp = false, sig
               <div className="flex items-baseline justify-between gap-4"><span className="font-semibold">Programme fee</span><span className="flex items-baseline gap-2">{saving > 0 && <span className="text-sm text-white/45 line-through">{money(q.fee)}</span>}<span className="font-display text-xl font-bold">{money(q.total)}</span></span></div>
               {saving > 0 && <p className="text-xs text-emerald-300">{discount?.code}: {discount?.percentOff}% off (−{money(saving)})</p>}
             </div>
+            {step === 1 ? (
+              // Nothing is chosen yet on the details step, so show the options rather than a total.
+              <div className="flex flex-col gap-2.5 rounded-[12px] border border-emerald-400/30 bg-emerald-400/[.04] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[1.2px] text-white/55">Ways to pay</p>
+                <div className="flex items-baseline justify-between gap-4 text-sm"><span>Pay in full</span><span className="font-semibold">{money(q.total)}</span></div>
+                {split && <div className="flex items-baseline justify-between gap-4 text-sm"><span>Or {split.count} monthly payments</span><span className="text-right font-semibold">{split.first === split.rest ? `${split.count} × ${money(split.rest)}` : `${money(split.first)} now, then ${split.count - 1} × ${money(split.rest)}`}</span></div>}
+                <p className="text-xs text-white/55">{split ? "Choose your payment plan and add a discount code" : "You can add a discount code"} in the next step.</p>
+              </div>
+            ) : (
             <div className="flex flex-col gap-2.5 rounded-[12px] border border-emerald-400/30 bg-emerald-400/[.04] p-4">
               <p className="text-xs font-semibold uppercase tracking-[1.2px] text-white/55">Amount due now</p>
               <div className="flex items-baseline justify-between gap-4"><span className="font-semibold">{q.count > 1 ? `Instalment 1 of ${q.count}` : "Total"}</span><span className="font-display text-3xl font-bold text-emerald-400">{money(q.first)}</span></div>
               {q.count > 1 && <p className="text-xs text-white/55">Then {q.count - 1} × {money(q.rest)}, one a month from your dashboard.</p>}
             </div>
+            )}
           </>
         )}
         <button type="submit" form={`${id}-form`} disabled={pending || (step === 2 && !cohort)} className="flex h-13 w-full cursor-pointer items-center justify-center rounded-[8px] bg-accent text-[16px] font-semibold text-white transition hover:bg-accent-mid disabled:cursor-not-allowed disabled:opacity-60">
