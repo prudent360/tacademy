@@ -33,7 +33,7 @@ Each cohort has a price per currency. Students choose the country they live in w
 
 - **GBP, USD, EUR, CAD** → Stripe Checkout
 - **NGN** → Paystack (a Paystack account only takes its own country's currency)
-- **TransactPay**, when switched on, goes first for every currency the account takes (detected automatically), with Paystack or Stripe as the backup. **GHS, KES, ZAR, UGX, TZS, RWF, XOF, XAF** can only be paid this way.
+- **TransactPay**, when switched on, goes first for every currency the account takes (detected automatically: the African currencies and USD), with Paystack or Stripe as the backup. **GHS, KES, ZAR, UGX, TZS, RWF, XOF, XAF** can only be paid this way.
 
 The student's place is confirmed by the gateway's **webhook** (and double-checked when they return to the site), then they get an enrolment email and a receipt. Turn on **bank transfer** in Settings → Payments to let students pay by transfer: they get your account details and a reference, and you click **Confirm** under Payments when the money arrives. Cash and other offline payments can be recorded with **Payments → Record payment**. Switch any gateway off, or between test and live mode, in Settings → Payments. Leave every price empty to make a cohort free.
 

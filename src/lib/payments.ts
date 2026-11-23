@@ -37,8 +37,11 @@ export function testPaymentsAllowed(): boolean {
   return process.env.NODE_ENV !== "production" && !process.env.VERCEL;
 }
 
-/** The African currencies TransactPay might take; which ones it does depends on the account (see detectTransactpayCurrencies). */
-export const TRANSACTPAY_CANDIDATES = CURRENCIES.filter((c) => c.gateway !== "stripe").map((c) => c.code);
+/**
+ * The currencies TransactPay might take: the African ones, plus USD. Which ones it does depends on the account
+ * (see detectTransactpayCurrencies). When USD is found, TransactPay goes first for it, with Stripe as the backup.
+ */
+export const TRANSACTPAY_CANDIDATES = CURRENCIES.filter((c) => c.gateway !== "stripe" || c.code === "USD").map((c) => c.code);
 
 export type OnlineProvider = "stripe" | "paystack" | "transactpay";
 
@@ -62,7 +65,7 @@ export async function onlineProviders(): Promise<Partial<Record<string, OnlinePr
 }
 
 /** A country for each currency, for TransactPay's test orders. */
-const CURRENCY_COUNTRY: Record<string, string> = { NGN: "NG", GHS: "GH", KES: "KE", ZAR: "ZA", UGX: "UG", TZS: "TZ", RWF: "RW", XOF: "CI", XAF: "CM" };
+const CURRENCY_COUNTRY: Record<string, string> = { NGN: "NG", GHS: "GH", KES: "KE", ZAR: "ZA", UGX: "UG", TZS: "TZ", RWF: "RW", XOF: "CI", XAF: "CM", USD: "US" };
 
 /**
  * Finds which currencies the TransactPay account accepts. TransactPay has no list to ask for, so this starts a

@@ -189,7 +189,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
         {[
           { name: "Stripe", logo: <Logo text="S" color="#635BFF" />, badge: gatewayBadge(stripe, true), text: "GBP · USD · EUR · CAD" },
           { name: "Paystack", logo: <Logo text="P" color="#0BA4DB" />, badge: gatewayBadge(paystack, true), text: "NGN" },
-          { name: "TransactPay", logo: <Logo text="T" color="#1F4ED8" />, badge: transactpayBadge(true), text: transactpay.currencies?.length ? `First for ${transactpay.currencies.join(" · ")}` : "African currencies, detected" },
+          { name: "TransactPay", logo: <Logo text="T" color="#1F4ED8" />, badge: transactpayBadge(true), text: transactpay.currencies?.length ? `First for ${transactpay.currencies.join(" · ")}` : "African currencies and USD, detected" },
           { name: "Bank transfer", logo: <span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white"><BankIcon className="size-5" /></span>, badge: bank.enabled ? <Badge tone="green"><CheckCircleIcon className="size-3.5" /> On</Badge> : <Badge>Off</Badge>, text: bank.enabled ? `${bank.currency}, confirmed by admins` : "Manual confirmation" },
         ].map((g) => (
           <div key={g.name} className="flex items-center gap-3 rounded-[14px] border border-edge bg-surface p-4">
@@ -270,7 +270,7 @@ export async function PaymentsTab({ s }: { s: Settings }) {
               ? <>{transactpay.currencies.join(", ")}. These go through TransactPay first; everything else (and anything TransactPay can&apos;t start) uses Paystack or Stripe as usual. Checked {new Date(transactpay.checkedAt!).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: s.timezone })}.</>
               : transactpay.secretKey && transactpay.publicKey && transactpay.encryptionKey
                 ? "Not checked yet. Save or check again to find out."
-                : "Save your keys and we'll ask TransactPay which currencies your account takes (NGN, GHS, KES, UGX…). There's no list to look up, so this starts a small test order in each currency; they're never paid."}
+                : "Save your keys and we'll ask TransactPay which currencies your account takes (NGN, GHS, KES, USD…). There's no list to look up, so this starts a small test order in each currency; they're never paid."}
           </p>
           {transactpay.secretKey && transactpay.publicKey && transactpay.encryptionKey && <TransactpayCheckButton />}
         </div>
